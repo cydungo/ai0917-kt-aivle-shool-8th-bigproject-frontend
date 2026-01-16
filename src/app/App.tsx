@@ -23,7 +23,7 @@ export default function App() {
   const navigate = useNavigate();
 
   const handleSignInClick = () => navigate('/login');
-  const handleSignupClick = () => navigate('/signup2');
+  const handleSignupClick = () => navigate('/signup');
   const handleGoHome = () => navigate('/');
   const handleLogout = () => {
     setUserType(null);
@@ -77,6 +77,16 @@ export default function App() {
               onLogin={handleLogin}
               onBack={handleGoHome}
               onSignup={handleSignupClick}
+            />
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <SignupPage2
+              initialData={pendingSignupData || undefined}
+              onSignupComplete={handleSignupComplete}
+              onBack={() => navigate('/login')}
             />
           }
         />

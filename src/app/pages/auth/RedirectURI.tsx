@@ -49,7 +49,7 @@ const RedirectURI: React.FC<RedirectURIProps> = ({
           navigate('/');
         } else if (isNewMember) {
           onRequireSignup(response.data);
-          navigate('/signup2');
+          navigate('/signup');
         }
       } catch (error) {
         console.error('네이버 로그인 인증 실패:', error);
