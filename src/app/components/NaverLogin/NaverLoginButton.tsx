@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '../ui/button';
 
 const NaverLogin: React.FC = () => {
@@ -6,12 +6,15 @@ const NaverLogin: React.FC = () => {
   const CALLBACK_URL = encodeURIComponent(
     import.meta.env.VITE_NAVER_CALLBACK_URL,
   );
-  const STATE = Math.random().toString(36).substring(2, 11);
 
-  const NAVER_AUTH_URL = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${CLIENT_ID}&state=${STATE}&redirect_uri=${CALLBACK_URL}`;
+  // 컴포넌트가 다시 그려져도 STATE 값이 바뀌지 않도록 고정
+  const NAVER_AUTH_URL = useMemo(() => {
+    const STATE = crypto.randomUUID();
+    return `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${CLIENT_ID}&state=${STATE}&redirect_uri=${CALLBACK_URL}`;
+  }, [CLIENT_ID, CALLBACK_URL]);
 
   const handleLogin = (): void => {
-    alert(NAVER_AUTH_URL);
+    // alert은 테스트 후에 지워주셔도 됩니다.
     window.location.href = NAVER_AUTH_URL;
   };
 

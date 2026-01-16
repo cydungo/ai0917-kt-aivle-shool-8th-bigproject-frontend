@@ -5,11 +5,17 @@ import { SignupPage as SignupPage2 } from './pages/auth/SignupPage2';
 import { ManagerDashboard } from './pages/dashboard/ManagerDashboard';
 import { AuthorDashboard } from './pages/dashboard/AuthorDashboard';
 import { AdminDashboard } from './pages/dashboard/AdminDashboard';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  Navigate,
+} from 'react-router-dom';
 import RedirectURI from './pages/auth/RedirectURI';
 
 type Screen = 'landing' | 'login' | 'signup' | 'dashboard';
-type UserType = 'manager' | 'author' | 'admin' | null;
+type UserType = 'Manager' | 'Author' | 'Admin' | null;
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
@@ -37,10 +43,13 @@ export default function App() {
     navigate('/login');
   };
 
-  const handleLogin = (type: 'manager' | 'author' | 'admin') => {
+  const handleLogin = (type: 'Manager' | 'Author' | 'Admin') => {
+    // 1. 상태 업데이트 (UI 즉시 반응)
     setUserType(type);
+    // 2. 저장
     localStorage.setItem('userRole', type);
-    navigate('/');
+    // 3. 이동 (replace: true로 인증 기록 제거)
+    navigate('/', { replace: true });
   };
 
   const handleRequireSignup = (profile: Record<string, any>) => {
@@ -50,8 +59,15 @@ export default function App() {
 
   useEffect(() => {
     const role = localStorage.getItem('userRole') as UserType | null;
-    setUserType(role);
-  }, [location.pathname]);
+    const token = localStorage.getItem('accessToken');
+
+    // 토큰과 역할이 모두 있을 때만 로그인 상태로 인정
+    if (role && token) {
+      setUserType(role);
+    } else {
+      setUserType(null);
+    }
+  }, [location.pathname]); // 경로가 바뀔 때마다 체크
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,11 +75,11 @@ export default function App() {
         <Route
           path="/"
           element={
-            userType === 'manager' ? (
+            userType === 'Manager' ? (
               <ManagerDashboard onLogout={handleLogout} onHome={handleGoHome} />
-            ) : userType === 'author' ? (
+            ) : userType === 'Author' ? (
               <AuthorDashboard onLogout={handleLogout} onHome={handleGoHome} />
-            ) : userType === 'admin' ? (
+            ) : userType === 'Admin' ? (
               <AdminDashboard onLogout={handleLogout} onHome={handleGoHome} />
             ) : (
               <LandingPage onSignInClick={handleSignInClick} />
@@ -73,11 +89,16 @@ export default function App() {
         <Route
           path="/login"
           element={
-            <LoginPage
-              onLogin={handleLogin}
-              onBack={handleGoHome}
-              onSignup={handleSignupClick}
-            />
+            // [추가] 이미 로그인된 유저가 뒤로가기로 로그인 페이지에 오면 메인으로 튕김
+            userType ? (
+              <Navigate to="/" replace />
+            ) : (
+              <LoginPage
+                onLogin={handleLogin}
+                onBack={handleGoHome}
+                onSignup={handleSignupClick}
+              />
+            )
           }
         />
         <Route

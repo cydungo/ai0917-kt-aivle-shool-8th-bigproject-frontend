@@ -1,11 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // searchParams 훅 사용 권장
 import styled from 'styled-components';
 import axios from 'axios';
-import { profile } from 'console';
 
 interface RedirectURIProps {
-  onLoginSuccess: (type: 'manager' | 'author' | 'admin') => void;
+  onLoginSuccess: (type: 'Manager' | 'Author' | 'Admin') => void;
   onRequireSignup: (profile: Record<string, any>) => void;
   onFail: () => void;
 }
@@ -16,58 +15,67 @@ const RedirectURI: React.FC<RedirectURIProps> = ({
   onFail,
 }) => {
   const navigate = useNavigate();
-  const isRequestSent = useRef(false); // React 18+ StrictMode 중복 요청 방지
+  const [searchParams] = useSearchParams(); // URL 파라미터를 더 안정적으로 읽어옴
+  const isRequestSent = useRef(false);
 
   useEffect(() => {
-    // 1. URL에서 네이버 인증 코드(code)와 상태(state) 추출
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-    console.log(`code: ${code}, state: ${state}`);
+    // 1. 파라미터 추출
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
 
-    const authenticateUser = async () => {
-      // 인증 코드는 1회용이므로 중복 요청 방지
-      if (isRequestSent.current) return;
-      isRequestSent.current = true;
+    // [중요] 이미 요청 중이거나 코드가 없으면 로직 실행 안 함
+    if (isRequestSent.current) return;
+
+    const authenticateUser = async (
+      authCode: string,
+      authState: string | null,
+    ) => {
+      isRequestSent.current = true; // 진입하자마자 Lock
 
       try {
-        // 2. 백엔드로 인증 코드 전송
+        console.log('인증 시도 중...', { authCode });
+
         const response = await axios.post(
           `${import.meta.env.VITE_BACKEND_URL}/auth/naver/user`,
-          {
-            code,
-            state,
-          },
+          { code: authCode, state: authState },
         );
 
-        // 3. 백엔드 응답 결과에 따른 분기 처리
         const { role, isNewMember, accessToken } = response.data;
-        console.log(role, isNewMember, accessToken);
 
+        // 성공 시 흐름 제어
         if (!isNewMember) {
           if (accessToken) localStorage.setItem('accessToken', accessToken);
           if (role) localStorage.setItem('userRole', role);
+
+          // 부모 상태 업데이트 (이 내부에서 navigate('/')가 실행됨)
           onLoginSuccess(role);
-          navigate('/');
-        } else if (isNewMember) {
+        } else {
           onRequireSignup(response.data);
-          navigate('/signup');
+          // App.tsx의 handleRequireSignup에서 navigate('/signup2')를 처리함
         }
       } catch (error) {
-        console.error('네이버 로그인 인증 실패:', error);
-        navigate('/');
+        console.error('백엔드 인증 에러:', error);
         onFail();
+        navigate('/login', { replace: true });
       }
     };
 
     if (code) {
-      authenticateUser();
+      authenticateUser(code, state);
     } else {
-      console.error('인증 코드가 누락되었습니다.');
-      navigate('/');
-      onFail();
+      // 코드가 없는 경우 (이미 처리됐거나 잘못 접근한 경우)
+      // 아주 잠깐 대기 후 유저 상태가 있으면 홈으로, 없으면 로그인으로 보냄
+      const existingRole = localStorage.getItem('userRole');
+      if (existingRole) {
+        navigate('/', { replace: true });
+      } else {
+        console.warn('URL에 인증 코드가 없습니다.');
+        // 무조건적인 에러 처리보다는 상황에 맞는 리다이렉트
+        // onFail(); // 필요 시 주석 해제
+        // navigate('/login', { replace: true });
+      }
     }
-  }, [navigate, onLoginSuccess, onRequireSignup, onFail]);
+  }, [searchParams, navigate, onLoginSuccess, onRequireSignup, onFail]);
 
   return (
     <Container>

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import NaverLogin from '../../components/NaverLogin/NaverLoginButton';
 
 interface LoginPageProps {
-  onLogin: (userType: 'manager' | 'author' | 'admin') => void;
+  onLogin: (userType: 'Manager' | 'Author' | 'Admin') => void;
   onBack: () => void;
   onSignup: () => void;
 }
@@ -17,17 +17,17 @@ export function LoginPage({ onLogin, onBack, onSignup }: LoginPageProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin('manager');
+    onLogin('Manager');
   };
 
   const handleAdminLogin = (e: React.MouseEvent) => {
     e.preventDefault();
-    onLogin('admin');
+    onLogin('Admin');
   };
-  
+
   const handleAuthorTemp = (e: React.MouseEvent) => {
     e.preventDefault();
-    onLogin('author');
+    onLogin('Author');
   };
 
   return (
