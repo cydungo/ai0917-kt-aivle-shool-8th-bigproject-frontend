@@ -31,6 +31,7 @@ import {
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
 import { useState } from "react";
 import { ThemeToggle } from "../../components/ui/theme-toggle";
 
@@ -681,6 +682,94 @@ function HomeTab() {
 
 // Notices Tab Component
 function NoticesTab() {
+  const [notices, setNotices] = useState<
+    { title: string; date: string; status: "published" | "draft"; views: number; content?: string; files?: { name: string; url: string; type: string }[] }[]
+  >([
+    {
+      title: "Lorem ipsum dolor sit amet consectetur",
+      date: "2026.01.08",
+      status: "published",
+      views: 1523,
+    },
+    {
+      title: "Sed do eiusmod tempor incididunt",
+      date: "2026.01.08",
+      status: "published",
+      views: 892,
+    },
+    {
+      title: "Ut enim ad minim veniam quis nostrud",
+      date: "2026.01.07",
+      status: "published",
+      views: 654,
+    },
+    {
+      title: "Duis aute irure dolor in reprehenderit",
+      date: "2025.12.24",
+      status: "draft",
+      views: 0,
+    },
+    {
+      title: "Excepteur sint occaecat cupidatat",
+      date: "2025.12.23",
+      status: "published",
+      views: 2341,
+    },
+  ]);
+  const [showModal, setShowModal] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [files, setFiles] = useState<{ name: string; url: string; type: string }[]>([]);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewIndex, setViewIndex] = useState<number | null>(null);
+  const [viewNotice, setViewNotice] = useState<{
+    title: string;
+    date: string;
+    status: "published" | "draft";
+    views: number;
+    content?: string;
+    files?: { name: string; url: string; type: string }[];
+  } | null>(null);
+
+  const openCreate = () => {
+    setEditingIndex(null);
+    setTitle("");
+    setContent("");
+    setFiles([]);
+    setShowModal(true);
+  };
+
+  const openEdit = (idx: number) => {
+    const n = notices[idx];
+    setEditingIndex(idx);
+    setTitle(n.title);
+    setContent(n.content || "");
+    setFiles(n.files || []);
+    setShowModal(true);
+  };
+
+  const onConfirm = () => {
+    if (!title.trim()) return;
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, "0")}.${String(
+      today.getDate()
+    ).padStart(2, "0")}`;
+    if (editingIndex === null) {
+      setNotices([{ title, content, date: dateStr, status: "published", views: 0, files: files.length ? files : undefined }, ...notices]);
+    } else {
+      const next = [...notices];
+      next[editingIndex] = { ...next[editingIndex], title, content, files: files.length ? files : undefined };
+      setNotices(next);
+    }
+    setShowModal(false);
+  };
+
+  const onDelete = (idx: number) => {
+    const next = notices.filter((_, i) => i !== idx);
+    setNotices(next);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
@@ -689,104 +778,236 @@ function NoticesTab() {
             <Megaphone className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h2 className="text-lg text-foreground font-semibold">
-              공지사항
-            </h2>
+            <h2 className="text-lg text-foreground font-semibold">공지사항</h2>
           </div>
         </div>
-        <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
-          <Megaphone className="w-4 h-4 mr-2" />새 공지사항 작성
+        <Button onClick={openCreate} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
+          <Megaphone className="w-4 h-4 mr-2" />
+          새 공지사항 작성
         </Button>
       </div>
 
       <Card className="border-border">
         <CardContent className="p-0">
           <div className="divide-y divide-border">
-            {[
-              {
-                title: "Lorem ipsum dolor sit amet consectetur",
-                date: "2026.01.08",
-                status: "published",
-                views: 1523,
-              },
-              {
-                title: "Sed do eiusmod tempor incididunt",
-                date: "2026.01.08",
-                status: "published",
-                views: 892,
-              },
-              {
-                title: "Ut enim ad minim veniam quis nostrud",
-                date: "2026.01.07",
-                status: "published",
-                views: 654,
-              },
-              {
-                title: "Duis aute irure dolor in reprehenderit",
-                date: "2025.12.24",
-                status: "draft",
-                views: 0,
-              },
-              {
-                title: "Excepteur sint occaecat cupidatat",
-                date: "2025.12.23",
-                status: "published",
-                views: 2341,
-              },
-            ].map((notice, idx) => (
+            {notices.map((notice, idx) => (
               <div
                 key={idx}
                 className="flex flex-col md:flex-row md:items-center justify-between p-4 md:p-5 hover:bg-muted/50 cursor-pointer transition-colors gap-4 md:gap-0"
+                onClick={() => {
+                  setViewIndex(idx);
+                  setViewNotice(notice);
+                  setViewOpen(true);
+                }}
               >
                 <div className="flex items-start md:items-center gap-4 flex-1">
-                  <div className="text-sm text-muted-foreground font-medium min-w-[40px] pt-1 md:pt-0">
-                    {idx + 1}
-                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
-                      <span className="text-base text-foreground font-medium truncate max-w-full">
-                        {notice.title}
-                      </span>
-                      {notice.status === "published" ? (
-                        <Badge className="bg-green-500 text-white text-xs shrink-0">
-                          게시됨
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="border-border text-muted-foreground text-xs shrink-0"
-                        >
-                          임시저장
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{notice.date}</span>
-                      <span>조회수 {notice.views}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <span className="text-xs text-muted-foreground">{idx + 1}</span>
+                        <span className="text-[16px] text-foreground font-normal break-words">
+                          {notice.title}
+                        </span>
+                        {notice.status === "published" ? (
+                          <Badge className="bg-green-500 text-white text-xs shrink-0">게시됨</Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-border text-muted-foreground text-xs shrink-0">
+                            임시저장
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end shrink-0">
+                        <div className="text-sm text-muted-foreground">{notice.date}</div>
+                        <div className="text-xs text-muted-foreground">관리자</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2 justify-end w-full md:w-auto pl-14 md:pl-0">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-border"
-                  >
-                    수정
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    삭제
-                  </Button>
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-lg bg-card border border-border rounded-lg shadow-lg">
+            <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                {editingIndex === null ? "새 공지사항 작성" : "공지사항 수정"}
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-1 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-5 space-y-1 sm:space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+              <Card className="border-border">
+                <CardHeader className="px-3 py-0 space-y-0">
+                  <CardTitle className="text-sm">제목</CardTitle>
+                </CardHeader>
+                <CardContent className="py-0 px-3">
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                </CardContent>
+              </Card>
+              <Card className="border-border">
+                <CardHeader className="px-3 py-0 space-y-0">
+                  <CardTitle className="text-sm">내용</CardTitle>
+                </CardHeader>
+                <CardContent className="py-0 px-3">
+                  <Textarea value={content} onChange={(e) => setContent(e.target.value)} className="min-h-32" />
+                </CardContent>
+              </Card>
+              <div className="space-y-1">
+                <div className="text-xs sm:text-sm text-muted-foreground">파일 업로드</div>
+                <Input
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+                  multiple
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.files || []);
+                    const mapped = selected.map((f) => ({ name: f.name, url: URL.createObjectURL(f), type: f.type }));
+                    setFiles((prev) => [...prev, ...mapped]);
+                  }}
+                  className="h-9"
+                />
+                <div className="text-xs text-muted-foreground">
+                  {files.length ? `${files.length}개 파일 선택됨` : "선택된 파일 없음"}
+                </div>
+                {files.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {files.map((f, i) => (
+                      <div key={`${f.name}-${i}`} className="relative inline-block">
+                        {f.type.startsWith("image") ? (
+                          <img src={f.url} alt={f.name} className="w-full max-h-48 object-contain rounded-md border border-border" />
+                        ) : (
+                          <a href={f.url} download={f.name} className="inline-flex items-center text-sm text-blue-600 underline">
+                            파일 다운로드: {f.name}
+                          </a>
+                        )}
+                        <button
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full border border-border bg-card text-muted-foreground flex items-center justify-center hover:bg-muted"
+                          onClick={() => {
+                            setFiles((prev) => prev.filter((_, idx) => idx !== i));
+                          }}
+                          aria-label="파일 제거"
+                        >
+                          <CloseIcon className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="border-border" onClick={() => setFiles([])}>
+                        모두 제거
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-4 sm:p-5 border-t border-border flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowModal(false)} className="px-3 sm:px-4 text-sm">
+                취소
+              </Button>
+              <Button onClick={onConfirm} className="px-3 sm:px-4 text-sm bg-blue-600 hover:bg-blue-700 text-white">
+                확인
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewOpen && viewNotice && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-lg bg-card border border-border rounded-lg shadow-lg">
+            <div className="p-4 sm:p-5 border-b border-border relative">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
+                공지사항
+              </h3>
+              <button
+                onClick={() => setViewOpen(false)}
+                className="p-1 rounded-md text-muted-foreground hover:bg-muted transition-colors absolute right-4 top-4"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                {viewIndex !== null && <span className="text-xs text-muted-foreground">{viewIndex + 1}</span>}
+                <div className="text-xl text-foreground font-semibold">{viewNotice.title}</div>
+                {viewNotice.status === "published" ? (
+                  <Badge className="bg-green-500 text-white text-xs">게시됨</Badge>
+                ) : (
+                  <Badge variant="outline" className="border-border text-muted-foreground text-xs">
+                    임시저장
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+                {viewNotice.files && viewNotice.files.length > 0 && (
+                  <div className="space-y-2">
+                    {viewNotice.files.map((f, i) =>
+                      f.type.startsWith("image") ? (
+                        <img
+                          key={`${f.name}-${i}`}
+                          src={f.url}
+                          alt={f.name}
+                          className="w-full max-h-64 object-contain rounded-md border border-border shadow-sm"
+                        />
+                      ) : (
+                        <a
+                          key={`${f.name}-${i}`}
+                          href={f.url}
+                          download={f.name}
+                          className="inline-flex items-center text-sm text-blue-600 underline"
+                        >
+                          파일 다운로드: {f.name}
+                        </a>
+                      )
+                    )}
+                  </div>
+                )}
+                <div className="text-sm text-foreground whitespace-pre-wrap">{viewNotice.content || "내용 없음"}</div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-5 border-t border-border flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">
+                {viewNotice.date} • 관리자
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="px-3 sm:px-4 text-sm"
+                  onClick={() => {
+                    if (viewIndex !== null) {
+                      openEdit(viewIndex);
+                      setViewOpen(false);
+                    }
+                  }}
+                >
+                  수정
+                </Button>
+                <Button
+                  variant="outline"
+                  className="px-3 sm:px-4 text-sm border-red-300 text-red-600 hover:bg-red-50"
+                  onClick={() => {
+                    if (viewIndex !== null) {
+                      onDelete(viewIndex);
+                      setViewOpen(false);
+                    }
+                  }}
+                >
+                  삭제
+                </Button>
+                <Button variant="outline" onClick={() => setViewOpen(false)} className="px-3 sm:px-4 text-sm">
+                  닫기
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
