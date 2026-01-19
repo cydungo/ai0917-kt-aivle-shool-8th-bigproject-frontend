@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Mail, ArrowLeft, Phone } from 'lucide-react';
+import { Brain, Mail, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -16,32 +16,37 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // 백엔드 리다이렉트 시 넘어온 데이터 추출
+  // 1. URL 파라미터에서 데이터 추출
   const token = searchParams.get('token');
   const naverEmail = searchParams.get('email');
   const naverName = searchParams.get('name');
-  const naverGender = searchParams.get('gender');
-  const naverBirthday = searchParams.get('birthday');
-  const naverBirthYear = searchParams.get('birthYear');
   const naverMobile = searchParams.get('mobile');
 
-  // 네이버 로그인 흐름인지 확인
-  const isNaverFlow = Boolean(token);
+  // 2. 보안 로직: 토큰이 없으면 비정상 접근으로 간주
+  useEffect(() => {
+    if (!token) {
+      alert('네이버 인증 정보가 없습니다. 다시 로그인 해주세요.');
+      navigate('/login', { replace: true });
+    }
+  }, [token, navigate]);
 
-  // 초기 상태 설정 (Pre-fill)
+  // 초기 상태 설정
   const [formData, setFormData] = useState({
     name: naverName ?? '',
     email: naverEmail ?? '',
     password: '',
     passwordConfirm: '',
-    gender: naverGender ?? '',
     mobile: naverMobile ?? '',
-    birthday: naverBirthday ?? '',
-    birthYear: naverBirthYear ?? '',
+    gender: searchParams.get('gender') ?? '',
+    birthday: searchParams.get('birthday') ?? '',
+    birthYear: searchParams.get('birthYear') ?? '',
   });
 
   const [termsAgree, setTermsAgree] = useState(false);
   const [privacyAgree, setPrivacyAgree] = useState(false);
+
+  // 토큰 검사 중일 때 깜빡임 방지
+  if (!token) return null;
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -50,7 +55,6 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 유효성 검사
     if (!termsAgree || !privacyAgree) {
       alert('필수 약관에 동의해주세요.');
       return;
@@ -59,23 +63,21 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
       alert('비밀번호가 일치하지 않습니다.');
       return;
     }
-    if (!formData.mobile) {
-      alert('연락처를 입력해주세요.');
-      return;
-    }
 
     try {
-      // 최종 가입 API 호출
+      const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/signup/complete`,
+        `${backendUrl}/api/v1/auth/signup/complete`,
         formData,
         {
-          headers: isNaverFlow ? { Authorization: `Bearer ${token}` } : {},
+          headers: { Authorization: `Bearer ${token}` },
         },
       );
 
       if (response.status === 200 || response.status === 201) {
-        alert('회원가입이 완료되었습니다. 로그인해 주세요.');
+        alert(
+          '회원가입 신청이 완료되었습니다. 관리자 승인 후 이용 가능합니다.',
+        );
         onSignupComplete();
       }
     } catch (err) {
@@ -92,48 +94,42 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">이전으로 돌아가기</span>
+          <span className="text-sm font-medium">로그인으로 돌아가기</span>
         </button>
 
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl shadow-lg mb-6">
             <Brain className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">회원가입</h1>
-          <p className="text-muted-foreground">
-            {isNaverFlow
-              ? '네이버 인증 정보를 기반으로 프로필을 완성하세요'
-              : '작가 활동을 위한 계정 정보를 입력하세요'}
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            프로필 완성
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            네이버 인증이 완료되었습니다. <br /> 추가 정보를 입력하여 작가
+            가입을 완료하세요.
           </p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-6 md:p-8 shadow-sm">
+        <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              {/* 이메일 (네이버 가입시 수정 불가) */}
+              {/* 이메일 (수정 불가) */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="flex justify-between">
-                  이메일 <span className="text-xs text-destructive">필수</span>
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    className={`pl-10 h-12 ${isNaverFlow && naverEmail ? 'bg-muted cursor-not-allowed' : ''}`}
-                    readOnly={isNaverFlow && Boolean(naverEmail)}
-                    required
-                  />
-                </div>
+                <Label className="text-xs font-bold ml-1">인증된 이메일</Label>
+                <Input
+                  value={formData.email}
+                  readOnly
+                  className="bg-muted cursor-not-allowed h-12"
+                />
               </div>
 
-              {/* 비밀번호 */}
+              {/* 비밀번호 설정 */}
               <div className="space-y-2">
-                <Label htmlFor="password">
-                  비밀번호{' '}
-                  <span className="text-xs text-destructive">필수</span>
+                <Label
+                  htmlFor="password font-bold"
+                  className="text-xs font-bold ml-1"
+                >
+                  비밀번호 설정
                 </Label>
                 <Input
                   id="password"
@@ -147,7 +143,12 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="passwordConfirm">비밀번호 확인</Label>
+                <Label
+                  htmlFor="passwordConfirm"
+                  className="text-xs font-bold ml-1"
+                >
+                  비밀번호 확인
+                </Label>
                 <Input
                   id="passwordConfirm"
                   type="password"
@@ -161,21 +162,24 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
               </div>
             </div>
 
-            <hr className="border-border" />
+            <hr className="border-border/60" />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">이름</Label>
+                <Label htmlFor="name" className="text-xs font-bold ml-1">
+                  이름
+                </Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  readOnly={isNaverFlow && Boolean(naverName)}
-                  className={`h-12 ${isNaverFlow && naverName ? 'bg-muted cursor-not-allowed border-none' : ''}`}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  readOnly={Boolean(naverName)}
+                  className={`h-12 ${naverName ? 'bg-muted cursor-not-allowed' : ''}`}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mobile">
-                  연락처 <span className="text-xs text-destructive">필수</span>
+                <Label htmlFor="mobile" className="text-xs font-bold ml-1">
+                  연락처
                 </Label>
                 <Input
                   id="mobile"
@@ -187,7 +191,7 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
               </div>
             </div>
 
-            {/* 약관 동의 섹션 */}
+            {/* 약관 동의 */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-3">
                 <Checkbox
@@ -197,13 +201,13 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
                 />
                 <label
                   htmlFor="terms"
-                  className="text-sm text-muted-foreground flex-1 cursor-pointer"
+                  className="text-[13px] text-muted-foreground flex-1 cursor-pointer"
                 >
                   서비스 이용약관 동의 (필수)
                 </label>
                 <Link
                   to="/terms"
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs text-primary hover:underline font-medium"
                 >
                   보기
                 </Link>
@@ -216,13 +220,13 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
                 />
                 <label
                   htmlFor="privacy"
-                  className="text-sm text-muted-foreground flex-1 cursor-pointer"
+                  className="text-[13px] text-muted-foreground flex-1 cursor-pointer"
                 >
                   개인정보처리방침 동의 (필수)
                 </label>
                 <Link
                   to="/privacy"
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs text-primary hover:underline font-medium"
                 >
                   보기
                 </Link>
@@ -231,10 +235,10 @@ export function SignupPage({ onSignupComplete, onBack }: SignupPageProps) {
 
             <Button
               type="submit"
-              className="w-full h-12 text-lg font-bold shadow-md hover:scale-[1.01] transition-transform"
+              className="w-full h-13 text-base font-bold shadow-md active:scale-[0.98] transition-all"
               disabled={!termsAgree || !privacyAgree}
             >
-              IP.AI 작가 가입 완료
+              IP.AI 작가 신청 완료
             </Button>
           </form>
         </div>
