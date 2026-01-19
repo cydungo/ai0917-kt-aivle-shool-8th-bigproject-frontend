@@ -10,6 +10,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -472,12 +473,18 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
             </div>
 
             <div className="flex items-center gap-8 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">
+              <Link
+                to="/terms"
+                className="hover:text-foreground transition-colors"
+              >
                 이용약관
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
+              </Link>
+              <Link
+                to="/privacy"
+                className="hover:text-foreground transition-colors"
+              >
                 개인정보처리방침
-              </a>
+              </Link>
               <a href="#" className="hover:text-foreground transition-colors">
                 고객센터
               </a>

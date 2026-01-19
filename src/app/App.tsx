@@ -1,10 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import { LandingPage } from './pages/landing/LandingPage';
-import { LoginPage } from './pages/auth/LoginPage';
-import { SignupPage as SignupPage2 } from './pages/auth/SignupPage2';
-import { ManagerDashboard } from './pages/dashboard/ManagerDashboard';
-import { AuthorDashboard } from './pages/dashboard/AuthorDashboard';
-import { AdminDashboard } from './pages/dashboard/AdminDashboard';
+import { useEffect, useState } from 'react';
 import {
   Routes,
   Route,
@@ -12,25 +6,45 @@ import {
   useNavigate,
   Navigate,
 } from 'react-router-dom';
-import RedirectURI from './pages/auth/RedirectURI';
+import { LandingPage } from './pages/landing/LandingPage';
+import { LoginPage } from './pages/auth/LoginPage';
+import { SignupPage } from './pages/auth/SignupPage';
+import { ManagerDashboard } from './pages/dashboard/ManagerDashboard';
+import { AuthorDashboard } from './pages/dashboard/AuthorDashboard';
+import { AdminDashboard } from './pages/dashboard/AdminDashboard';
+import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import TermsPage from './pages/legal/TermsPage';
 
-type Screen = 'landing' | 'login' | 'signup' | 'dashboard';
+// 사용자 타입 정의
 type UserType = 'Manager' | 'Author' | 'Admin' | null;
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('landing');
   const [userType, setUserType] = useState<UserType>(null);
-  const [pendingSignupData, setPendingSignupData] = useState<Record<
-    string,
-    any
-  > | null>(null);
-
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleSignInClick = () => navigate('/login');
-  const handleSignupClick = () => navigate('/signup');
-  const handleGoHome = () => navigate('/');
+  // 1. 초기 로드 및 경로 변경 시 인증 상태 체크
+  useEffect(() => {
+    const role = localStorage.getItem('userRole') as UserType | null;
+    const token = localStorage.getItem('accessToken');
+
+    if (role && token) {
+      setUserType(role);
+    } else {
+      setUserType(null);
+    }
+  }, [location.pathname]);
+
+  // 2. 로그인 처리 함수
+  const handleLogin = (type: UserType, token: string) => {
+    if (!type || !token) return;
+    setUserType(type);
+    localStorage.setItem('userRole', type);
+    localStorage.setItem('accessToken', token);
+    navigate('/', { replace: true });
+  };
+
+  // 3. 로그아웃 처리 함수
   const handleLogout = () => {
     setUserType(null);
     localStorage.removeItem('userRole');
@@ -38,99 +52,69 @@ export default function App() {
     navigate('/login');
   };
 
-  const handleSignupComplete = () => {
-    setPendingSignupData(null);
-    navigate('/login');
-  };
-
-  const handleLogin = (type: 'Manager' | 'Author' | 'Admin') => {
-    // 1. 상태 업데이트 (UI 즉시 반응)
-    setUserType(type);
-    // 2. 저장
-    localStorage.setItem('userRole', type);
-    // 3. 이동 (replace: true로 인증 기록 제거)
-    navigate('/', { replace: true });
-  };
-
-  const handleRequireSignup = (profile: Record<string, any>) => {
-    setPendingSignupData(profile);
-    navigate('/signup2');
-  };
-
-  useEffect(() => {
-    const role = localStorage.getItem('userRole') as UserType | null;
-    const token = localStorage.getItem('accessToken');
-
-    // 토큰과 역할이 모두 있을 때만 로그인 상태로 인정
-    if (role && token) {
-      setUserType(role);
-    } else {
-      setUserType(null);
-    }
-  }, [location.pathname]); // 경로가 바뀔 때마다 체크
-
   return (
     <div className="min-h-screen bg-background">
       <Routes>
+        {/* 메인 경로 (권한별 대시보드 분기) */}
         <Route
           path="/"
           element={
             userType === 'Manager' ? (
-              <ManagerDashboard onLogout={handleLogout} onHome={handleGoHome} />
+              <ManagerDashboard
+                onLogout={handleLogout}
+                onHome={() => navigate('/')}
+              />
             ) : userType === 'Author' ? (
-              <AuthorDashboard onLogout={handleLogout} onHome={handleGoHome} />
+              <AuthorDashboard
+                onLogout={handleLogout}
+                onHome={() => navigate('/')}
+              />
             ) : userType === 'Admin' ? (
-              <AdminDashboard onLogout={handleLogout} onHome={handleGoHome} />
+              <AdminDashboard
+                onLogout={handleLogout}
+                onHome={() => navigate('/')}
+              />
             ) : (
-              <LandingPage onSignInClick={handleSignInClick} />
+              <LandingPage onSignInClick={() => navigate('/login')} />
             )
           }
         />
+
+        {/* 로그인 페이지 */}
         <Route
           path="/login"
           element={
-            // [추가] 이미 로그인된 유저가 뒤로가기로 로그인 페이지에 오면 메인으로 튕김
             userType ? (
               <Navigate to="/" replace />
             ) : (
               <LoginPage
-                onLogin={handleLogin}
-                onBack={handleGoHome}
-                onSignup={handleSignupClick}
+                onLogin={(type) =>
+                  handleLogin(type, localStorage.getItem('accessToken') || '')
+                }
+                onBack={() => navigate('/')}
+                onSignup={() => navigate('/signup')}
               />
             )
           }
         />
+
+        {/* 회원가입 페이지 (네이버 리다이렉트 데이터 수신 포함) */}
         <Route
           path="/signup"
           element={
-            <SignupPage2
-              initialData={pendingSignupData || undefined}
-              onSignupComplete={handleSignupComplete}
+            <SignupPage
+              onSignupComplete={() => navigate('/login')}
               onBack={() => navigate('/login')}
             />
           }
         />
-        <Route
-          path="/signup2"
-          element={
-            <SignupPage2
-              initialData={pendingSignupData || undefined}
-              onSignupComplete={handleSignupComplete}
-              onBack={() => navigate('/login')}
-            />
-          }
-        />
-        <Route
-          path="/auth/naver/callback"
-          element={
-            <RedirectURI
-              onLoginSuccess={handleLogin}
-              onRequireSignup={handleRequireSignup}
-              onFail={() => navigate('/login')}
-            />
-          }
-        />
+
+        {/* 법적 약관 페이지 */}
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+
+        {/* 404 처리: 정의되지 않은 경로는 메인으로 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
