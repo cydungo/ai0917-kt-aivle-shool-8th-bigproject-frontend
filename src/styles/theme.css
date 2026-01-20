@@ -99,69 +99,52 @@
   --sidebar-ring: rgba(148, 163, 184, 1);
 }
 
-
-
 .dark {
-  /* 기본 배경 및 텍스트 */
-  --background: rgba(10, 10, 12, 1); /* 아주 어두운 무채색 */
-  --foreground: rgba(
-    248,
-    250,
-    252,
-    1
-  ); /* 밝은 회색 (완전 흰색보다 눈이 편함) */
+  /* 기본 배경 및 텍스트 - Zinc/Slate Palette for crisp dark mode */
+  --background: rgba(2, 6, 23, 1); /* Slate 950 - Deep rich background */
+  --foreground: rgba(248, 250, 252, 1); /* Slate 50 - High contrast text */
 
   /* 컨테이너 (카드, 모달 등) */
-  --card: rgba(24, 24, 28, 1);
+  --card: rgba(15, 23, 42, 1); /* Slate 900 - Distinct card background */
   --card-foreground: rgba(248, 250, 252, 1);
 
-  --popover: rgba(18, 18, 20, 1);
+  --popover: rgba(15, 23, 42, 1); /* Slate 900 */
   --popover-foreground: rgba(248, 250, 252, 1);
 
-  /* 기본 프라이머리 (기본값은 Admin의 Graphite 톤 유지) */
-  --primary: rgba(
-    248,
-    250,
-    252,
-    1
-  ); /* 다크모드에서는 밝은색이 프라이머리 */
-  --primary-foreground: rgba(10, 10, 12, 1);
+  /* 기본 프라이머리 */
+  --primary: rgba(248, 250, 252, 1); /* Slate 50 */
+  --primary-foreground: rgba(2, 6, 23, 1); /* Slate 950 */
 
-  /* 세컨더리 및 뮤트 (비활성화 요소) */
-  --secondary: rgba(30, 41, 59, 1);
+  /* 세컨더리 및 뮤트 */
+  --secondary: rgba(30, 41, 59, 1); /* Slate 800 */
   --secondary-foreground: rgba(248, 250, 252, 1);
 
-  --muted: rgba(30, 41, 59, 1);
-  --muted-foreground: rgba(148, 163, 184, 1);
+  --muted: rgba(30, 41, 59, 1); /* Slate 800 */
+  --muted-foreground: rgba(148, 163, 184, 1); /* Slate 400 */
 
   /* 액센트 (호버 시 강조) */
-  --accent: rgba(30, 41, 59, 1);
+  --accent: rgba(30, 41, 59, 1); /* Slate 800 */
   --accent-foreground: rgba(248, 250, 252, 1);
 
-  /* 파괴적 액션 (삭제 등) */
-  --destructive: rgba(127, 29, 29, 1); /* 어두운 빨강 */
+  /* 파괴적 액션 */
+  --destructive: rgba(127, 29, 29, 1);
   --destructive-foreground: rgba(248, 250, 252, 1);
 
   /* 경계선 및 입력창 */
-  --border: rgba(30, 41, 59, 1);
+  --border: rgba(30, 41, 59, 1); /* Slate 800 */
   --input: rgba(30, 41, 59, 1);
-  --input-background: rgba(15, 23, 42, 1);
-  --ring: rgba(71, 85, 105, 1);
+  --input-background: rgba(2, 6, 23, 1); /* Slate 950 */
+  --ring: rgba(203, 213, 225, 1); /* Slate 300 - lighter ring for visibility */
 
-  /* 사이드바 전용 (메인 배경보다 살짝 더 어둡거나 대비되는 톤) */
-  --sidebar: rgba(12, 12, 14, 1);
-  --sidebar-foreground: rgba(241, 245, 249, 1);
-  --sidebar-primary: rgba(
-    59,
-    130,
-    246,
-    1
-  ); /* 운영자/작가 테마에 따라 변동 권장 */
+  /* 사이드바 전용 */
+  --sidebar: rgba(2, 6, 23, 1); /* Slate 950 */
+  --sidebar-foreground: rgba(248, 250, 252, 1);
+  --sidebar-primary: rgba(59, 130, 246, 1);
   --sidebar-primary-foreground: rgba(255, 255, 255, 1);
   --sidebar-accent: rgba(30, 41, 59, 1);
-  --sidebar-accent-foreground: rgba(241, 245, 249, 1);
+  --sidebar-accent-foreground: rgba(248, 250, 252, 1);
   --sidebar-border: rgba(30, 41, 59, 1);
-  --sidebar-ring: rgba(71, 85, 105, 1);
+  --sidebar-ring: rgba(203, 213, 225, 1);
 
   /* 차트 색상 (다크모드용으로 채도 조정) */
   --chart-1: rgba(96, 165, 250, 1);
@@ -174,7 +157,7 @@
 /* Role-based color schemes */
 
 /* Author (작가): Deep Indigo - Creativity */
-[data-role="author"] {
+[data-role='author'] {
   --role-primary: rgba(108, 92, 231, 1); /* #6C5CE7 */
   --role-primary-hover: rgba(88, 72, 211, 1);
   --role-primary-light: rgba(108, 92, 231, 0.1);
@@ -182,7 +165,7 @@
 }
 
 /* Manager/Operator (운영자): Royal Blue - Trust */
-[data-role="manager"] {
+[data-role='manager'] {
   --role-primary: rgba(9, 132, 227, 1); /* #0984E3 */
   --role-primary-hover: rgba(7, 112, 197, 1);
   --role-primary-light: rgba(9, 132, 227, 0.1);
@@ -190,7 +173,7 @@
 }
 
 /* Admin (관리자): Deep Graphite - Stability */
-[data-role="admin"] {
+[data-role='admin'] {
   --role-primary: rgba(45, 52, 54, 1); /* #2D3436 */
   --role-primary-hover: rgba(35, 42, 44, 1);
   --role-primary-light: rgba(45, 52, 54, 0.1);
@@ -199,13 +182,8 @@
 
 /* Author (작가): Indigo - Dark Mode 보정 */
 /* 채도를 유지하며 명도를 살짝 높여 어두운 배경에서 더 잘 보이게 조정 */
-[data-role="author"].dark {
-  --role-primary: rgba(
-    162,
-    155,
-    254,
-    1
-  ); /* 조금 더 밝은 연보라 톤 */
+[data-role='author'].dark {
+  --role-primary: rgba(162, 155, 254, 1); /* 조금 더 밝은 연보라 톤 */
   --role-primary-hover: rgba(108, 92, 231, 1);
   --role-primary-light: rgba(
     162,
@@ -218,7 +196,7 @@
 
 /* Manager/Operator (운영자): Royal Blue - Dark Mode 보정 */
 /* 심해색 배경과 겹치지 않도록 밝은 스카이 블루 톤 가미 */
-[data-role="manager"].dark {
+[data-role='manager'].dark {
   --role-primary: rgba(116, 185, 255, 1); /* 밝고 경쾌한 블루 */
   --role-primary-hover: rgba(9, 132, 227, 1);
   --role-primary-light: rgba(116, 185, 255, 0.15);
@@ -227,7 +205,7 @@
 
 /* Admin (관리자): Deep Graphite - Dark Mode 보정 */
 /* Graphite는 무채색이므로 다크 모드 배경과 구분되도록 밝은 Silver/Slate 톤으로 변경 */
-[data-role="admin"].dark {
+[data-role='admin'].dark {
   --role-primary: rgba(223, 230, 233, 1); /* 밝은 실버 그레이 */
   --role-primary-hover: rgba(178, 190, 195, 1);
   --role-primary-light: rgba(223, 230, 233, 0.1);
@@ -267,13 +245,9 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(
-    --sidebar-primary-foreground
-  );
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(
-    --sidebar-accent-foreground
-  );
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
@@ -285,7 +259,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", sans-serif;
+    font-family: 'Inter', sans-serif;
   }
 }
 
@@ -293,11 +267,9 @@
  * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
  */
 @layer base {
-  :where(
-    :not(:has([class*=" text-"]), :not(:has([class^="text-"])))
-  ) {
+  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h1 {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-h1);
       font-weight: var(--font-weight-extrabold);
     }
@@ -307,7 +279,10 @@
 /* Dark mode high-contrast cursor for visibility */
 @layer base {
   .dark {
-    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><path d='M4 4 L22 15 L14 15 L18 28 L14 30 L10 18 L4 20 Z' fill='%23ffffff' stroke='%23000000' stroke-width='2'/></svg>") 0 0, auto;
+    cursor:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><path d='M4 4 L22 15 L14 15 L18 28 L14 30 L10 18 L4 20 Z' fill='%23ffffff' stroke='%23000000' stroke-width='2'/></svg>")
+        0 0,
+      auto;
   }
   .dark a,
   .dark button,
@@ -315,57 +290,58 @@
   .dark input,
   .dark select,
   .dark textarea {
-    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><path d='M4 4 L22 15 L14 15 L18 28 L14 30 L10 18 L4 20 Z' fill='%23ffffff' stroke='%23000000' stroke-width='2'/></svg>") 2 2, pointer;
+    cursor:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><path d='M4 4 L22 15 L14 15 L18 28 L14 30 L10 18 L4 20 Z' fill='%23ffffff' stroke='%23000000' stroke-width='2'/></svg>")
+        2 2,
+      pointer;
   }
 }
 @layer base {
-  :where(
-    :not(:has([class*=" text-"]), :not(:has([class^="text-"])))
-  ) {
+  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h2 {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-h2);
       font-weight: var(--font-weight-semibold);
       line-height: 1.5;
     }
 
     h3 {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-h3);
       font-weight: var(--font-weight-semibold);
       line-height: 1.5;
     }
 
     h4 {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-h4);
       font-weight: var(--font-weight-semibold);
       line-height: 1.5;
     }
 
     p {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-base);
       font-weight: var(--font-weight-normal);
       line-height: 1.75;
     }
 
     label {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-label);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
 
     button {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-label);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
 
     input {
-      font-family: "Inter", sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: var(--text-base);
       font-weight: var(--font-weight-normal);
       line-height: 1.5;
@@ -378,7 +354,7 @@ html {
 }
 
 /* Responsive Typography */
-@media (max-width: 768px) {     
+@media (max-width: 768px) {
   :root {
     --text-h1: 2rem; /* 32px on mobile */
     --text-h2: 1.5rem; /* 24px on mobile */

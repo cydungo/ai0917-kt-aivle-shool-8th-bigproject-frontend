@@ -1,18 +1,9 @@
-import {
-  Brain,
-  Users,
-  Globe,
-  BookMarked,
-  ArrowRight,
-  Menu,
-  X,
-  Sun,
-  Moon,
-} from 'lucide-react';
+import { Brain, Users, Globe, ArrowRight, Menu, X, BookMarked } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { ThemeToggle } from '../../components/ui/theme-toggle';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 interface LandingPageProps {
   onSignInClick: () => void;
@@ -20,19 +11,8 @@ interface LandingPageProps {
 
 export function LandingPage({ onSignInClick }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    // Check system preference or localStorage
-    const darkMode =
-      localStorage.getItem('darkMode') === 'true' ||
-      (!('darkMode' in localStorage) &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
-    setIsDark(darkMode);
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    }
-
     // cors 테스트 ---------------------------------------------------
     axios
       .get(`${import.meta.env.VITE_BACKEND_URL}/hello`, {
@@ -49,14 +29,8 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
         console.error('Error:', error);
       });
     // cors 테스트 ---------------------------------------------------
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDark;
-    setIsDark(newDarkMode);
-    localStorage.setItem('darkMode', String(newDarkMode));
-    document.documentElement.classList.toggle('dark');
-  };
 
   return (
     <div className="bg-background min-h-screen transition-colors duration-300">
@@ -98,17 +72,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
 
             {/* Desktop Right Side - Dark Mode Toggle + CTA */}
             <div className="hidden md:flex items-center gap-4">
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-lg hover:bg-accent transition-colors"
-                aria-label="Toggle dark mode"
-              >
-                {isDark ? (
-                  <Sun className="w-5 h-5 text-foreground" />
-                ) : (
-                  <Moon className="w-5 h-5 text-foreground" />
-                )}
-              </button>
+              <ThemeToggle />
               <Button
                 onClick={onSignInClick}
                 variant="outline"
@@ -154,27 +118,9 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
                   About
                 </a>
                 <div className="flex items-center gap-2 pt-2">
-                  <button
-                    onClick={toggleDarkMode}
-                    className="flex-1 p-2 rounded-lg border border-border hover:bg-accent transition-colors flex items-center justify-center gap-2"
-                    aria-label="Toggle dark mode"
-                  >
-                    {isDark ? (
-                      <>
-                        <Sun className="w-4 h-4 text-foreground" />
-                        <span className="text-sm text-foreground">
-                          Light Mode
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Moon className="w-4 h-4 text-foreground" />
-                        <span className="text-sm text-foreground">
-                          Dark Mode
-                        </span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex-1 flex justify-center">
+                    <ThemeToggle />
+                  </div>
                 </div>
                 <Button
                   onClick={onSignInClick}

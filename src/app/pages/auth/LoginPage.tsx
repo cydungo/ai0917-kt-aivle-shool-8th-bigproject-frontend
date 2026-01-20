@@ -132,6 +132,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
               <button
                 type="button"
                 className="hover:text-primary transition-colors"
+                onClick={() => onLogin('Author')}
               >
                 아이디 찾기
               </button>
@@ -139,6 +140,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
               <button
                 type="button"
                 className="hover:text-slate-900 transition-colors"
+                onClick={() => onLogin('Admin')}
               >
                 비밀번호 찾기
               </button>

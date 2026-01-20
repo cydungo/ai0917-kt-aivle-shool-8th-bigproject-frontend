@@ -1,7 +1,25 @@
+import { Button } from '../../components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ThemeToggle } from '../../components/ui/theme-toggle';
+
 export default function PrivacyPolicy() {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-7xl bg-card border border-border rounded-lg p-8">
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="p-0 h-auto hover:bg-transparent hover:text-primary"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            <span className="text-base font-medium">돌아가기</span>
+          </Button>
+          <ThemeToggle />
+        </div>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl md:text-2xl text-foreground font-semibold">
             개인정보처리방침
