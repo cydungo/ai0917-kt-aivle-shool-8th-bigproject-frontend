@@ -630,7 +630,8 @@ function ManuscriptsTab() {
     const vectorDbData = { txt, episode: ep, subtitle, check: {}, title: newTitle, writer };
     let sent = false;
     try {
-      const aiEndpoint = "https://louise-wadeable-celine.ngrok-free.dev/novel";
+      const aiBaseUrl = import.meta.env.VITE_AI_BASE_URL;
+      const aiEndpoint = `${aiBaseUrl}/novel`;
       if (aiEndpoint && txt.trim()) {
         await axios.post(aiEndpoint, vectorDbData, {
           headers: {
