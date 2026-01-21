@@ -1,11 +1,5 @@
+## Running the code
 
-  # front make 디자인
+Run `npm i` to install the dependencies.
 
-  This is a code bundle for front make 디자인. The original project is available at https://www.figma.com/design/9dmPhPOBv9fMyZIJa7y586/front-make-%EB%94%94%EC%9E%90%EC%9D%B8.
-
-  ## Running the code
-
-  Run `npm i` to install the dependencies.
-
-  Run `npm run dev` to start the development server.
-  
+Run `npm run dev` to start the development server.

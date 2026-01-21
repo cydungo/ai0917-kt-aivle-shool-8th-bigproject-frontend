@@ -12,7 +12,7 @@ import { Label } from '../../components/ui/label';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import NaverLogin from '../../components/NaverLogin/NaverLoginButton';
-import apiClient from '../../api/axios';
+import { authService } from '../../services/authService';
 
 interface LoginPageProps {
   onLogin: (userType: 'Manager' | 'Author' | 'Admin') => void;
@@ -40,9 +40,9 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
       ) {
         try {
           // 백엔드에 현재 쿠키를 기반으로 내 정보 조회
-          const res = await apiClient.get('/api/v1/auth/me');
-          if (res.data.role) {
-            onLogin(res.data.role);
+          const res = await authService.me();
+          if (res.role) {
+            onLogin(res.role);
           }
         } catch (err) {
           // 세션이 없으면 로그인 페이지 유지
@@ -61,13 +61,13 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
     setIsLoading(true);
     try {
       // 백엔드 AuthController 구조에 맞춘 로그인 요청
-      const res = await apiClient.post('/api/v1/auth/login', {
+      const res = await authService.login({
         email,
         password,
       });
 
       // 백엔드 응답에서 Role 추출 (HttpOnly 쿠키는 헤더에 저장됨)
-      const userRole = res.data.role;
+      const userRole = res.role;
       if (userRole) {
         onLogin(userRole);
       }

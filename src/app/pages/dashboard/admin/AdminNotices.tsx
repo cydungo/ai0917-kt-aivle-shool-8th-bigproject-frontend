@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Paperclip,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
@@ -24,6 +25,7 @@ import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Badge } from '../../../components/ui/badge';
 
+// --- 인터페이스 ---
 interface Notice {
   id: number;
   title: string;
@@ -46,15 +48,21 @@ export function AdminNotices() {
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
 
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  // 모달 제어 상태
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(
+    null,
+  );
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+
+  // 폼 상태
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [writer, setWriter] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [existingFileName, setExistingFileName] = useState<string | null>(null);
 
+  // 1. 목록 조회
   const fetchNotices = useCallback(async () => {
     setLoading(true);
     try {
@@ -62,7 +70,6 @@ export function AdminNotices() {
         params: { keyword, page, size: 10 },
       });
       setNotices(res.data.content);
-      setTotalElements(res.data.totalElements);
       setTotalPages(res.data.totalPages);
     } catch (error) {
       console.error('데이터 로드 실패', error);
@@ -75,15 +82,20 @@ export function AdminNotices() {
     fetchNotices();
   }, [fetchNotices]);
 
+  // 2. 저장 (등록/수정)
   const handleSave = async () => {
-    if (!title.trim()) return alert('제목을 입력해주세요.');
+    if (!title.trim() || !content.trim() || !writer.trim()) {
+      return alert('모든 필드를 입력해주세요.');
+    }
 
     const formData = new FormData();
-    // [핵심 수정] 백엔드 @RequestPart("data") String을 위한 JSON Blob 처리
-    const dataBlob = new Blob([JSON.stringify({ title, content })], {
+    const dataObj = { title, content, writer };
+
+    // 파일 전송 시 필수: JSON 데이터에 대한 Blob 처리
+    const jsonBlob = new Blob([JSON.stringify(dataObj)], {
       type: 'application/json',
     });
-    formData.append('data', dataBlob);
+    formData.append('data', jsonBlob);
 
     if (selectedFile) {
       formData.append('file', selectedFile);
@@ -91,195 +103,172 @@ export function AdminNotices() {
 
     try {
       setLoading(true);
-      if (editingId) {
-        await apiClient.patch(`/api/v1/admin/notice/${editingId}`, formData);
+      if (modalMode === 'edit' && selectedNotice) {
+        await apiClient.patch(
+          `/api/v1/admin/notice/${selectedNotice.id}`,
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          },
+        );
       } else {
-        await apiClient.post('/api/v1/admin/notice', formData);
+        await apiClient.post('/api/v1/admin/notice', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       }
-      alert('공지사항이 저장되었습니다.');
+      alert('성공적으로 처리되었습니다.');
       closeModal();
       fetchNotices();
     } catch (e: any) {
-      alert(e.response?.data?.message || '저장 실패');
+      alert(e.response?.data?.message || '처리 실패');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
-    try {
-      await apiClient.delete(`/api/v1/admin/notice/${id}`);
-      fetchNotices();
-    } catch (e) {
-      alert('삭제 실패');
-    }
-  };
-
-  // [추가] 기존 첨부파일만 별도 삭제 기능
-  const handleDeleteFile = async () => {
-    if (!editingId || !confirm('첨부파일을 삭제하시겠습니까?')) return;
-    try {
-      await apiClient.delete(`/api/v1/admin/notice/${editingId}/file`);
-      setExistingFileName(null);
-      alert('파일이 삭제되었습니다.');
-      fetchNotices();
-    } catch (e) {
-      alert('파일 삭제 실패');
-    }
-  };
-
-  const handleDownload = async (id: number, filename: string) => {
-    try {
-      const res = await apiClient.get(`/api/v1/admin/notice/${id}/download`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      alert('다운로드 실패');
-    }
+    apiClient.delete(`/api/v1/admin/notice/${id}`).then(() => fetchNotices());
   };
 
   const closeModal = () => {
-    setShowModal(false);
-    setEditingId(null);
+    setModalMode(null);
+    setSelectedNotice(null);
     setTitle('');
     setContent('');
+    setWriter('');
     setSelectedFile(null);
-    setExistingFileName(null);
+  };
+
+  const openView = (notice: Notice) => {
+    setSelectedNotice(notice);
+    setModalMode('view');
+  };
+
+  const openEdit = (e: React.MouseEvent, notice: Notice) => {
+    e.stopPropagation(); // 제목 클릭 이벤트 방지
+    setSelectedNotice(notice);
+    setTitle(notice.title);
+    setContent(notice.content);
+    setWriter(notice.writer);
+    setExistingFileName(notice.originalFilename);
+    setModalMode('edit');
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header & Stats (생략 - 동일) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600">
-            <Megaphone />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              공지사항 관리
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              총 {totalElements}개의 공지가 있습니다.
-            </p>
-          </div>
-        </div>
+    <div className="space-y-6 p-4 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Megaphone className="text-blue-600 w-7 h-7" /> 공지사항 관리
+        </h2>
         <Button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => setModalMode('create')}
+          className="bg-blue-600 w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4 mr-2" /> 새 공지 작성
+          <Plus className="w-4 h-4 mr-2" /> 새 공지 등록
         </Button>
       </div>
 
-      <Card className="border-border">
-        <CardHeader className="border-b">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <CardTitle>공지사항 목록</CardTitle>
-            <div className="relative w-full md:max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="제목 검색..."
-                className="pl-10"
-                value={keyword}
-                onChange={(e) => {
-                  setKeyword(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader className="bg-slate-50/50 border-b">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="공지 제목 검색..."
+              className="pl-9 bg-white"
+              value={keyword}
+              onChange={(e) => {
+                setKeyword(e.target.value);
+                setPage(0);
+              }}
+            />
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50 border-b">
-                <tr className="text-xs text-muted-foreground uppercase">
-                  <th className="px-6 py-3 w-20">ID</th>
-                  <th className="px-6 py-3 text-left">제목</th>
-                  <th className="px-6 py-3 w-24">첨부</th>
-                  <th className="px-6 py-3 w-32 text-center">등록일</th>
-                  <th className="px-6 py-3 w-24 text-center">관리</th>
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500 border-b uppercase font-semibold text-xs">
+                <tr>
+                  <th className="px-4 py-3 w-16 text-center">ID</th>
+                  <th className="px-4 py-3 text-left">제목</th>
+                  <th className="px-4 py-3 w-28 text-center hidden sm:table-cell">
+                    작성자
+                  </th>
+                  <th className="px-4 py-3 w-20 text-center hidden sm:table-cell">
+                    첨부
+                  </th>
+                  <th className="px-4 py-3 w-40 text-center hidden md:table-cell">
+                    작성일
+                  </th>
+                  <th className="px-4 py-3 w-28 text-center">관리</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="p-10 text-center">
-                      <Loader2 className="animate-spin mx-auto text-blue-600" />
+              <tbody className="divide-y divide-slate-100">
+                {notices.map((n) => (
+                  <tr
+                    key={n.id}
+                    className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
+                    onClick={() => openView(n)}
+                  >
+                    <td className="px-4 py-4 text-center text-slate-400 font-mono text-xs">
+                      {n.id}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                          {n.title}
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-slate-300 sm:hidden" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center hidden sm:table-cell">
+                      <Badge variant="secondary" className="font-normal">
+                        {n.writer}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-4 text-center hidden sm:table-cell">
+                      {n.originalFilename && (
+                        <FileText className="w-4 h-4 mx-auto text-blue-400" />
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-center text-slate-500 hidden md:table-cell">
+                      {new Date(n.createdAt).toLocaleDateString()}
+                    </td>
+                    <td
+                      className="px-4 py-4 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-600"
+                          onClick={(e) => openEdit(e, n)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500"
+                          onClick={() => handleDelete(n.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  notices.map((n) => (
-                    <tr
-                      key={n.id}
-                      className="hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-center text-muted-foreground">
-                        {n.id}
-                      </td>
-                      <td className="px-6 py-4 font-medium">{n.title}</td>
-                      <td className="px-6 py-4 text-center">
-                        {n.originalFilename && (
-                          <button
-                            onClick={() =>
-                              handleDownload(n.id, n.originalFilename!)
-                            }
-                            className="text-blue-500 hover:text-blue-700"
-                          >
-                            <FileText className="w-5 h-5 mx-auto" />
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center text-sm text-muted-foreground">
-                        {new Date(n.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingId(n.id);
-                              setTitle(n.title);
-                              setContent(n.content);
-                              setExistingFileName(n.originalFilename);
-                              setShowModal(true);
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(n.id)}
-                            className="text-red-500"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination UI */}
-          <div className="p-4 border-t flex items-center justify-center gap-2">
+          {/* 페이지네이션 */}
+          <div className="flex items-center justify-center gap-1.5 py-4 border-t bg-slate-50/30">
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
+              className="h-8 w-8"
               disabled={page === 0}
               onClick={() => setPage(page - 1)}
             >
@@ -288,17 +277,17 @@ export function AdminNotices() {
             {Array.from({ length: totalPages }, (_, i) => (
               <Button
                 key={i}
-                variant={page === i ? 'default' : 'outline'}
-                size="sm"
+                variant={page === i ? 'default' : 'ghost'}
+                className={`h-8 w-8 p-0 ${page === i ? 'bg-blue-600 text-white' : 'text-slate-600'}`}
                 onClick={() => setPage(i)}
-                className={page === i ? 'bg-blue-600' : ''}
               >
                 {i + 1}
               </Button>
             ))}
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
+              className="h-8 w-8"
               disabled={page >= totalPages - 1}
               onClick={() => setPage(page + 1)}
             >
@@ -308,77 +297,122 @@ export function AdminNotices() {
         </CardContent>
       </Card>
 
-      {/* 모달 */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
-          <Card className="w-full max-w-2xl shadow-xl animate-in zoom-in-95 duration-200">
-            <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20">
-              <CardTitle>
-                {editingId ? '공지사항 수정' : '새 공지사항 등록'}
+      {/* --- 통합 모달 (작성/수정/보기) --- */}
+      {modalMode && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-lg shadow-2xl border-none">
+            <CardHeader className="border-b flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">
+                {modalMode === 'view'
+                  ? '공지사항 상세'
+                  : modalMode === 'edit'
+                    ? '공지 수정'
+                    : '새 공지 등록'}
               </CardTitle>
-              <Button variant="ghost" size="sm" onClick={closeModal}>
+              <Button variant="ghost" size="icon" onClick={closeModal}>
                 <CloseIcon className="w-4 h-4" />
               </Button>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-bold">공지 제목</label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="제목을 입력하세요"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold">상세 내용</label>
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="h-48"
-                  placeholder="내용을 입력하세요"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold">파일 첨부</label>
-                {existingFileName && !selectedFile && (
-                  <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 rounded-md mb-2">
-                    <div className="flex items-center gap-2 text-sm text-blue-600">
-                      <Paperclip className="w-4 h-4" />
-                      <span className="truncate max-w-[300px]">
-                        {existingFileName}
+            <CardContent className="p-6 space-y-5">
+              {modalMode === 'view' && selectedNotice ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">
+                      {selectedNotice.title}
+                    </h3>
+                    <div className="flex gap-2 mt-2 text-xs text-slate-500">
+                      <span>작성자: {selectedNotice.writer}</span>
+                      <span>|</span>
+                      <span>
+                        날짜:{' '}
+                        {new Date(selectedNotice.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDeleteFile}
-                      className="text-red-500 h-7"
-                    >
-                      삭제
-                    </Button>
                   </div>
-                )}
-                <Input
-                  type="file"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                />
-              </div>
+                  <div className="bg-slate-50 p-4 rounded-lg text-slate-700 whitespace-pre-wrap min-h-[150px] text-sm leading-relaxed">
+                    {selectedNotice.content}
+                  </div>
+                  {selectedNotice.originalFilename && (
+                    <div className="flex items-center gap-2 p-3 border rounded-md bg-white">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm flex-1 truncate">
+                        {selectedNotice.originalFilename}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                      >
+                        다운로드
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      작성자
+                    </label>
+                    <Input
+                      value={writer}
+                      onChange={(e) => setWriter(e.target.value)}
+                      placeholder="작성자 이름"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      제목
+                    </label>
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="공지 제목"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      내용
+                    </label>
+                    <Textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="h-40 resize-none"
+                      placeholder="내용을 입력하세요"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      파일 첨부
+                    </label>
+                    <Input
+                      type="file"
+                      className="text-xs cursor-pointer"
+                      onChange={(e) =>
+                        setSelectedFile(e.target.files?.[0] || null)
+                      }
+                    />
+                  </div>
+                </>
+              )}
             </CardContent>
-            <div className="flex justify-end gap-2 p-4 border-t">
+            <div className="p-4 border-t bg-slate-50/50 flex justify-end gap-2">
               <Button variant="outline" onClick={closeModal}>
-                취소
+                닫기
               </Button>
-              <Button
-                onClick={handleSave}
-                disabled={loading}
-                className="bg-blue-600 text-white"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : null}
-                저장하기
-              </Button>
+              {modalMode !== 'view' && (
+                <Button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="bg-blue-600 px-8 text-white"
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin w-4 h-4" />
+                  ) : (
+                    '저장하기'
+                  )}
+                </Button>
+              )}
             </div>
           </Card>
         </div>

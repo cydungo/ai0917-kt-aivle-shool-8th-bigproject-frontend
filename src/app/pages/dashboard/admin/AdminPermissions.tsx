@@ -1,4 +1,4 @@
-import { cloneElement, useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Shield,
   Users,
@@ -8,6 +8,7 @@ import {
   Trash2,
   Plus,
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../../components/ui/button';
 import {
   Card,
@@ -17,137 +18,111 @@ import {
 } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
-import apiClient from '../../../api/axios';
+import { cloneElement } from 'react';
+import { adminService } from '../../../services/adminService';
+import { UserRole } from '../../../types/common';
+import { UserCreateRequestDto, UserListResponseDto } from '../../../types/admin';
 
-// 1. 타입 정의
-type Role = 'Admin' | 'Manager' | 'Author';
-type Status = 'ACTIVE' | 'INACTIVE';
-
-const ROLE_LABELS: Record<Role, string> = {
+// Role Labels and Helpers
+const ROLE_LABELS: Record<UserRole, string> = {
   Admin: '관리자',
   Manager: '매니저',
   Author: '작가',
 };
 
-interface AccessUser {
-  id: number;
-  name: string;
-  email: string;
-  role: Role;
-  status: Status;
-  date: string;
-}
+const getRoleBadge = (role: UserRole) => {
+  const styles = {
+    Admin: 'bg-red-500 text-white hover:bg-red-600',
+    Manager: 'bg-blue-500 text-white hover:bg-blue-600',
+    Author: 'bg-green-500 text-white hover:bg-green-600',
+  };
+  return styles[role] || 'bg-gray-500 text-white';
+};
+
+const getGradient = (role: UserRole) => {
+  const gradients = {
+    Admin: 'from-red-500 to-pink-600',
+    Manager: 'from-blue-500 to-purple-600',
+    Author: 'from-green-500 to-teal-600',
+  };
+  return gradients[role] || 'from-gray-500 to-gray-600';
+};
 
 export function AdminPermissions() {
-  // 상태 관리
-  const [users, setUsers] = useState<AccessUser[]>([]);
-  const [summary, setSummary] = useState({
-    adminCount: 0,
-    managerCount: 0,
-    authorCount: 0,
-  });
+  const queryClient = useQueryClient();
+  
+  // Local State
   const [keyword, setKeyword] = useState('');
-  const [roleFilter, setRoleFilter] = useState<Role | ''>('');
+  const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
   const [page, setPage] = useState(0);
-
-  // 모달 제어
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AccessUser | null>(null);
-
-  // 등록용 폼 상태
-  const [newForm, setNewForm] = useState({
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserListResponseDto | null>(null);
+  const [newForm, setNewForm] = useState<UserCreateRequestDto>({
     name: '',
     email: '',
-    role: 'Manager' as Role,
+    role: 'Manager',
+    siteEmail: '',
+    sitePwd: '',
+    mobile: ''
   });
 
-  // 스타일 헬퍼
-  const getRoleBadge = (role: Role) => {
-    const styles = {
-      Admin: 'bg-red-500 text-white hover:bg-red-600',
-      Manager: 'bg-blue-500 text-white hover:bg-blue-600',
-      Author: 'bg-green-500 text-white hover:bg-green-600',
-    };
-    return styles[role];
-  };
+  // Queries
+  const { data: summary } = useQuery({
+    queryKey: ['adminSummary'],
+    queryFn: adminService.getSummary,
+  });
 
-  const getGradient = (role: Role) => {
-    const gradients = {
-      Admin: 'from-red-500 to-pink-600',
-      Manager: 'from-blue-500 to-purple-600',
-      Author: 'from-green-500 to-teal-600',
-    };
-    return gradients[role];
-  };
+  const { data: userPage } = useQuery({
+    queryKey: ['adminUsers', page, keyword, roleFilter],
+    queryFn: () => adminService.getUsers(page, 10, keyword, roleFilter),
+  });
 
-  // API 1: 요약 정보 조회 (AccessSummaryResponseDto 필드 매핑)
-  const fetchSummary = useCallback(async () => {
-    try {
-      const res = await apiClient.get('/api/v1/admin/access/summary');
-      setSummary({
-        adminCount: res.data.adminCount || 0,
-        managerCount: res.data.managerCount || 0,
-        authorCount: res.data.authorCount || 0,
-      });
-    } catch (err) {
-      console.error('Summary fetch error', err);
-    }
-  }, []);
+  const users = userPage?.content || [];
 
-  // API 2: 사용자 목록 조회
-  const fetchUsers = useCallback(async () => {
-    try {
-      const params = {
-        keyword: keyword || undefined,
-        role: roleFilter || undefined,
-        page,
-        size: 10,
-      };
-      const res = await apiClient.get('/api/v1/admin/access/users', { params });
-      // 백엔드 반환 구조 (new UserPageResponse)에 맞춰 content 추출
-      setUsers(res.data.users?.content || res.data.content || []);
-    } catch (err) {
-      setUsers([]);
-    }
-  }, [keyword, roleFilter, page]);
-
-  useEffect(() => {
-    fetchSummary();
-    fetchUsers();
-  }, [fetchSummary, fetchUsers]);
-
-  // API 3: 사용자 생성 (UserCreateRequestDto)
-  const handleCreate = async () => {
-    if (!newForm.name || !newForm.email) return;
-    try {
-      await apiClient.post('/api/v1/admin/access/users', newForm);
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: adminService.createUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminSummary'] });
       setShowCreateModal(false);
-      setNewForm({ name: '', email: '', role: 'Manager' });
-      fetchUsers();
-      fetchSummary();
-    } catch (err) {
+      setNewForm({ name: '', email: '', role: 'Manager', siteEmail: '', sitePwd: '', mobile: '' });
+      alert('사용자가 추가되었습니다.');
+    },
+    onError: () => {
       alert('사용자 추가에 실패했습니다.');
-    }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: adminService.deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminSummary'] });
+      alert('사용자가 삭제되었습니다.');
+    },
+    onError: () => {
+      alert('삭제 실패');
+    },
+  });
+
+  // Handlers
+  const handleCreate = () => {
+    if (!newForm.name || !newForm.email) return;
+    createMutation.mutate(newForm);
   };
 
-  // API 4: 사용자 삭제 (DELETE)
-  const handleDelete = async (user: AccessUser) => {
+  const handleDelete = (user: UserListResponseDto) => {
     if (user.role === 'Admin')
       return alert('관리자 권한은 삭제할 수 없습니다.');
     if (!confirm(`${user.name}님의 모든 권한을 회수하시겠습니까?`)) return;
-    try {
-      await apiClient.delete(`/api/v1/admin/access/users/${user.id}`);
-      fetchUsers();
-      fetchSummary();
-    } catch (err) {
-      alert('삭제 실패');
-    }
+    deleteMutation.mutate(user.id);
   };
 
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen text-foreground">
-      {/* 헤더 */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -168,32 +143,32 @@ export function AdminPermissions() {
         </Button>
       </div>
 
-      {/* 요약 카드 (AccessSummaryResponseDto 필드 반영) */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           title="관리자"
-          count={summary.adminCount}
+          count={summary?.adminCount || 0}
           icon={<Shield />}
           color="text-red-600"
           bg="bg-red-100 dark:bg-red-900/20"
         />
         <StatCard
           title="매니저"
-          count={summary.managerCount}
+          count={summary?.managerCount || 0}
           icon={<Users />}
           color="text-blue-600"
           bg="bg-blue-100 dark:bg-blue-900/20"
         />
         <StatCard
           title="작가"
-          count={summary.authorCount}
+          count={summary?.authorCount || 0}
           icon={<FileText />}
           color="text-green-600"
           bg="bg-green-100 dark:bg-green-900/20"
         />
       </div>
 
-      {/* 사용자 목록 리스트 */}
+      {/* User List */}
       <Card className="border-border">
         <CardHeader className="flex flex-col md:flex-row justify-between items-center gap-4 border-b">
           <CardTitle className="text-lg">사용자 리스트</CardTitle>
@@ -210,7 +185,7 @@ export function AdminPermissions() {
             <select
               className="border rounded-md px-3 py-2 bg-background text-sm flex-1 md:flex-none"
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as Role)}
+              onChange={(e) => setRoleFilter(e.target.value as UserRole)}
             >
               <option value="">모든 역할</option>
               <option value="Admin">관리자</option>
@@ -227,7 +202,7 @@ export function AdminPermissions() {
                   <th className="p-4 text-left font-medium">사용자</th>
                   <th className="p-4 text-left font-medium">이메일</th>
                   <th className="p-4 text-left font-medium">역할</th>
-                  <th className="p-4 text-left font-medium">상태</th>
+                  {/* Status column removed */}
                   <th className="p-4 text-center font-medium">관리</th>
                 </tr>
               </thead>
@@ -256,20 +231,7 @@ export function AdminPermissions() {
                           {ROLE_LABELS[user.role]}
                         </Badge>
                       </td>
-                      <td className="p-4">
-                        <Badge
-                          variant={
-                            user.status === 'ACTIVE' ? 'default' : 'outline'
-                          }
-                          className={
-                            user.status === 'ACTIVE'
-                              ? 'bg-green-500 hover:bg-green-600'
-                              : ''
-                          }
-                        >
-                          {user.status === 'ACTIVE' ? '활성' : '휴면'}
-                        </Badge>
-                      </td>
+                      {/* Status cell removed */}
                       <td className="p-4 text-center space-x-1">
                         <Button
                           variant="ghost"
@@ -297,7 +259,7 @@ export function AdminPermissions() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="p-8 text-center text-muted-foreground"
                     >
                       사용자가 없습니다.
@@ -310,7 +272,7 @@ export function AdminPermissions() {
         </CardContent>
       </Card>
 
-      {/* 새 사용자 추가 모달 */}
+      {/* Create User Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -352,7 +314,7 @@ export function AdminPermissions() {
                   className="w-full border rounded-md p-2 bg-background"
                   value={newForm.role}
                   onChange={(e) =>
-                    setNewForm({ ...newForm, role: e.target.value as Role })
+                    setNewForm({ ...newForm, role: e.target.value as UserRole })
                   }
                 >
                   <option value="Manager">매니저 (Manager)</option>
@@ -369,8 +331,9 @@ export function AdminPermissions() {
                 <Button
                   onClick={handleCreate}
                   className="bg-purple-600 hover:bg-purple-700"
+                  disabled={createMutation.isPending}
                 >
-                  사용자 추가
+                  {createMutation.isPending ? '처리중...' : '사용자 추가'}
                 </Button>
               </div>
             </CardContent>
@@ -381,7 +344,7 @@ export function AdminPermissions() {
   );
 }
 
-// 통계 카드 컴포넌트
+// Stat Card Component
 function StatCard({ title, count, icon, color, bg }: any) {
   return (
     <Card className="overflow-hidden border-border shadow-sm">

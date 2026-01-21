@@ -26,10 +26,8 @@ export default defineConfig(({ mode }) => {
         // 프론트엔드에서 /api로 시작하는 요청을 백엔드로 전달
         '/api': {
           // .env의 VITE_BACKEND_URL을 사용하고, 없을 경우 로컬 백엔드 기본값 사용
-          target: env.VITE_BACKEND_URL,
+          target: env.VITE_BACKEND_URL || 'http://localhost:8080',
           changeOrigin: true,
-          // 요청 경로에 /api가 포함되어 전달되도록 설정 (백엔드 구조에 따라 다름)
-          rewrite: (path) => path.replace(/^\/api/, '/api'),
           secure: false,
         },
       },
