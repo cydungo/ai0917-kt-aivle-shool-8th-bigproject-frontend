@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Loader2,
   Check,
   X,
-  ShieldCheck,
   Mail,
-  Lock,
-  Smartphone,
+  ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
+
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
-import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../../components/ui/dialog';
+
 import apiClient from '../../api/axios';
 
 export function SignupPage({
@@ -27,9 +35,11 @@ export function SignupPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 이메일 인증 관련 상태
   const [emailCode, setEmailCode] = useState('');
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false); // 인증번호 확인 중 로딩
 
   const [formData, setFormData] = useState({
     siteEmail: '',
@@ -39,7 +49,11 @@ export function SignupPage({
     mobile: '',
   });
 
-  // 비밀번호 검증 상태
+  const [agreements, setAgreements] = useState({
+    terms: false,
+    privacy: false,
+  });
+
   const pwdValidation = {
     length: formData.sitePwd.length >= 8,
     special: /[!@#$%^&*(),.?":{}|<> ]/.test(formData.sitePwd),
@@ -48,7 +62,7 @@ export function SignupPage({
   };
 
   useEffect(() => {
-    const loadPending = async () => {
+    const loadPendingData = async () => {
       try {
         const res = await apiClient.get('/api/v1/signup/naver/pending');
         setFormData((prev) => ({
@@ -62,37 +76,54 @@ export function SignupPage({
         setIsLoading(false);
       }
     };
-    loadPending();
+    loadPendingData();
   }, [navigate]);
 
+  // (B) 이메일 인증번호 요청
   const handleRequestEmailCode = async () => {
-    if (!formData.siteEmail.includes('@')) return;
+    if (!formData.siteEmail.includes('@'))
+      return alert('올바른 이메일을 입력해주세요.');
+
     try {
       await apiClient.post('/api/v1/signup/email/request', {
         email: formData.siteEmail,
       });
       setIsCodeSent(true);
+      setEmailCode(''); // 이전 코드 초기화
+      alert('인증번호가 발송되었습니다. 메일함을 확인해주세요.');
     } catch (err) {
-      alert('발송 실패');
+      alert('인증번호 발송에 실패했습니다.');
     }
   };
 
+  // (C) 이메일 인증번호 검증
   const handleVerifyEmailCode = async () => {
+    if (emailCode.length < 4) return;
+
+    setIsVerifying(true);
     try {
       const res = await apiClient.post('/api/v1/signup/email/verify', {
         email: formData.siteEmail,
         code: emailCode,
       });
-      if (res.data.ok) setIsEmailVerified(true);
+
+      if (res.data.ok) {
+        setIsEmailVerified(true);
+      } else {
+        alert('인증번호가 일치하지 않습니다. 다시 확인해주세요.');
+      }
     } catch (err) {
-      alert('인증 실패');
+      alert('인증 확인 중 오류가 발생했습니다.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
+  // (D) 가입 완료
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pwdValidation.length || !pwdValidation.special || !pwdValidation.match)
-      return;
+    if (!isEmailVerified) return alert('먼저 이메일 인증을 완료해주세요.');
+
     setIsSubmitting(true);
     try {
       const res = await apiClient.post('/api/v1/signup/naver/complete', {
@@ -100,8 +131,8 @@ export function SignupPage({
         sitePwd: formData.sitePwd,
       });
       if (res.data.ok) onSignupComplete();
-    } catch (err) {
-      alert('가입 처리 중 오류가 발생했습니다.');
+    } catch (err: any) {
+      alert(err.response?.data?.message || '가입 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -109,45 +140,38 @@ export function SignupPage({
 
   if (isLoading)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-200" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-slate-200" />
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 antialiased text-slate-900">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 text-slate-900">
       <div className="w-full max-w-[380px] space-y-10">
-        {/* Header */}
         <header className="space-y-4">
           <button
             onClick={onBack}
-            className="p-0 h-auto text-slate-400 hover:text-slate-900 transition-colors"
+            className="text-slate-400 hover:text-slate-900"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              계정 만들기
-            </h1>
-            <p className="text-sm text-slate-500">
-              네이버 인증이 확인되었습니다. 나머지 정보를 입력해주세요.
+            <h1 className="text-2xl font-bold tracking-tight">계정 만들기</h1>
+            <p className="text-sm text-slate-500 font-medium">
+              거의 다 왔습니다! 이메일 인증을 진행해주세요.
             </p>
           </div>
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Section 1: Email Verification */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-[13px] font-medium text-slate-700"
-              >
-                이메일 주소
-              </Label>
-              <div className="flex gap-2">
+          {/* Email Verification Group */}
+          <div className="space-y-3">
+            <Label className="text-[13px] font-semibold text-slate-700 ml-1">
+              이메일 주소
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
                 <Input
-                  id="email"
                   type="email"
                   placeholder="name@example.com"
                   value={formData.siteEmail}
@@ -155,99 +179,119 @@ export function SignupPage({
                     setFormData({ ...formData, siteEmail: e.target.value })
                   }
                   disabled={isEmailVerified}
-                  className="h-11 rounded-md border-slate-200 focus-visible:ring-slate-400"
+                  className={`h-12 rounded-xl border-slate-200 ${isEmailVerified ? 'bg-slate-50 text-slate-400' : ''}`}
                 />
-                {!isEmailVerified && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleRequestEmailCode}
-                    className="h-11 px-4 text-xs font-semibold border-slate-200"
-                  >
-                    {isCodeSent ? '재요청' : '인증'}
-                  </Button>
+                {isEmailVerified && (
+                  <Check className="absolute right-3 top-3.5 w-5 h-5 text-blue-500" />
                 )}
               </div>
+              {!isEmailVerified && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleRequestEmailCode}
+                  className="h-12 px-4 font-bold rounded-xl border-slate-200 hover:bg-slate-50"
+                >
+                  {isCodeSent ? '재발송' : '인증요청'}
+                </Button>
+              )}
             </div>
 
+            {/* 인증번호 입력창 (발송 후에만 등장) */}
             {isCodeSent && !isEmailVerified && (
-              <div className="flex gap-2 animate-in fade-in slide-in-from-top-1">
+              <div className="flex gap-2 mt-2 animate-in slide-in-from-top-2 duration-300">
                 <Input
-                  placeholder="인증코드 6자리"
+                  placeholder="인증번호 6자리"
                   value={emailCode}
                   onChange={(e) => setEmailCode(e.target.value)}
-                  className="h-11 border-slate-200"
+                  className="h-12 rounded-xl border-slate-200 flex-1"
                 />
                 <Button
                   type="button"
                   onClick={handleVerifyEmailCode}
-                  className="h-11 px-6 font-bold bg-slate-900 text-white"
+                  disabled={isVerifying || emailCode.length < 4}
+                  className="h-12 px-6 font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 >
-                  확인
+                  {isVerifying ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    '확인'
+                  )}
                 </Button>
               </div>
             )}
+
             {isEmailVerified && (
-              <p className="text-[12px] text-blue-600 font-medium flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5" /> 이메일 인증이 완료되었습니다.
+              <p className="text-[11px] text-blue-600 font-bold flex items-center gap-1.5 ml-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> 이메일 인증이 성공적으로
+                완료되었습니다.
               </p>
             )}
           </div>
 
-          {/* Section 2: Password with Validation */}
-          <div className="space-y-4">
+          {/* Password Section */}
+          <div className="space-y-3">
+            <Label className="text-[13px] font-semibold text-slate-700 ml-1">
+              비밀번호 설정
+            </Label>
             <div className="space-y-2">
-              <Label className="text-[13px] font-medium text-slate-700">
-                비밀번호 설정
-              </Label>
               <Input
                 type="password"
-                placeholder="비밀번호 입력"
+                placeholder="비밀번호"
                 value={formData.sitePwd}
                 onChange={(e) =>
                   setFormData({ ...formData, sitePwd: e.target.value })
                 }
-                className="h-11 border-slate-200 focus-visible:ring-slate-400"
+                className="h-12 border-slate-200 rounded-xl focus:ring-slate-400"
               />
               <Input
                 type="password"
-                placeholder="비밀번호 재입력"
+                placeholder="비밀번호 재확인"
                 value={formData.sitePwdConfirm}
                 onChange={(e) =>
                   setFormData({ ...formData, sitePwdConfirm: e.target.value })
                 }
-                className="h-11 border-slate-200 focus-visible:ring-slate-400"
+                className="h-12 border-slate-200 rounded-xl focus:ring-slate-400"
               />
             </div>
-
-            {/* Password Checklist */}
-            <div className="grid grid-cols-2 gap-y-2 px-1">
+            <div className="flex gap-4 px-1 mt-2">
               <ValidationItem isValid={pwdValidation.length} text="8자 이상" />
-              <ValidationItem
-                isValid={pwdValidation.special}
-                text="특수문자 포함"
-              />
-              <ValidationItem
-                isValid={pwdValidation.match}
-                text="비밀번호 일치"
-              />
+              <ValidationItem isValid={pwdValidation.special} text="특수문자" />
+              <ValidationItem isValid={pwdValidation.match} text="일치 확인" />
             </div>
           </div>
 
-          {/* Section 3: Identity (ReadOnly) */}
-          <div className="pt-2 border-t border-slate-100 space-y-4">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-400 font-medium">이름</span>
-              <span className="text-slate-900 font-semibold">
-                {formData.name}
-              </span>
+          {/* Identity (ReadOnly) */}
+          <div className="p-4 bg-slate-50/70 rounded-2xl border border-slate-100 flex justify-between items-center text-sm">
+            <div className="space-y-1">
+              <p className="text-slate-400 text-xs">본인 인증 정보</p>
+              <p className="font-bold">
+                {formData.name} · {formData.mobile}
+              </p>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-400 font-medium">휴대폰 번호</span>
-              <span className="text-slate-900 font-semibold">
-                {formData.mobile}
-              </span>
-            </div>
+            <Check className="w-5 h-5 text-slate-300" />
+          </div>
+
+          {/* Agreements (iframe modal) */}
+          <div className="space-y-3">
+            <AgreementRow
+              id="terms"
+              label="서비스 이용약관 동의 (필수)"
+              checked={agreements.terms}
+              onCheckedChange={(v: any) =>
+                setAgreements({ ...agreements, terms: !!v })
+              }
+              url="/terms"
+            />
+            <AgreementRow
+              id="privacy"
+              label="개인정보 처리방침 동의 (필수)"
+              checked={agreements.privacy}
+              onCheckedChange={(v: any) =>
+                setAgreements({ ...agreements, privacy: !!v })
+              }
+              url="/privacy"
+            />
           </div>
 
           <Button
@@ -257,43 +301,68 @@ export function SignupPage({
               !pwdValidation.match ||
               !pwdValidation.length ||
               !pwdValidation.special ||
+              !agreements.terms ||
+              !agreements.privacy ||
               isSubmitting
             }
-            className="w-full h-12 bg-slate-900 text-white hover:bg-slate-800 rounded-md font-semibold transition-all active:scale-[0.98]"
+            className="w-full h-14 bg-slate-900 text-white rounded-[18px] font-bold text-base shadow-xl shadow-slate-100 disabled:bg-slate-200 disabled:shadow-none transition-all active:scale-[0.98]"
           >
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              '가입 완료하기'
+              '회원가입 완료'
             )}
           </Button>
         </form>
-
-        <footer className="text-center">
-          <p className="text-[12px] text-slate-400 font-medium">
-            가입 시 서비스{' '}
-            <span className="underline cursor-pointer">이용약관</span> 및{' '}
-            <span className="underline cursor-pointer">개인정보처리방침</span>에
-            동의하게 됩니다.
-          </p>
-        </footer>
       </div>
     </div>
   );
 }
 
-// 비밀번호 검증 아이템 컴포넌트
+// 헬퍼 컴포넌트들 (ValidationItem, AgreementRow는 이전 답변과 동일)
 function ValidationItem({ isValid, text }: { isValid: boolean; text: string }) {
   return (
     <div
-      className={`flex items-center gap-1.5 text-[12px] font-medium transition-colors ${isValid ? 'text-blue-600' : 'text-slate-300'}`}
+      className={`flex items-center gap-1.5 text-[11px] font-bold ${isValid ? 'text-blue-600' : 'text-slate-300'}`}
     >
-      {isValid ? (
-        <Check className="w-3.5 h-3.5" />
-      ) : (
-        <X className="w-3.5 h-3.5" />
-      )}
+      <Check
+        className={`w-3.5 h-3.5 ${isValid ? 'opacity-100' : 'opacity-0'}`}
+      />{' '}
       {text}
+    </div>
+  );
+}
+
+function AgreementRow({ id, label, checked, onCheckedChange, url }: any) {
+  return (
+    <div className="flex items-center justify-between group">
+      <div className="flex items-center gap-3">
+        <Checkbox
+          id={id}
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          className="w-5 h-5 border-slate-200 rounded-md"
+        />
+        <Label
+          htmlFor={id}
+          className="text-[13px] text-slate-600 font-bold cursor-pointer group-hover:text-slate-900"
+        >
+          {label}
+        </Label>
+      </div>
+      <Dialog>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="text-[11px] font-bold text-slate-300 hover:text-slate-900 underline underline-offset-4"
+          >
+            보기
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-[90vw] sm:max-w-[480px] h-[70vh] p-0 rounded-[24px] overflow-hidden">
+          <iframe src={url} className="w-full h-full border-none" />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
