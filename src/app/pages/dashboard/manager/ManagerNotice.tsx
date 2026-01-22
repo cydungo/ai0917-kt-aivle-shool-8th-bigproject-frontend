@@ -1,209 +1,453 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
 import {
   Megaphone,
-  Plus,
+  X as CloseIcon,
   Search,
-  Filter,
-  MoreHorizontal,
-  Calendar,
-  Users,
-  AlertCircle,
-  X,
-} from "lucide-react";
-import { Button } from "../../../components/ui/button";
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+} from 'lucide-react';
+import { Button } from '../../../components/ui/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card";
-import { Badge } from "../../../components/ui/badge";
-import { Input } from "../../../components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "../../../components/ui/dialog";
-import { Textarea } from "../../../components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../components/ui/select";
-import { useState } from "react";
+} from '../../../components/ui/card';
+import { Input } from '../../../components/ui/input';
+import { Textarea } from '../../../components/ui/textarea';
+import { Badge } from '../../../components/ui/badge';
+
+// --- 인터페이스 ---
+interface Notice {
+  id: number;
+  title: string;
+  content: string;
+  originalFilename: string | null;
+  writer: string;
+  createdAt: string;
+}
+
+interface PageResponse {
+  content: Notice[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+}
 
 export function ManagerNotice() {
-  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // 모달 제어 상태
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(
+    null,
+  );
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+
+  // 폼 상태
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [writer, setWriter] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [existingFileName, setExistingFileName] = useState<string | null>(null);
+
+  // Auth Axios Instance
+  const apiClient = useMemo(() => {
+    const instance = axios.create({
+      baseURL: import.meta.env.VITE_BACKEND_URL || "",
+      withCredentials: true,
+    });
+    instance.interceptors.request.use((config) => {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+    return instance;
+  }, []);
+
+  // 1. 목록 조회
+  const fetchNotices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient.get<PageResponse>('/api/v1/admin/notice', {
+        params: { keyword, page, size: 10 },
+      });
+      setNotices(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
+    } catch (error) {
+      console.error('데이터 로드 실패', error);
+      // Fallback for demo if API fails/empty
+      setNotices([]); 
+    } finally {
+      setLoading(false);
+    }
+  }, [keyword, page, apiClient]);
+
+  useEffect(() => {
+    fetchNotices();
+  }, [fetchNotices]);
+
+  // 2. 저장 (등록/수정)
+  const handleSave = async () => {
+    if (!title.trim() || !content.trim() || !writer.trim()) {
+      return alert('모든 필드를 입력해주세요.');
+    }
+
+    const formData = new FormData();
+    const dataObj = { title, content, writer };
+
+    // 파일 전송 시 필수: JSON 데이터에 대한 Blob 처리
+    const jsonBlob = new Blob([JSON.stringify(dataObj)], {
+      type: 'application/json',
+    });
+    formData.append('data', jsonBlob);
+
+    if (selectedFile) {
+      formData.append('file', selectedFile);
+    }
+
+    try {
+      setLoading(true);
+      if (modalMode === 'edit' && selectedNotice) {
+        await apiClient.patch(
+          `/api/v1/admin/notice/${selectedNotice.id}`,
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          },
+        );
+      } else {
+        await apiClient.post('/api/v1/admin/notice', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+      alert('성공적으로 처리되었습니다.');
+      closeModal();
+      fetchNotices();
+    } catch (e: any) {
+      alert(e.response?.data?.message || '처리 실패');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    apiClient.delete(`/api/v1/admin/notice/${id}`).then(() => fetchNotices());
+  };
+
+  const closeModal = () => {
+    setModalMode(null);
+    setSelectedNotice(null);
+    setTitle('');
+    setContent('');
+    setWriter('');
+    setSelectedFile(null);
+    setExistingFileName(null);
+  };
+
+  const openView = (notice: Notice) => {
+    setSelectedNotice(notice);
+    setModalMode('view');
+  };
+
+  const openEdit = (e: React.MouseEvent, notice: Notice) => {
+    e.stopPropagation(); // 제목 클릭 이벤트 방지
+    setSelectedNotice(notice);
+    setTitle(notice.title);
+    setContent(notice.content);
+    setWriter(notice.writer);
+    setExistingFileName(notice.originalFilename);
+    setModalMode('edit');
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-initial">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="공지사항 검색..."
-              className="pl-9 w-full sm:w-64"
-            />
-          </div>
-          <Button variant="outline" size="icon">
-            <Filter className="w-4 h-4 text-slate-600" />
-          </Button>
-        </div>
+    <div className="space-y-6 p-4 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Megaphone className="text-blue-600 w-7 h-7" /> 공지사항 관리
+        </h2>
         <Button
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-          onClick={() => setIsWriteModalOpen(true)}
+          onClick={() => setModalMode('create')}
+          className="bg-blue-600 w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          공지사항 작성
+          <Plus className="w-4 h-4 mr-2" /> 새 공지 등록
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {[1, 2, 3, 4, 5].map((item) => (
-          <Card
-            key={item}
-            className="border-slate-200 hover:shadow-md transition-shadow cursor-pointer"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-0">
-                      중요
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className="text-slate-500 border-slate-200"
-                    >
-                      서비스 점검
-                    </Badge>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      2024.01.20
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    [점검] 1월 25일 정기 서비스 점검 안내 (02:00 ~
-                    06:00)
-                  </h3>
-                  <p className="text-slate-600 text-sm line-clamp-2">
-                    안녕하세요. 서비스 안정화를 위한 정기 점검이
-                    진행될 예정입니다. 점검 시간 동안은 서비스 이용이
-                    제한되오니 양해 부탁드립니다. 주요 점검 내용은
-                    데이터베이스 최적화 및 보안 패치 적용입니다.
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-slate-400"
-                  >
-                    <MoreHorizontal className="w-5 h-5" />
-                  </Button>
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
-                    <Users className="w-3 h-3" />
-                    1,234
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Dialog
-        open={isWriteModalOpen}
-        onOpenChange={setIsWriteModalOpen}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>공지사항 작성</DialogTitle>
-            <DialogDescription>
-              전체 사용자 또는 특정 그룹에게 공지사항을 발송합니다.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  분류
-                </label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="notice">일반 공지</SelectItem>
-                    <SelectItem value="check">서비스 점검</SelectItem>
-                    <SelectItem value="event">이벤트</SelectItem>
-                    <SelectItem value="update">업데이트</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  중요도
-                </label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="normal">일반</SelectItem>
-                    <SelectItem value="high">중요</SelectItem>
-                    <SelectItem value="urgent">긴급</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">
-                제목
-              </label>
-              <Input placeholder="공지사항 제목을 입력하세요" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">
-                내용
-              </label>
-              <Textarea
-                placeholder="공지 내용을 입력하세요"
-                className="h-64 resize-none"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="push"
-                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label
-                htmlFor="push"
-                className="text-sm text-slate-700"
-              >
-                푸시 알림 전송
-              </label>
-            </div>
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader className="bg-slate-50/50 border-b">
+          <div className="relative max-w-md flex items-center">
+            <Search 
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 cursor-pointer hover:text-blue-600" 
+              onClick={() => {
+                setKeyword(searchInput);
+                setPage(0);
+              }}
+            />
+            <Input
+              placeholder="공지 제목 검색..."
+              className="pl-9 bg-white"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setKeyword(searchInput);
+                  setPage(0);
+                }
+              }}
+            />
           </div>
-          <DialogFooter>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500 border-b uppercase font-semibold text-xs">
+                <tr>
+                  <th className="px-4 py-3 w-16 text-center">ID</th>
+                  <th className="px-4 py-3 text-left">제목</th>
+                  <th className="px-4 py-3 w-28 text-center hidden sm:table-cell">
+                    작성자
+                  </th>
+                  <th className="px-4 py-3 w-20 text-center hidden sm:table-cell">
+                    첨부
+                  </th>
+                  <th className="px-4 py-3 w-40 text-center hidden md:table-cell">
+                    작성일
+                  </th>
+                  <th className="px-4 py-3 w-28 text-center">관리</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {notices.map((n) => (
+                  <tr
+                    key={n.id}
+                    className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
+                    onClick={() => openView(n)}
+                  >
+                    <td className="px-4 py-4 text-center text-slate-400 font-mono text-xs">
+                      {n.id}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                          {n.title}
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-slate-300 sm:hidden" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center hidden sm:table-cell">
+                      <Badge variant="secondary" className="font-normal">
+                        {n.writer}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-4 text-center hidden sm:table-cell">
+                      {n.originalFilename && (
+                        <FileText className="w-4 h-4 mx-auto text-blue-400" />
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-center text-slate-500 hidden md:table-cell">
+                      {new Date(n.createdAt).toLocaleDateString()}
+                    </td>
+                    <td
+                      className="px-4 py-4 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-600"
+                          onClick={(e) => openEdit(e, n)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500"
+                          onClick={() => handleDelete(n.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 페이지네이션 */}
+          <div className="flex items-center justify-center gap-1.5 py-4 border-t bg-slate-50/30">
             <Button
-              variant="outline"
-              onClick={() => setIsWriteModalOpen(false)}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={page === 0}
+              onClick={() => setPage(page - 1)}
             >
-              취소
+              <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              등록
+            {Array.from({ length: totalPages }, (_, i) => (
+              <Button
+                key={i}
+                variant={page === i ? 'default' : 'ghost'}
+                className={`h-8 w-8 p-0 ${page === i ? 'bg-blue-600 text-white' : 'text-slate-600'}`}
+                onClick={() => setPage(i)}
+              >
+                {i + 1}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage(page + 1)}
+            >
+              <ChevronRight className="w-4 h-4" />
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* --- 통합 모달 (작성/수정/보기) --- */}
+      {modalMode && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-lg shadow-2xl border-none">
+            <CardHeader className="border-b flex flex-row items-center justify-between py-4">
+              <CardTitle className="text-lg">
+                {modalMode === 'view'
+                  ? '공지사항 상세'
+                  : modalMode === 'edit'
+                    ? '공지 수정'
+                    : '새 공지 등록'}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={closeModal}>
+                <CloseIcon className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-6 space-y-5">
+              {modalMode === 'view' && selectedNotice ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">
+                      {selectedNotice.title}
+                    </h3>
+                    <div className="flex gap-2 mt-2 text-xs text-slate-500">
+                      <span>작성자: {selectedNotice.writer}</span>
+                      <span>|</span>
+                      <span>
+                        날짜:{' '}
+                        {new Date(selectedNotice.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-lg text-slate-700 whitespace-pre-wrap min-h-[150px] text-sm leading-relaxed">
+                    {selectedNotice.content}
+                  </div>
+                  {selectedNotice.originalFilename && (
+                    <div className="flex items-center gap-2 p-3 border rounded-md bg-white">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm flex-1 truncate">
+                        {selectedNotice.originalFilename}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                      >
+                        다운로드
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      작성자
+                    </label>
+                    <Input
+                      value={writer}
+                      onChange={(e) => setWriter(e.target.value)}
+                      placeholder="작성자 이름"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      제목
+                    </label>
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="공지 제목"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      내용
+                    </label>
+                    <Textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="h-40 resize-none"
+                      placeholder="내용을 입력하세요"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">
+                      파일 첨부
+                    </label>
+                    <Input
+                      type="file"
+                      className="text-xs cursor-pointer"
+                      onChange={(e) =>
+                        setSelectedFile(e.target.files?.[0] || null)
+                      }
+                    />
+                    {existingFileName && !selectedFile && (
+                        <p className="text-xs text-slate-500">현재 파일: {existingFileName}</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+            <div className="p-4 border-t bg-slate-50/50 flex justify-end gap-2">
+              <Button variant="outline" onClick={closeModal}>
+                닫기
+              </Button>
+              {modalMode !== 'view' && (
+                <Button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="bg-blue-600 px-8 text-white"
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin w-4 h-4" />
+                  ) : (
+                    '저장하기'
+                  )}
+                </Button>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,19 +3,14 @@ import {
   Filter,
   MoreHorizontal,
   Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Award,
   BookOpen,
   Star,
+  Calendar,
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
 import { Input } from "../../../components/ui/input";
@@ -24,50 +19,72 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "../../../components/ui/avatar";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
 
 export function ManagerAuthorManagement() {
-  const authors = [
-    {
-      id: 1,
-      name: "김민지",
-      email: "minji@example.com",
-      status: "active",
-      works: 12,
-      followers: "2.5k",
-      rating: 4.8,
-      joinDate: "2023.05.15",
-    },
-    {
-      id: 2,
-      name: "이재원",
-      email: "jaewon@example.com",
-      status: "warning",
-      works: 8,
-      followers: "1.2k",
-      rating: 4.2,
-      joinDate: "2023.08.20",
-    },
-    {
-      id: 3,
-      name: "박수진",
-      email: "sujin@example.com",
-      status: "active",
-      works: 15,
-      followers: "3.8k",
-      rating: 4.9,
-      joinDate: "2023.01.10",
-    },
-    {
-      id: 4,
-      name: "최현우",
-      email: "hyunwoo@example.com",
-      status: "inactive",
-      works: 5,
-      followers: "800",
-      rating: 3.5,
-      joinDate: "2023.11.05",
-    },
-  ];
+  interface Author {
+    id: number;
+    name: string;
+    email: string;
+    status: string;
+    works: number;
+    followers: string;
+    rating: number;
+    joinDate: string;
+  }
+
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [keyword, setKeyword] = useState("");
+
+  const authAxios = useMemo(() => {
+    const instance = axios.create({
+      baseURL: import.meta.env.VITE_BACKEND_URL || "",
+    });
+    instance.interceptors.request.use((config) => {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+    return instance;
+  }, []);
+
+  const fetchAuthors = useCallback(async () => {
+    try {
+      // Using Admin API to fetch authors
+      const res = await authAxios.get(`/api/v1/admin/access/users`, {
+        params: {
+          role: "Author",
+          keyword: keyword,
+          page: 0,
+          size: 20 // Fetch reasonable amount
+        }
+      });
+      
+      const content = res.data.content || [];
+      const mappedAuthors = content.map((user: any) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        status: "active", // API doesn't provide status yet, default to active
+        works: 0, // API doesn't provide works count yet
+        followers: "0", // API doesn't provide followers yet
+        rating: 0.0, // API doesn't provide rating yet
+        joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"
+      }));
+      
+      setAuthors(mappedAuthors);
+    } catch (error) {
+      console.error("Failed to fetch authors", error);
+      setAuthors([]);
+    }
+  }, [authAxios, keyword]);
+
+  useEffect(() => {
+    fetchAuthors();
+  }, [fetchAuthors]);
 
   return (
     <div className="space-y-6">
@@ -79,6 +96,8 @@ export function ManagerAuthorManagement() {
             <Input
               placeholder="작가 검색..."
               className="pl-9 w-full sm:w-64"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
             />
           </div>
           <Button variant="outline" size="icon">
@@ -106,7 +125,7 @@ export function ManagerAuthorManagement() {
                   <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                     <AvatarImage src={`/avatars/${author.id}.jpg`} />
                     <AvatarFallback className="bg-slate-100 text-slate-600 font-bold">
-                      {author.name[0]}
+                      {author.name ? author.name[0] : "?"}
                     </AvatarFallback>
                   </Avatar>
                   <div>

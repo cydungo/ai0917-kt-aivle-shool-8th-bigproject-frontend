@@ -414,7 +414,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
 
         {/* Content Area */}
         <main className="flex-1 overflow-auto p-4 md:p-8">
-          {activeMenu === 'home' && <ManagerHome />}
+          {activeMenu === 'home' && <ManagerHome onNavigate={handleMenuClick} />}
           {activeMenu === 'work-analysis' && <ManagerWorkAnalysis />}
           {activeMenu === '3d-assets' && <Manager3DAssets />}
           {activeMenu === 'notice' && <ManagerNotice />}
