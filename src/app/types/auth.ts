@@ -58,3 +58,19 @@ export interface LoginResponse {
   role?: UserRole;
   accessToken?: string; // Although we don't use it for storage, the API might return it
 }
+
+export interface PasswordResetCodeRequest {
+  siteEmail: string;
+  name: string;
+}
+
+export interface PasswordResetVerifyRequest {
+  email: string;
+  code: string;
+}
+
+export interface PasswordResetRequest {
+  siteEmail: string;
+  newPassword: string;
+  newPasswordConfirm: string;
+}

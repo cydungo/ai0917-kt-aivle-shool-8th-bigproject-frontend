@@ -5,6 +5,10 @@ import {
   ArrowLeft,
   ShieldCheck,
   Loader2,
+  Check,
+  Eye,
+  EyeOff,
+  User,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -13,6 +17,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import NaverLogin from '../../components/NaverLogin/NaverLoginButton';
 import { authService } from '../../services/authService';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
 
 interface LoginPageProps {
   onLogin: (userType: 'Manager' | 'Author' | 'Admin') => void;
@@ -20,11 +30,48 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, onBack }: LoginPageProps) {
+  // Login State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Password Reset State
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<0 | 1 | 2>(0); // 0: Request, 1: Verify, 2: Reset
+  const [resetData, setResetData] = useState({
+    name: '',
+    siteEmail: '',
+    code: '',
+    newPassword: '',
+    newPasswordConfirm: '',
+  });
+  const [resetLoading, setResetLoading] = useState(false);
+  const [showResetPwd, setShowResetPwd] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Password Strength Logic
+  const getStrengthScore = (pwd: string) => {
+    if (!pwd) return 0;
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++; // Uppercase
+    if (/[0-9]/.test(pwd)) score++; // Number
+    if (/[!@#$%^&*(),.?":{}|<> ]/.test(pwd)) score++; // Special char
+    return score;
+  };
+
+  const strengthScore = getStrengthScore(resetData.newPassword);
+
+  const resetPwdValidation = {
+    length: resetData.newPassword.length >= 8,
+    special: /[!@#$%^&*(),.?":{}|<> ]/.test(resetData.newPassword),
+    match:
+      resetData.newPassword !== '' &&
+      resetData.newPassword === resetData.newPasswordConfirm,
+  };
 
   /**
    * 1. 자동 로그인 및 리다이렉트 처리
@@ -76,6 +123,90 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
     }
   };
 
+  // --- Password Reset Handlers ---
+
+  const handleResetRequest = async () => {
+    if (!resetData.siteEmail || !resetData.name) {
+      alert('이름과 이메일을 입력해주세요.');
+      return;
+    }
+    if (!resetData.siteEmail.includes('@')) {
+      alert('올바른 이메일 형식이 아닙니다.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await authService.requestPasswordResetCode({
+        siteEmail: resetData.siteEmail,
+        name: resetData.name,
+      });
+      alert('인증 코드가 이메일로 발송되었습니다.');
+      setResetStep(1);
+    } catch (error: any) {
+      alert(error.response?.data?.message || '인증 요청에 실패했습니다.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetVerify = async () => {
+    if (!resetData.code) {
+      alert('인증 코드를 입력해주세요.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await authService.verifyPasswordResetCode({
+        email: resetData.siteEmail,
+        code: resetData.code,
+      });
+      alert('인증이 완료되었습니다. 새 비밀번호를 설정해주세요.');
+      setResetStep(2);
+    } catch (error: any) {
+      alert(error.response?.data?.message || '인증 코드가 올바르지 않습니다.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetComplete = async () => {
+    if (!resetPwdValidation.length) {
+      alert('비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+    if (!resetPwdValidation.special) {
+      alert('비밀번호에 특수문자를 포함해야 합니다.');
+      return;
+    }
+    if (!resetPwdValidation.match) {
+      alert('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await authService.resetPassword({
+        siteEmail: resetData.siteEmail,
+        newPassword: resetData.newPassword,
+        newPasswordConfirm: resetData.newPasswordConfirm,
+      });
+      alert('비밀번호가 성공적으로 변경되었습니다. 로그인해주세요.');
+      setIsResetOpen(false);
+      setResetStep(0);
+      setResetData({
+        name: '',
+        siteEmail: '',
+        code: '',
+        newPassword: '',
+        newPasswordConfirm: '',
+      });
+    } catch (error: any) {
+      alert(error.response?.data?.message || '비밀번호 변경에 실패했습니다.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/40 flex flex-col items-center justify-center p-6 text-slate-900 font-sans antialiased">
       <div className="w-full max-w-[360px] flex flex-col gap-6">
@@ -99,7 +230,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
         </header>
 
         <main className="bg-white border border-slate-200/80 rounded-[2rem] shadow-sm overflow-hidden">
-          {/* 네이버 로그인: 백엔드 Controller의 /api/v1/auth/naver/login 호출 */}
+          {/* 네이버 로그인 */}
           <section className="p-8 pb-7 space-y-5">
             <div className="flex justify-start">
               <span className="text-[11px] font-extrabold text-primary bg-primary/5 px-2.5 py-1 rounded-full tracking-tighter">
@@ -155,27 +286,50 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-primary transition-colors" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showLoginPwd ? 'text' : 'password'}
                     placeholder="••••••••"
-                    className="pl-11 h-12 bg-white border-slate-200 rounded-xl focus-visible:ring-primary/10 text-[14px]"
+                    className="pl-11 pr-10 h-12 bg-white border-slate-200 rounded-xl focus-visible:ring-primary/10 text-[14px]"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPwd(!showLoginPwd)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showLoginPwd ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-xl font-bold text-[14px] shadow-lg shadow-primary/10 transition-all active:scale-[0.97] mt-2"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  '로그인'
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-xl font-bold text-[14px] shadow-lg shadow-primary/10 transition-all active:scale-[0.97]"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    '로그인'
+                  )}
+                </Button>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsResetOpen(true)}
+                    className="text-[11px] font-bold text-slate-400 hover:text-primary transition-colors"
+                  >
+                    비밀번호를 잊으셨나요?
+                  </button>
+                </div>
+              </div>
             </form>
           </section>
         </main>
@@ -191,6 +345,276 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
           </p>
         </div>
       </div>
+
+      {/* 비밀번호 찾기 모달 */}
+      <Dialog open={isResetOpen} onOpenChange={setIsResetOpen}>
+        <DialogContent className="sm:max-w-md bg-white rounded-2xl border-0 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center pb-2">
+              비밀번호 재설정
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Step 0: Request Code */}
+            {resetStep === 0 && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-500">
+                    이름
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      placeholder="가입된 이름"
+                      value={resetData.name}
+                      onChange={(e) =>
+                        setResetData({ ...resetData, name: e.target.value })
+                      }
+                      className="pl-9 h-11 rounded-xl bg-slate-50 border-slate-200"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-500">
+                    이메일
+                  </Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        type="email"
+                        placeholder="가입된 이메일"
+                        value={resetData.siteEmail}
+                        onChange={(e) =>
+                          setResetData({
+                            ...resetData,
+                            siteEmail: e.target.value,
+                          })
+                        }
+                        className="pl-9 h-11 rounded-xl bg-slate-50 border-slate-200"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleResetRequest}
+                      disabled={resetLoading}
+                      className="h-11 px-4 rounded-xl font-bold bg-slate-900 text-white hover:bg-slate-800"
+                    >
+                      {resetLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        '인증요청'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Verify Code */}
+            {resetStep === 1 && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="p-3 bg-blue-50 text-blue-700 text-xs rounded-lg font-medium flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  이메일로 발송된 인증코드를 입력해주세요.
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-500">
+                    인증코드
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="123456"
+                      value={resetData.code}
+                      onChange={(e) =>
+                        setResetData({ ...resetData, code: e.target.value })
+                      }
+                      className="h-11 rounded-xl bg-slate-50 border-slate-200 text-center tracking-widest font-mono text-lg"
+                      maxLength={6}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleResetVerify}
+                      disabled={resetLoading}
+                      className="h-11 px-6 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      {resetLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        '확인'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <button
+                    onClick={() => setResetStep(0)}
+                    className="text-xs text-slate-400 hover:text-slate-600 underline"
+                  >
+                    이메일 다시 입력하기
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Reset Password */}
+            {resetStep === 2 && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-slate-500">
+                      새 비밀번호
+                    </Label>
+                    {resetData.newPassword.length > 0 && (
+                      <span
+                        className={`text-[10px] font-bold ${
+                          strengthScore <= 2
+                            ? 'text-red-500'
+                            : strengthScore === 3
+                              ? 'text-orange-500'
+                              : 'text-green-500'
+                        }`}
+                      >
+                        {strengthScore <= 2
+                          ? '사용불가'
+                          : strengthScore === 3
+                            ? '보통'
+                            : '안전함'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      type={showResetPwd ? 'text' : 'password'}
+                      placeholder="8자 이상, 특수문자 포함"
+                      value={resetData.newPassword}
+                      onChange={(e) =>
+                        setResetData({
+                          ...resetData,
+                          newPassword: e.target.value,
+                        })
+                      }
+                      className="pl-9 pr-10 h-11 rounded-xl bg-slate-50 border-slate-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPwd(!showResetPwd)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showResetPwd ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  {/* Strength Meter Bar */}
+                  {resetData.newPassword.length > 0 && (
+                    <div className="flex gap-1 h-1 mt-1">
+                      {[1, 2, 3, 4].map((step) => (
+                        <div
+                          key={step}
+                          className={`flex-1 rounded-full transition-colors duration-300 ${
+                            step <= strengthScore
+                              ? strengthScore <= 2
+                                ? 'bg-red-400'
+                                : strengthScore === 3
+                                  ? 'bg-orange-400'
+                                  : 'bg-green-500'
+                              : 'bg-slate-100'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-500">
+                    새 비밀번호 확인
+                  </Label>
+                  <div className="relative">
+                    <Check className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      type="password"
+                      placeholder="비밀번호 재입력"
+                      value={resetData.newPasswordConfirm}
+                      onChange={(e) =>
+                        setResetData({
+                          ...resetData,
+                          newPasswordConfirm: e.target.value,
+                        })
+                      }
+                      className={`pl-9 h-11 rounded-xl bg-slate-50 border-slate-200 ${
+                        resetPwdValidation.match && resetData.newPasswordConfirm
+                          ? 'bg-blue-50/30 border-blue-200'
+                          : ''
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <ValidationItem
+                    isValid={resetPwdValidation.length}
+                    text="8자 이상"
+                  />
+                  <ValidationItem
+                    isValid={resetPwdValidation.special}
+                    text="특수문자"
+                  />
+                  <ValidationItem
+                    isValid={resetPwdValidation.match}
+                    text="일치 확인"
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleResetComplete}
+                  disabled={
+                    resetLoading ||
+                    !resetPwdValidation.match ||
+                    !resetPwdValidation.length ||
+                    !resetPwdValidation.special
+                  }
+                  className="w-full h-12 rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
+                >
+                  {resetLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    '비밀번호 변경하기'
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ValidationItem({ isValid, text }: { isValid: boolean; text: string }) {
+  return (
+    <div
+      className={`flex items-center gap-1.5 text-[11px] font-bold transition-colors ${
+        isValid ? 'text-blue-600' : 'text-slate-300'
+      }`}
+    >
+      <div
+        className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border ${
+          isValid ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'
+        }`}
+      >
+        <Check
+          className={`w-2.5 h-2.5 text-white ${
+            isValid ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      </div>
+      {text}
     </div>
   );
 }

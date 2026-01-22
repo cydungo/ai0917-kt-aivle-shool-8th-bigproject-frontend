@@ -9,6 +9,9 @@ import {
   SignupCompleteResponse,
   LoginRequest,
   LoginResponse,
+  PasswordResetCodeRequest,
+  PasswordResetVerifyRequest,
+  PasswordResetRequest,
 } from '../types/auth';
 
 export const authService = {
@@ -53,6 +56,28 @@ export const authService = {
   completeSignup: async (data: SignupCompleteRequest) => {
     const response = await apiClient.post<SignupCompleteResponse>(
       '/api/v1/signup/naver/complete',
+      data,
+    );
+    return response.data;
+  },
+
+  // Password Reset
+  requestPasswordResetCode: async (data: PasswordResetCodeRequest) => {
+    const response = await apiClient.post(
+      '/api/v1/signup/password/email/request',
+      data,
+    );
+    return response.data;
+  },
+
+  verifyPasswordResetCode: async (data: PasswordResetVerifyRequest) => {
+    const response = await apiClient.post('/api/v1/signup/email/verify', data);
+    return response.data;
+  },
+
+  resetPassword: async (data: PasswordResetRequest) => {
+    const response = await apiClient.post(
+      '/api/v1/signup/password/reset',
       data,
     );
     return response.data;
