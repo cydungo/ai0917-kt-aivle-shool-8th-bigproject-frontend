@@ -21,16 +21,16 @@ export default defineConfig(({ mode }) => {
       // 2. 다른 포트로 자동 전환 방지 (인증 콜백 오류 방지)
       strictPort: true,
 
-      // // --- 프록시 설정 ---
-      // proxy: {
-      //   // 프론트엔드에서 /api로 시작하는 요청을 백엔드로 전달
-      //   '/api': {
-      //     // .env의 VITE_BACKEND_URL을 사용하고, 없을 경우 로컬 백엔드 기본값 사용
-      //     target: env.VITE_BACKEND_URL || 'http://localhost:8080',
-      //     changeOrigin: true,
-      //     secure: false,
-      //   },
-      // },
+      // --- 프록시 설정 ---
+      proxy: {
+        // 프론트엔드에서 /api로 시작하는 요청을 백엔드로 전달
+        '/api': {
+          // .env의 VITE_BACKEND_URL을 사용하고, 없을 경우 로컬 백엔드 기본값 사용
+          target: env.VITE_BACKEND_URL || 'http://localhost:8080',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     build: {
       // Vercel 배포 및 대규모 프로젝트를 위한 빌드 최적화

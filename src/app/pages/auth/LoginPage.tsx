@@ -34,10 +34,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
   useEffect(() => {
     const checkSession = async () => {
       // URL이 /auth/callback 이거나 페이지 진입 시 세션 확인
-      if (
-        location.pathname === '/auth/callback' ||
-        location.pathname === '/login'
-      ) {
+      if (location.pathname === '/login') {
         try {
           // 백엔드에 현재 쿠키를 기반으로 내 정보 조회
           const res = await authService.me();

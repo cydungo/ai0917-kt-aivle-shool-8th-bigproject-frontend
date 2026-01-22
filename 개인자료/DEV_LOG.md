@@ -8,7 +8,7 @@
 
 > "이번 작업은 **보안 강화**와 **개발 효율성 증대**에 초점을 맞췄습니다."
 
-- **데이터 백업 가이드 작성**: 소중한 개인 자료를 지키기 위한 클라우드 동기화(심볼릭 링크) 및 Private Git Repo 활용법을 정리했습니다. (`개인자료/데이터_백업_가이드.md`)
+- **데이터 백업 가이드 작성**: 소중한 개인 자료를 지키기 위한 클라우드 동기화 활용법을 정리했습니다. (`개인자료/데이터_백업_가이드.md`)
   - _추가 발견_: 다행히 Google Drive 동기화가 작동 중이라 휴지통에서 복구 가능했습니다! (자동화의 승리 🎉)
 - **보안 강화 (Security)**: 기존의 취약했던 로컬 스토리지(LocalStorage) 토큰 저장 방식을 제거하고, 금융권 수준 보안인 **HttpOnly Cookie** 인증 방식을 전면 도입했습니다. 이를 통해 XSS 공격 위협을 원천 차단했습니다.
 - **개발 생산성 혁신 (DX)**: 백엔드 서버가 닫혀있어도 프론트엔드 개발이 멈추지 않도록 **가상 서버(MSW)** 환경을 구축했습니다. 이제 언제 어디서든 UI/UX 개발이 가능합니다.
@@ -21,7 +21,6 @@
 - **로그인/회원가입**: 로직 개편이 완료되어 실제 백엔드 API와 안전하게 통신합니다.
 - **개발 환경 세팅**:
   - `.env` 파일과 `Guidelines.md`를 정리했습니다. 새로 오신 분도 문서만 보면 바로 세팅 가능합니다.
-  - 백엔드(Spring/FastAPI) 주소 설정을 완료했습니다 (Tailscale/Ngrok 지원).
 - **이슈 공유**: 백엔드 서버가 종종 꺼져있는 경우가 있어 MSW를 도입했습니다. 혹시 서버 연결이 안 되면 말씀해주세요.
 
 #### 3. 프론트엔드 파트 공유용 (상세 기술)
@@ -90,3 +89,26 @@
 - **`AdminPermissions.tsx` 정상화**:
   - 기존 코드(`adminpermission2.tsx`)의 UI/UX 요소(모바일 뷰, 수정 모달 등)를 현재 프로젝트 아키텍처(TanStack Query, Service Layer)에 맞게 통합했습니다.
   - 누락되었던 `handleUpdate` 핸들러와 관련 상태(`editRole`)를 구현하여 컴파일 에러를 해결했습니다.
+
+### 🍪 쿠키/CORS 이슈 해결 (Proxy 설정)
+
+- **증상**: CSRF 토큰이나 인증 쿠키가 브라우저에 저장되지 않거나 전송되지 않는 문제.
+- **원인**: 프론트엔드(`5173`)와 백엔드(`8080`)의 포트가 달라 브라우저가 보안상 쿠키를 차단(SameSite 정책)하거나, HttpOnly 쿠키 접근 불가 문제 발생.
+- **해결**:
+  1. `vite.config.ts`에서 Proxy 설정을 활성화하여 `/api` 요청을 백엔드로 우회.
+  2. `axios.ts`의 `baseURL`을 개발 환경(`DEV`)에서는 빈 문자열(`''`)로 설정하여 Proxy를 타도록 변경.
+  3. 이제 브라우저는 모든 요청을 `same-origin`으로 인식하여 쿠키를 정상적으로 주고받음.
+
+### 🚫 로그인 403 Forbidden 오류 해결 (백엔드 설정)
+- **증상**: 로그인 요청(`POST /api/v1/auth/login`) 시 `403 Forbidden` 에러 발생.
+- **원인**: 백엔드 `SecurityConfig.java` 설정에서 로그인 경로가 `/api/v1/login`으로 잘못 지정되어 있음. 실제 컨트롤러 경로는 `/api/v1/auth/login`임.
+- **해결**: 백엔드 코드(`SecurityConfig.java`)의 `requestMatchers`를 실제 경로에 맞게 수정해야 함.
+  ```java
+  // 수정 전
+  .requestMatchers("/api/v1/login").permitAll()
+  .requestMatchers("/api/v1/logout").permitAll()
+
+  // 수정 후
+  .requestMatchers("/api/v1/auth/login").permitAll()
+  .requestMatchers("/api/v1/auth/logout").permitAll()
+  ```
