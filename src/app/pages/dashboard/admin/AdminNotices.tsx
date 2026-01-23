@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import apiClient from '../../../api/axios';
+import { adminService } from '../../../services/adminService';
 import {
   Megaphone,
   X as CloseIcon,
@@ -46,117 +47,6 @@ export function AdminNotices() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const PAGE_SIZE = 10;
-
-  // 모달 제어 상태
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view' | null>(
-    null,
-  );
-  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
-
-  // 폼 상태
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [writer, setWriter] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [existingFileName, setExistingFileName] = useState<string | null>(null);
-
-  // 1. 목록 조회
-  const fetchNotices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient.get<PageResponse>('/api/v1/admin/notice', {
-        params: { keyword, page, size: 10 },
-      });
-      setNotices(res.data.content);
-      setTotalPages(res.data.totalPages);
-    } catch (error) {
-      console.error('데이터 로드 실패', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [keyword, page]);
-
-  useEffect(() => {
-    fetchNotices();
-  }, [fetchNotices]);
-
-  // 2. 저장 (등록/수정)
-  const handleSave = async () => {
-    if (!title.trim() || !content.trim() || !writer.trim()) {
-      return alert('모든 필드를 입력해주세요.');
-    }
-
-    const formData = new FormData();
-    const dataObj = { title, content, writer };
-
-    // 파일 전송 시 필수: JSON 데이터에 대한 Blob 처리
-    const jsonBlob = new Blob([JSON.stringify(dataObj)], {
-      type: 'application/json',
-    });
-    formData.append('data', jsonBlob);
-
-    if (selectedFile) {
-      formData.append('file', selectedFile);
-    }
-
-    try {
-      setLoading(true);
-      if (modalMode === 'edit' && selectedNotice) {
-        await apiClient.patch(
-          `/api/v1/admin/notice/${selectedNotice.id}`,
-          formData,
-          {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          },
-        );
-      } else {
-        await apiClient.post('/api/v1/admin/notice', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      }
-      alert('성공적으로 처리되었습니다.');
-      closeModal();
-      fetchNotices();
-    } catch (e: any) {
-      alert(e.response?.data?.message || '처리 실패');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = (id: number) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
-    apiClient.delete(`/api/v1/admin/notice/${id}`).then(() => fetchNotices());
-  };
-
-  const closeModal = () => {
-    setModalMode(null);
-    setSelectedNotice(null);
-    setTitle('');
-    setContent('');
-    setWriter('');
-    setSelectedFile(null);
-  };
-
-  const openView = (notice: Notice) => {
-    setSelectedNotice(notice);
-    setModalMode('view');
-  };
-
-  const openEdit = (e: React.MouseEvent, notice: Notice) => {
-    e.stopPropagation(); // 제목 클릭 이벤트 방지
-    setSelectedNotice(notice);
-    setTitle(notice.title);
-    setContent(notice.content);
-    setWriter(notice.writer);
-    setExistingFileName(notice.originalFilename);
-    setModalMode('edit');
-  };
-
   const filteredNotices = keyword
     ? notices.filter((n) =>
         (n.title ?? '').toLowerCase().includes(keyword.toLowerCase()) ||
@@ -170,18 +60,6 @@ export function AdminNotices() {
 
   return (
     <div className="space-y-6 p-4 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Megaphone className="text-blue-600 w-7 h-7" /> 공지사항 관리
-        </h2>
-        <Button
-          onClick={() => setModalMode('create')}
-          className="bg-blue-600 w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4 mr-2" /> 새 공지 등록
-        </Button>
-      </div>
-
       <Card className="shadow-sm border-slate-200">
         <CardHeader className="bg-slate-50/50 border-b">
           <div className="relative max-w-md flex items-center">
@@ -366,6 +244,12 @@ export function AdminNotices() {
                         variant="outline"
                         size="sm"
                         className="text-xs h-7"
+                        onClick={() =>
+                          handleDownload(
+                            selectedNotice.id,
+                            selectedNotice.originalFilename!,
+                          )
+                        }
                       >
                         다운로드
                       </Button>
