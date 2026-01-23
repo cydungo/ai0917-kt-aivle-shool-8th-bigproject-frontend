@@ -53,48 +53,10 @@ export function AuthorWorks() {
       // If separate endpoints exist for novels and settings, we might need Promise.all
       try {
         const res = await apiClient.get('/api/v1/author/works');
-        // If API returns empty array or invalid data, use mock
-        if (!res.data || (Array.isArray(res.data) && res.data.length === 0)) {
-          throw new Error('No data');
-        }
         return res.data;
       } catch (e) {
         // Fallback or mock if API not ready
-        console.log('Using mock data for works');
-        return [
-          {
-            id: 1,
-            title: '해리포터와 마법사의 돌',
-            type: 'NOVEL',
-            createdAt: '2023-01-01T12:00:00Z',
-            updatedAt: '2023-01-10T15:30:00Z',
-            status: 'PUBLISHED',
-          },
-          {
-            id: 2,
-            title: '반지의 제왕: 반지 원정대',
-            type: 'NOVEL',
-            createdAt: '2023-02-15T09:00:00Z',
-            updatedAt: '2023-02-20T11:20:00Z',
-            status: 'DRAFT',
-          },
-          {
-            id: 3,
-            title: '호그와트 마법 세계관 설정집',
-            type: 'SETTING',
-            createdAt: '2023-01-05T14:00:00Z',
-            updatedAt: '2023-01-12T16:45:00Z',
-            status: 'PUBLISHED',
-          },
-          {
-            id: 4,
-            title: '중간계 종족 및 지리 설정',
-            type: 'SETTING',
-            createdAt: '2023-02-10T10:30:00Z',
-            updatedAt: '2023-02-18T13:15:00Z',
-            status: 'DRAFT',
-          },
-        ];
+        return [];
       }
     },
   });
@@ -116,16 +78,10 @@ export function AuthorWorks() {
       } catch (e) {
         console.error('Failed to fetch work detail', e);
         // Fallback for demo if API fails
-        let mockContent = '';
-        if (selectedWork.type === 'NOVEL') {
-          mockContent = `[${selectedWork.title}] 본문 내용입니다.\n\n제1장: 시작\n\n어느 날 아침, 주인공은 눈을 떴다. 창밖으로 들어오는 햇살이 눈부셨다. "오늘은 뭔가 좋은 일이 일어날 것만 같아." 그는 중얼거렸다.\n\n하지만 그의 예감은 빗나갔다. 문을 열고 나가자마자 마주친 것은 거대한 용이었기 때문이다. 용은 코에서 연기를 뿜으며 그를 내려다보고 있었다.\n\n"안녕, 작은 인간아." 용이 말했다.`;
-        } else {
-          mockContent = `[${selectedWork.title}] 설정집 내용입니다.\n\n1. 세계관 개요\n이 세계는 마법과 과학이 공존하는 판타지 세계입니다.\n\n2. 주요 종족\n- 인간: 가장 평범하지만 적응력이 뛰어난 종족.\n- 엘프: 숲에 살며 마법에 능통한 종족.\n- 드워프: 광산에서 보석을 캐고 무기를 만드는 종족.\n\n3. 마법 체계\n마법은 4원소(물, 불, 바람, 흙)를 기반으로 합니다.`;
-        }
-
         return {
           ...selectedWork,
-          content: mockContent,
+          content:
+            '이 작품의 내용은 아직 불러올 수 없습니다. (API 연동 필요)\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
         };
       }
     },
