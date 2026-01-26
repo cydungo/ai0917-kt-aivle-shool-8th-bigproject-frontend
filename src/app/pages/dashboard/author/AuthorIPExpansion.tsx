@@ -22,6 +22,7 @@ import {
   Calendar,
   ChevronRight,
   Loader2,
+  Share2,
 } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { useQuery } from '@tanstack/react-query';
@@ -72,12 +73,19 @@ export function AuthorIPExpansion({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">IP 확장</h1>
-        <p className="text-muted-foreground">
-          내 작품의 OSMU(One Source Multi Use) 제안서를 검토하고 담당자와
-          매칭합니다.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Share2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">IP 확장</h1>
+            <p className="text-sm text-muted-foreground">
+              내 작품의 OSMU(One Source Multi Use) 제안서를 검토하고 담당자와
+              매칭합니다.
+            </p>
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

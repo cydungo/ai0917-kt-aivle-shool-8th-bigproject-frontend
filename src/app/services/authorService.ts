@@ -5,12 +5,15 @@ import {
   AuthorMyPageDto,
   AuthorNoticeDto,
   ContestTemplateDto,
+  ContestTemplateCreateRequestDto,
   ExtractSettingRequest,
   ExtractSettingResponse,
   IPMatchingDto,
   IPProposalDto,
   LorebookDto,
   LorebookCharacterDto,
+  LorebookWorldviewDto,
+  LorebookPlotDto,
   WorkCreateRequestDto,
   WorkResponseDto,
   WorkStatus,
@@ -155,6 +158,20 @@ export const authorService = {
     return response.data;
   },
 
+  getLorebookWorldviews: async (workId: string) => {
+    const response = await apiClient.get<LorebookWorldviewDto[]>(
+      `/api/v1/author/lorebook/${workId}/worldview`,
+    );
+    return response.data;
+  },
+
+  getLorebookPlots: async (workId: string) => {
+    const response = await apiClient.get<LorebookPlotDto[]>(
+      `/api/v1/author/lorebook/${workId}/plot`,
+    );
+    return response.data;
+  },
+
   // IP Expansion
   getIPProposals: async () => {
     const response = await apiClient.get<IPProposalDto[]>(
@@ -174,6 +191,14 @@ export const authorService = {
   getContestTemplates: async () => {
     const response = await apiClient.get<ContestTemplateDto[]>(
       '/api/v1/author/contest/templates',
+    );
+    return response.data;
+  },
+
+  createContestTemplate: async (data: ContestTemplateCreateRequestDto) => {
+    const response = await apiClient.post<ContestTemplateDto>(
+      '/api/v1/author/contest/templates',
+      data,
     );
     return response.data;
   },

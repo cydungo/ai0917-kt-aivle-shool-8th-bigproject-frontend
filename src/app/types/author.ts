@@ -78,6 +78,22 @@ export interface LorebookCharacterDto {
   traits?: string[];
 }
 
+export interface LorebookWorldviewDto {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  tags?: string[];
+}
+
+export interface LorebookPlotDto {
+  id: number;
+  title: string;
+  order: number;
+  description: string;
+  importance?: 'Main' | 'Sub';
+}
+
 // Episode DTOs
 export interface EpisodeDto {
   id: number;
@@ -122,6 +138,15 @@ export interface ContestTemplateDto {
   dDay: string;
   description: string;
   isAiSupported: boolean;
+}
+
+export interface ContestTemplateCreateRequestDto {
+  title: string;
+  organizer: string;
+  category: string;
+  prize: string;
+  deadline: string;
+  description: string;
 }
 
 // My Page

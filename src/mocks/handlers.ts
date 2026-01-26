@@ -121,6 +121,25 @@ const ROLES = [
   '가족',
 ];
 
+let contestTemplates = generateList(10, (i) => ({
+  id: i,
+  title: `2026 ${getRandomItem(GENRES)} 공모전`,
+  organizer: getRandomItem([
+    '네이버웹툰',
+    '카카오페이지',
+    '리디북스',
+    '문피아',
+    '조아라',
+  ]),
+  prize: `${(i + 1) * 1000}만원`,
+  dDay: `D-${i * 3}`,
+  category: getRandomItem(GENRES),
+  status: 'OPEN',
+  description:
+    '이 공모전은 신인 작가 발굴을 위한 최고의 기회입니다. 당신의 상상력을 펼쳐보세요!',
+  isAiSupported: i % 2 === 0,
+}));
+
 // ----------------------------------------------------------------------
 // Handlers Definition
 // ----------------------------------------------------------------------
@@ -162,10 +181,14 @@ export const handlers = [
       return HttpResponse.json({
         type: 'AUTH',
         role: storedRole,
-        id: 1,
+        userId: 1,
         email: 'user@example.com',
         name: '김에이블',
         siteEmail: 'user@example.com',
+        mobile: '010-1234-5678',
+        birthYear: '1995',
+        gender: 'M',
+        createdAt: '2025-01-01T09:00:00',
       });
     }
     return new HttpResponse(null, { status: 401 });
@@ -549,6 +572,17 @@ export const handlers = [
   ),
 
   // 5.4 Lorebook
+  http.get(`${BACKEND_URL}/api/v1/author/lorebook`, () =>
+    HttpResponse.json(
+      generateList(5, (i) => ({
+        id: i,
+        title: `${TITLES[i % TITLES.length]} 설정집`,
+        description: '작품의 세계관, 인물, 사건 등을 정리한 설정집입니다.',
+        updatedAt: new Date().toISOString(),
+        count: 15 + i * 3,
+      })),
+    ),
+  ),
   http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/characters`, () =>
     HttpResponse.json(
       generateList(15, (i) => ({
@@ -561,23 +595,27 @@ export const handlers = [
       })),
     ),
   ),
-  http.get(`${BACKEND_URL}/api/v2/author/lorebook/:workId/worldview`, () =>
+  http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/worldview`, () =>
     HttpResponse.json(
       generateList(10, (i) => ({
         id: i,
-        name: `세계관 설정 - ${['마법탑', '황궁', '북부 대공령', '마계', '천계'][i % 5]}`,
-        type: 'Location',
-        description: '마법이 존재하는 대륙의 주요 거점입니다.',
+        title: `세계관 설정 - ${['마법탑', '황궁', '북부 대공령', '마계', '천계', '아카데미', '길드', '던전', '신전', '암시장'][i % 10]}`,
+        category: ['지리', '역사', '마법', '종교', '문화'][i % 5],
+        description:
+          '이 구역은 대륙의 중심에 위치하며, 강력한 마력의 흐름이 모이는 곳입니다. 고대부터 전해져 내려오는 전설이 깃들어 있습니다.',
+        tags: ['중요', '위험', '비밀', '보물'],
       })),
     ),
   ),
-  http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/narrative`, () =>
+  http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/plot`, () =>
     HttpResponse.json(
       generateList(12, (i) => ({
         id: i,
-        title: `주요 사건 ${i} - ${['전쟁 발발', '황제 서거', '마왕 부활', '아카데미 입학'][i % 4]}`,
-        description: '스토리의 큰 줄기가 되는 사건입니다.',
-        order: i,
+        title: `주요 사건 ${i + 1} - ${['전쟁 발발', '황제 서거', '마왕 부활', '아카데미 입학', '첫 번째 시련', '동료의 배신', '각성', '최종 결전'][i % 8]}`,
+        description:
+          '스토리의 큰 줄기가 되는 사건입니다. 주인공의 운명을 크게 바꾸는 계기가 됩니다.',
+        order: i + 1,
+        importance: i % 3 === 0 ? 'Main' : 'Sub',
       })),
     ),
   ),
@@ -608,15 +646,26 @@ export const handlers = [
 
   // 5.6 Contest Templates
   http.get(`${BACKEND_URL}/api/v1/author/contest/templates`, () =>
-    HttpResponse.json(
-      generateList(10, (i) => ({
-        id: i,
-        title: `2026 ${getRandomItem(GENRES)} 공모전`,
-        prize: `${(i + 1) * 1000}만원`,
-        dDay: `D-${i * 3}`,
-        category: getRandomItem(GENRES),
+    HttpResponse.json(contestTemplates),
+  ),
+
+  http.post(
+    `${BACKEND_URL}/api/v1/author/contest/templates`,
+    async ({ request }) => {
+      const body = (await request.json()) as any;
+      const newItem = {
+        id: contestTemplates.length + 1,
+        title: body.title,
+        organizer: body.organizer || 'User',
+        prize: body.prize,
+        category: body.category,
+        dDay: 'D-NEW',
         status: 'OPEN',
-      })),
-    ),
+        description: body.description,
+        isAiSupported: true,
+      };
+      contestTemplates = [newItem, ...contestTemplates];
+      return HttpResponse.json(newItem);
+    },
   ),
 ];
