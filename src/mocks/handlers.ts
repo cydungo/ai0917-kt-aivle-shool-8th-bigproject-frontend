@@ -483,6 +483,91 @@ export const handlers = [
   // 5. Author API
   // ======================================================================
 
+  // 5.5 Serialization (New)
+  http.post(
+    `${BACKEND_URL}/api/v1/author/works/:workId/publish/keywords`,
+    async () => {
+      // Simulate AI processing delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return HttpResponse.json({
+        keywords: {
+          characters: ['강민우', '이수연', '김철수', '박영희'],
+          locations: ['서울 타워', '지하 벙커', '아카데미'],
+          events: ['게이트 발생', '각성', '첫 번째 임무'],
+          groups: ['헌터 협회', '블랙 길드'],
+          items: ['엑스칼리버', '치유 물약'],
+          worlds: ['대격변 이후', '마력 각성 시대'],
+        },
+      });
+    },
+  ),
+
+  http.post(
+    `${BACKEND_URL}/api/v1/author/works/:workId/publish/analysis`,
+    async ({ request }) => {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const body = (await request.json()) as any;
+      const selected = body.selectedKeywords || {};
+
+      // Generate dummy changes based on selection
+      const after = [
+        {
+          id: '1',
+          category: 'characters',
+          name: '강민우',
+          description: 'S급 헌터로 각성함 (Updated)',
+          status: 'UPDATED',
+        },
+        {
+          id: 'new-1',
+          category: 'items',
+          name: '마석',
+          description: '마력을 담은 돌 (New)',
+          status: 'NEW',
+        },
+      ];
+
+      // Add selected keywords as new items if not already present
+      Object.keys(selected).forEach((cat) => {
+        selected[cat]?.forEach((kw: string, idx: number) => {
+          if (kw !== '강민우') {
+            after.push({
+              id: `gen-${cat}-${idx}`,
+              category: cat,
+              name: kw,
+              description: `AI가 추출한 ${kw} 설정입니다.`,
+              status: 'NEW',
+            });
+          }
+        });
+      });
+
+      return HttpResponse.json({
+        before: [
+          {
+            id: '1',
+            category: 'characters',
+            name: '강민우',
+            description: '평범한 대학생',
+            status: 'UNCHANGED',
+          },
+        ],
+        after,
+      });
+    },
+  ),
+
+  http.post(
+    `${BACKEND_URL}/api/v1/author/works/:workId/publish/confirm`,
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return HttpResponse.json({
+        success: true,
+        publishedAt: new Date().toISOString(),
+      });
+    },
+  ),
+
   // 5.1 Dashboard
   http.get(`${BACKEND_URL}/api/v1/author/dashboard/summary`, () =>
     HttpResponse.json({
@@ -522,13 +607,31 @@ export const handlers = [
       })),
     ),
   ),
-  http.get(`${BACKEND_URL}/api/v1/author/works/:id`, ({ params }) =>
+  // Work Creation
+  http.post(`${BACKEND_URL}/api/v1/author/works`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json({
+      id: Date.now(),
+      title: body.title,
+      writer: '홍길동',
+      synopsis: body.synopsis || '',
+      genre: body.genre || '',
+      coverImageUrl: body.coverImageUrl || '',
+      description: body.description || '',
+      status: 'ONGOING',
+      statusDescription: '연재 중',
+      createdAt: new Date().toISOString(),
+    });
+  }),
+
+  // Work Detail
+  http.get(`${BACKEND_URL}/api/v1/author/works/:workId`, ({ params }) =>
     HttpResponse.json({
-      id: Number(params.id),
-      title: TITLES[Number(params.id) % TITLES.length],
+      id: Number(params.workId),
+      title: TITLES[Number(params.workId) % TITLES.length],
       description: '상세 설명입니다.',
       status: 'SERIES',
-      genre: GENRES[Number(params.id) % GENRES.length],
+      genre: GENRES[Number(params.workId) % GENRES.length],
       createdAt: '2026-01-01',
       updatedAt: new Date().toISOString(),
     }),

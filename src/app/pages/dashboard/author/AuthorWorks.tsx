@@ -24,6 +24,16 @@ import {
   DialogTitle,
 } from '../../../components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../../components/ui/alert-dialog';
+import {
   Save,
   Sidebar,
   Maximize2,
@@ -40,6 +50,12 @@ import {
   ArrowRight,
   ChevronsLeft,
   ChevronsRight,
+  Users,
+  Globe,
+  MapPin,
+  Package,
+  Users2,
+  Check,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authorService } from '../../../services/authorService';
@@ -50,9 +66,16 @@ import {
   WorkResponseDto,
   WorkCreateRequestDto,
   WorkUpdateRequestDto,
+  KeywordExtractionResponseDto,
+  SettingBookDiffDto,
+  PublishAnalysisResponseDto,
 } from '../../../types/author';
 import { cn } from '../../../components/ui/utils';
 import { toast } from 'sonner';
+import { Checkbox } from '../../../components/ui/checkbox';
+import { ScrollArea } from '../../../components/ui/scroll-area';
+import { Badge } from '../../../components/ui/badge';
+import { Loader2, Plus, Trash2, Edit2 } from 'lucide-react';
 
 interface AuthorWorksProps {
   integrationId: string;
@@ -75,6 +98,38 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
   const [editorContent, setEditorContent] = useState('');
   const [isDirty, setIsDirty] = useState(false);
 
+  // History State for Undo/Redo
+  const [history, setHistory] = useState<string[]>(['']);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const isUndoing = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update history with debounce
+  const updateHistory = (newContent: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      setHistory((prev) => {
+        const newHistory = prev.slice(0, historyIndex + 1);
+        newHistory.push(newContent);
+        return newHistory;
+      });
+      setHistoryIndex((prev) => prev + 1);
+    }, 500);
+  };
+
+  const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    setEditorContent(newContent);
+    setIsDirty(true);
+
+    if (!isUndoing.current) {
+      updateHistory(newContent);
+    }
+  };
+
   // Modals State
   const [isCreateWorkOpen, setIsCreateWorkOpen] = useState(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
@@ -82,31 +137,230 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
     null,
   );
   const [newWorkTitle, setNewWorkTitle] = useState('');
+  const [newWorkSynopsis, setNewWorkSynopsis] = useState('');
+  const [newWorkGenre, setNewWorkGenre] = useState('');
+  const [newWorkCover, setNewWorkCover] = useState(''); // Optional
   const [isPublishPasswordOpen, setIsPublishPasswordOpen] = useState(false);
   const [publishPassword, setPublishPassword] = useState('');
+  const [isCreateEpisodeOpen, setIsCreateEpisodeOpen] = useState(false);
+  const [createEpisodeWorkId, setCreateEpisodeWorkId] = useState<number | null>(
+    null,
+  );
+  const [newEpisodeTitle, setNewEpisodeTitle] = useState('');
+  const [newEpisodeSubtitle, setNewEpisodeSubtitle] = useState('');
+
   const [isKeywordSelectionOpen, setIsKeywordSelectionOpen] = useState(false);
 
   // New States
-  const [keywordSelection, setKeywordSelection] = useState({
-    characters: '',
-    places: '',
-    items: '',
-    groups: '',
-    worldviews: '',
-    plots: '',
-  });
+  const [extractedKeywords, setExtractedKeywords] = useState<
+    KeywordExtractionResponseDto['keywords'] | null
+  >(null);
+  const [selectedKeywords, setSelectedKeywords] = useState<{
+    [key: string]: string[];
+  }>({});
+  const [isKeywordSelectionConfirmed, setIsKeywordSelectionConfirmed] =
+    useState(false);
+  const [processingStatus, setProcessingStatus] = useState<
+    Record<number, 'EXTRACTING' | 'ANALYZING' | 'REVIEW_READY'>
+  >({});
+  const [analysisResults, setAnalysisResults] = useState<
+    Record<number, PublishAnalysisResponseDto>
+  >({});
+  const [settingBookDiff, setSettingBookDiff] =
+    useState<PublishAnalysisResponseDto | null>(null);
+
   const [isFinalReviewOpen, setIsFinalReviewOpen] = useState(false);
   const [reviewEpisode, setReviewEpisode] = useState<EpisodeDto | null>(null);
   const [reviewConfirmText, setReviewConfirmText] = useState('');
+  const [isFinalReviewConfirmed, setIsFinalReviewConfirmed] = useState(false);
 
   const [editMetadataTitle, setEditMetadataTitle] = useState('');
+
+  // Diff Modal Category State
+  type Category =
+    | 'characters'
+    | 'places'
+    | 'items'
+    | 'groups'
+    | 'worldviews'
+    | 'plots';
+  const [activeDiffCategory, setActiveDiffCategory] =
+    useState<Category>('characters');
+  const [editingItems, setEditingItems] = useState<Set<string>>(new Set());
+
+  const toggleEditItem = (id: string) => {
+    setEditingItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const categories: { id: Category; label: string; icon: React.ElementType }[] =
+    [
+      { id: 'characters', label: '인물', icon: Users },
+      { id: 'places', label: '장소', icon: MapPin },
+      { id: 'items', label: '물건', icon: Package },
+      { id: 'groups', label: '집단', icon: Users2 },
+      { id: 'worldviews', label: '세계', icon: Globe },
+      { id: 'plots', label: '사건', icon: BookOpen },
+    ];
   const [editMetadataSynopsis, setEditMetadataSynopsis] = useState('');
   const [editMetadataGenre, setEditMetadataGenre] = useState('');
+
+  // Rename & Delete State
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [renamingWork, setRenamingWork] = useState<WorkResponseDto | null>(
+    null,
+  );
+  const [renameTitle, setRenameTitle] = useState('');
+
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [deletingWorkId, setDeletingWorkId] = useState<number | null>(null);
+
+  // Episode Rename & Delete State
+  const [isRenameEpisodeOpen, setIsRenameEpisodeOpen] = useState(false);
+  const [renamingEpisode, setRenamingEpisode] = useState<{
+    workId: number;
+    episode: EpisodeDto;
+  } | null>(null);
+  const [renameEpisodeTitle, setRenameEpisodeTitle] = useState('');
+
+  const [isDeleteEpisodeAlertOpen, setIsDeleteEpisodeAlertOpen] =
+    useState(false);
+  const [deletingEpisode, setDeletingEpisode] = useState<{
+    workId: number;
+    episodeId: number;
+  } | null>(null);
+
+  // Keyword Extraction Mutation
+  const keywordExtractionMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedWorkId || !selectedEpisode) return;
+      return authorService.publishKeywords(selectedWorkId.toString(), {
+        content: editorContent,
+        episodeId: selectedEpisode.id,
+      });
+    },
+    onSuccess: (data) => {
+      if (data) {
+        setExtractedKeywords(data.keywords);
+        setIsKeywordSelectionOpen(true);
+        // Select all keywords by default
+        setSelectedKeywords(data.keywords);
+        setIsKeywordSelectionConfirmed(false);
+      }
+    },
+    onError: () => {
+      toast.error('키워드 추출에 실패했습니다.');
+    },
+  });
+
+  // Analysis Mutation
+  const analysisMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedWorkId) return;
+      return authorService.publishAnalysis(selectedWorkId.toString(), {
+        selectedKeywords: {
+          characters: selectedKeywords['characters'] || [],
+          locations: selectedKeywords['locations'] || [],
+          events: selectedKeywords['events'] || [],
+          groups: selectedKeywords['groups'] || [],
+          items: selectedKeywords['items'] || [],
+          worlds: selectedKeywords['worlds'] || [],
+        },
+      });
+    },
+    onSuccess: (data) => {
+      if (data) {
+        setSettingBookDiff(data);
+        setIsKeywordSelectionOpen(false);
+        setIsFinalReviewOpen(true);
+      }
+    },
+    onError: () => {
+      toast.error('설정집 분석에 실패했습니다.');
+    },
+  });
+
+  // Confirm Publish Mutation
+  const confirmPublishMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedWorkId) return;
+      return authorService.publishConfirm(selectedWorkId.toString());
+    },
+    onSuccess: () => {
+      toast.success('설정집이 업데이트되고 연재가 완료되었습니다.');
+      setIsFinalReviewOpen(false);
+      setSettingBookDiff(null);
+      if (selectedEpisode) {
+        setSelectedEpisode({ ...selectedEpisode, isReadOnly: true });
+      }
+      queryClient.invalidateQueries({
+        queryKey: ['author', 'work', selectedWorkId, 'episodes'],
+      });
+    },
+    onError: () => {
+      toast.error('연재 처리에 실패했습니다.');
+    },
+  });
 
   // Fetch Works
   const { data: works } = useQuery({
     queryKey: ['author', 'works'],
     queryFn: () => authorService.getWorks(integrationId),
+  });
+
+  // Rename Work Mutation
+  const renameWorkMutation = useMutation({
+    mutationFn: async () => {
+      if (!renamingWork) return;
+      return authorService.updateWork(integrationId, {
+        id: renamingWork.id,
+        title: renameTitle,
+        description: renamingWork.description,
+        status: renamingWork.status,
+        synopsis: renamingWork.synopsis,
+        genre: renamingWork.genre,
+      });
+    },
+    onSuccess: () => {
+      toast.success('작품 이름이 변경되었습니다.');
+      setIsRenameOpen(false);
+      setRenamingWork(null);
+      setRenameTitle('');
+      queryClient.invalidateQueries({ queryKey: ['author', 'works'] });
+    },
+    onError: () => {
+      toast.error('작품 이름 변경에 실패했습니다.');
+    },
+  });
+
+  // Delete Work Mutation
+  const deleteWorkMutation = useMutation({
+    mutationFn: async () => {
+      if (!deletingWorkId) return;
+      return authorService.deleteWork(deletingWorkId);
+    },
+    onSuccess: () => {
+      toast.success('작품이 삭제되었습니다.');
+      setIsDeleteAlertOpen(false);
+      setDeletingWorkId(null);
+      queryClient.invalidateQueries({ queryKey: ['author', 'works'] });
+      // If deleted work was selected, deselect it
+      if (selectedWorkId === deletingWorkId) {
+        setSelectedWorkId(null);
+        setSelectedEpisode(null);
+        setEditorContent('');
+      }
+    },
+    onError: () => {
+      toast.error('작품 삭제에 실패했습니다.');
+    },
   });
 
   // Fetch Episode Content
@@ -196,9 +450,91 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
     },
   });
 
+  // Create Episode Mutation
+  const createEpisodeMutation = useMutation({
+    mutationFn: async ({
+      workId,
+      title,
+      subtitle,
+    }: {
+      workId: string;
+      title: string;
+      subtitle?: string;
+    }) => {
+      await authorService.createEpisode(workId, title, subtitle);
+    },
+    onSuccess: (_, variables) => {
+      toast.success('원문이 생성되었습니다.');
+      setIsCreateEpisodeOpen(false);
+      setNewEpisodeTitle('');
+      setNewEpisodeSubtitle('');
+      queryClient.invalidateQueries({
+        queryKey: ['author', 'work', Number(variables.workId), 'episodes'],
+      });
+    },
+  });
+
+  const renameEpisodeMutation = useMutation({
+    mutationFn: async () => {
+      if (!renamingEpisode) return;
+      await authorService.updateEpisodeTitle(
+        renamingEpisode.workId.toString(),
+        renamingEpisode.episode.id.toString(),
+        renameEpisodeTitle,
+      );
+    },
+    onSuccess: () => {
+      toast.success('원문 이름이 변경되었습니다.');
+      setIsRenameEpisodeOpen(false);
+      setRenamingEpisode(null);
+      setRenameEpisodeTitle('');
+      if (renamingEpisode) {
+        queryClient.invalidateQueries({
+          queryKey: ['author', 'work', renamingEpisode.workId, 'episodes'],
+        });
+      }
+    },
+    onError: () => {
+      toast.error('원문 이름 변경에 실패했습니다.');
+    },
+  });
+
+  const deleteEpisodeMutation = useMutation({
+    mutationFn: async () => {
+      if (!deletingEpisode) return;
+      await authorService.deleteEpisode(
+        deletingEpisode.workId.toString(),
+        deletingEpisode.episodeId.toString(),
+      );
+    },
+    onSuccess: () => {
+      toast.success('원문이 삭제되었습니다.');
+      setIsDeleteEpisodeAlertOpen(false);
+
+      if (
+        selectedEpisode &&
+        deletingEpisode &&
+        selectedEpisode.id === deletingEpisode.episodeId
+      ) {
+        setSelectedEpisode(null);
+        setEditorContent('');
+      }
+
+      if (deletingEpisode) {
+        queryClient.invalidateQueries({
+          queryKey: ['author', 'work', deletingEpisode.workId, 'episodes'],
+        });
+      }
+      setDeletingEpisode(null);
+    },
+    onError: () => {
+      toast.error('원문 삭제에 실패했습니다.');
+    },
+  });
+
   // Ctrl+S Handler
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleGlobalSaveShortcut = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         if (selectedEpisode && isDirty && !saveMutation.isPending) {
@@ -211,15 +547,10 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleGlobalSaveShortcut);
+    return () =>
+      window.removeEventListener('keydown', handleGlobalSaveShortcut);
   }, [selectedEpisode, isDirty, saveMutation]);
-
-  const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (selectedEpisode?.isReadOnly) return;
-    setEditorContent(e.target.value);
-    setIsDirty(true);
-  };
 
   const handleSelectWork = (workId: number) => {
     setSelectedWorkId(workId);
@@ -250,6 +581,28 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
     setIsRightSidebarOpen(true);
   };
 
+  const handleRenameWork = (work: WorkResponseDto) => {
+    setRenamingWork(work);
+    setRenameTitle(work.title);
+    setIsRenameOpen(true);
+  };
+
+  const handleDeleteWork = (workId: number) => {
+    setDeletingWorkId(workId);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const handleRenameEpisode = (workId: number, episode: EpisodeDto) => {
+    setRenamingEpisode({ workId, episode });
+    setRenameEpisodeTitle(episode.title);
+    setIsRenameEpisodeOpen(true);
+  };
+
+  const handleDeleteEpisode = (workId: number, episodeId: number) => {
+    setDeletingEpisode({ workId, episodeId });
+    setIsDeleteEpisodeAlertOpen(true);
+  };
+
   const handleCreateWork = () => {
     if (!newWorkTitle.trim()) {
       toast.error('작품 제목을 입력해주세요.');
@@ -257,88 +610,174 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
     }
     createWorkMutation.mutate({
       title: newWorkTitle,
+      synopsis: newWorkSynopsis,
+      genre: newWorkGenre,
+      coverImageUrl: newWorkCover,
       description: '',
       integrationId,
     });
   };
 
+  const handleCreateEpisode = (workId: number) => {
+    setCreateEpisodeWorkId(workId);
+    setNewEpisodeTitle('');
+    setNewEpisodeSubtitle('');
+    setIsCreateEpisodeOpen(true);
+  };
+
+  const handleSubmitCreateEpisode = () => {
+    if (!createEpisodeWorkId) return;
+    if (!newEpisodeTitle.trim()) {
+      toast.error('원문 제목을 입력해주세요.');
+      return;
+    }
+
+    createEpisodeMutation.mutate({
+      workId: createEpisodeWorkId.toString(),
+      title: newEpisodeTitle.trim(),
+      subtitle: newEpisodeSubtitle.trim(),
+    });
+  };
+
   const handlePublishClick = () => {
     if (!selectedEpisode) return;
-    setIsPublishPasswordOpen(true);
+    if (isDirty) {
+      toast.error('먼저 저장해주세요.');
+      return;
+    }
+
+    const status = processingStatus[selectedEpisode.id];
+
+    if (status === 'ANALYZING') {
+      toast.info('설정집 분석이 진행 중입니다. 잠시만 기다려주세요.');
+      return;
+    }
+
+    if (status === 'REVIEW_READY') {
+      const result = analysisResults[selectedEpisode.id];
+      if (result) {
+        setSettingBookDiff(result);
+        setIsFinalReviewOpen(true);
+        setIsFinalReviewConfirmed(false);
+      } else {
+        toast.error('분석 결과를 찾을 수 없습니다. 다시 시도해주세요.');
+        // Maybe reset status?
+      }
+      return;
+    }
+
+    if (confirm('연재하시겠습니까?')) {
+      setIsPublishPasswordOpen(true);
+    }
   };
 
   const handlePasswordSubmit = () => {
     // Mock password check
     if (publishPassword === '1234') {
-      // Mock password
       setIsPublishPasswordOpen(false);
       setPublishPassword('');
 
-      if (selectedEpisode?.isAnalyzed) {
-        toast.info('기존 분석 데이터를 바탕으로 설정집을 업데이트합니다.');
-        handleKeywordSubmit();
-      } else {
-        setIsKeywordSelectionOpen(true);
+      if (selectedEpisode) {
+        setProcessingStatus((prev) => ({
+          ...prev,
+          [selectedEpisode.id]: 'EXTRACTING',
+        }));
       }
+
+      toast.info('AI가 원문을 분석하여 키워드를 추출하고 있습니다...');
+      keywordExtractionMutation.mutate();
     } else {
       toast.error('비밀번호가 일치하지 않습니다. (테스트: 1234)');
     }
   };
 
   const handleOpenReview = (workId: number, episode: EpisodeDto) => {
-    setReviewEpisode(episode);
-    setIsFinalReviewOpen(true);
+    if (episode.isReadOnly) return; // Already published
+
+    // If it's in REVIEW_READY state, open it
+    const status = processingStatus[episode.id];
+    if (status === 'REVIEW_READY') {
+      const result = analysisResults[episode.id];
+      if (result) {
+        setSettingBookDiff(result);
+        setIsFinalReviewOpen(true);
+        return;
+      }
+    }
+
+    // Otherwise show standard message
+    toast.info('진행 중인 연재 프로세스가 없습니다.');
   };
 
-  const handleFinalPublish = () => {
-    if (reviewConfirmText !== '연재합니다') {
-      toast.error("'연재합니다'를 정확히 입력해주세요.");
-      return;
-    }
+  const handleKeywordToggle = (category: string, keyword: string) => {
+    setSelectedKeywords((prev) => {
+      const currentList = prev[category] || [];
+      const newList = currentList.includes(keyword)
+        ? currentList.filter((k) => k !== keyword)
+        : [...currentList, keyword];
+      return { ...prev, [category]: newList };
+    });
+  };
 
-    // Call publish API
-    if (selectedWorkId && reviewEpisode) {
-      authorService
-        .publishEpisode(selectedWorkId.toString(), reviewEpisode.id.toString())
-        .then(() => {
-          toast.success('성공적으로 연재되었습니다.');
-          setIsFinalReviewOpen(false);
-          setReviewConfirmText('');
-          setReviewEpisode(null);
-          queryClient.invalidateQueries({
-            queryKey: ['author', 'work', selectedWorkId, 'episodes'],
-          });
-        })
-        .catch(() => {
-          toast.error('연재 처리에 실패했습니다.');
-        });
+  const handleSelectAllKeywords = (selectAll: boolean) => {
+    if (!extractedKeywords) return;
+    if (selectAll) {
+      setSelectedKeywords(extractedKeywords);
+    } else {
+      setSelectedKeywords({});
     }
+  };
+
+  const handleCategoryToggle = (category: string, all: boolean) => {
+    if (!extractedKeywords) return;
+    const categoryKeywords = (extractedKeywords as any)[category] || [];
+    setSelectedKeywords((prev) => ({
+      ...prev,
+      [category]: all ? categoryKeywords : [],
+    }));
   };
 
   const handleKeywordSubmit = () => {
-    // Mock AI generation call
-    toast.success('설정집 생성이 요청되었습니다. 잠시 후 알림을 확인해주세요.');
-    setIsKeywordSelectionOpen(false);
+    if (!isKeywordSelectionConfirmed) {
+      toast.error('확인 체크박스에 체크해주세요.');
+      return;
+    }
 
-    // Simulate AI completion after 2 seconds for demo purposes
-    setTimeout(() => {
-      toast.info('AI 설정집 생성이 완료되었습니다. 최종 확인을 진행해주세요.');
-      // In a real app, this would be a server push or polling.
-      // Here we optimistically update the cache to show the alert icon.
-      if (selectedWorkId && selectedEpisode) {
-        queryClient.setQueryData(
-          ['author', 'work', selectedWorkId, 'episodes'],
-          (oldData: EpisodeDto[] | undefined) => {
-            if (!oldData) return oldData;
-            return oldData.map((ep) =>
-              ep.id === selectedEpisode.id
-                ? { ...ep, isReviewPending: true }
-                : ep,
-            );
-          },
-        );
-      }
-    }, 2000);
+    if (selectedEpisode) {
+      setProcessingStatus((prev) => ({
+        ...prev,
+        [selectedEpisode.id]: 'ANALYZING',
+      }));
+    }
+
+    setIsKeywordSelectionOpen(false);
+    toast.info(
+      '설정집 변경사항을 분석 중입니다... (시간이 소요될 수 있습니다)',
+    );
+    analysisMutation.mutate();
+  };
+
+  // Helper to handle diff changes in final review
+  const handleDiffChange = (
+    id: string,
+    field: keyof SettingBookDiffDto,
+    value: any,
+  ) => {
+    if (!settingBookDiff) return;
+    setSettingBookDiff({
+      ...settingBookDiff,
+      after: settingBookDiff.after.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item,
+      ),
+    });
+  };
+
+  const handleDiffDelete = (id: string) => {
+    if (!settingBookDiff) return;
+    setSettingBookDiff({
+      ...settingBookDiff,
+      after: settingBookDiff.after.filter((item) => item.id !== id),
+    });
   };
 
   // Update Work Mutation
@@ -377,12 +816,18 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                 works={works || []}
                 selectedWorkId={selectedWorkId}
                 selectedEpisodeId={selectedEpisode?.id || null}
+                processingStatus={processingStatus}
                 onSelectWork={handleSelectWork}
                 onSelectEpisode={handleSelectEpisode}
                 onOpenMetadata={handleOpenMetadata}
                 onOpenLorebook={handleOpenLorebook}
                 onCreateWork={() => setIsCreateWorkOpen(true)}
+                onCreateEpisode={handleCreateEpisode}
                 onReviewRequired={handleOpenReview}
+                onRenameWork={handleRenameWork}
+                onDeleteWork={handleDeleteWork}
+                onRenameEpisode={handleRenameEpisode}
+                onDeleteEpisode={handleDeleteEpisode}
                 className="h-full"
               />
             </ResizablePanel>
@@ -449,14 +894,26 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                       <Save className="w-4 h-4 mr-2" />
                       저장
                     </Button>
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => toast.info('연재 기능 준비 중입니다.')} // Placeholder for now
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      연재
-                    </Button>
+                    {processingStatus[selectedEpisode.id] === 'ANALYZING' ? (
+                      <Button
+                        size="sm"
+                        disabled
+                        variant="outline"
+                        className="bg-blue-500/10 text-blue-500 border-blue-200"
+                      >
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        AI 분석 중
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={handlePublishClick}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        연재
+                      </Button>
+                    )}
                   </>
                 )}
 
@@ -528,11 +985,38 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>작품 제목</Label>
+              <Label>
+                작품 제목 <span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={newWorkTitle}
                 onChange={(e) => setNewWorkTitle(e.target.value)}
                 placeholder="나의 멋진 소설"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>시놉시스 (선택)</Label>
+              <Textarea
+                value={newWorkSynopsis}
+                onChange={(e) => setNewWorkSynopsis(e.target.value)}
+                placeholder="작품의 줄거리를 입력하세요"
+                className="h-24 resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>장르 (선택)</Label>
+              <Input
+                value={newWorkGenre}
+                onChange={(e) => setNewWorkGenre(e.target.value)}
+                placeholder="예: 판타지, 로맨스"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>표지 이미지 URL (선택)</Label>
+              <Input
+                value={newWorkCover}
+                onChange={(e) => setNewWorkCover(e.target.value)}
+                placeholder="https://example.com/cover.jpg"
               />
             </div>
           </div>
@@ -546,6 +1030,58 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
             <Button
               onClick={handleCreateWork}
               disabled={createWorkMutation.isPending}
+            >
+              생성
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Episode Modal */}
+      <Dialog open={isCreateEpisodeOpen} onOpenChange={setIsCreateEpisodeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>새 원문(회차) 생성</DialogTitle>
+            <DialogDescription>
+              새로운 회차의 제목과 부제를 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>
+                회차 제목 <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={newEpisodeTitle}
+                onChange={(e) => setNewEpisodeTitle(e.target.value)}
+                placeholder="예: 1화. 새로운 시작"
+                onKeyDown={(e) =>
+                  e.key === 'Enter' && handleSubmitCreateEpisode()
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>부제 (선택)</Label>
+              <Input
+                value={newEpisodeSubtitle}
+                onChange={(e) => setNewEpisodeSubtitle(e.target.value)}
+                placeholder="부제를 입력하세요"
+                onKeyDown={(e) =>
+                  e.key === 'Enter' && handleSubmitCreateEpisode()
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateEpisodeOpen(false)}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handleSubmitCreateEpisode}
+              disabled={createEpisodeMutation.isPending}
             >
               생성
             </Button>
@@ -591,102 +1127,157 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
         open={isKeywordSelectionOpen}
         onOpenChange={setIsKeywordSelectionOpen}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>설정집 생성을 위한 키워드 선택</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>설정집 생성을 위한 키워드 선택</span>
+              <div className="flex items-center gap-2 mr-8">
+                <Checkbox
+                  id="select-all-keywords"
+                  checked={
+                    !!extractedKeywords &&
+                    Object.keys(extractedKeywords).every(
+                      (category) =>
+                        (selectedKeywords[category] || []).length ===
+                        (extractedKeywords as any)[category].length,
+                    )
+                  }
+                  onCheckedChange={(checked) =>
+                    handleSelectAllKeywords(checked === true)
+                  }
+                />
+                <label
+                  htmlFor="select-all-keywords"
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  전체 선택
+                </label>
+              </div>
+            </DialogTitle>
             <DialogDescription>
-              AI가 설정집을 생성하기 위해 각 카테고리별 핵심 키워드를
-              입력해주세요. (30초 이내 권장)
+              AI가 추출한 키워드 중 설정집에 반영할 항목을 선택해주세요.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-              <Label>인물 (Characters)</Label>
-              <Input
-                value={keywordSelection.characters}
-                onChange={(e) =>
-                  setKeywordSelection({
-                    ...keywordSelection,
-                    characters: e.target.value,
-                  })
-                }
-                placeholder="예: 주인공, 조력자 이름"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>장소 (Places)</Label>
-              <Input
-                value={keywordSelection.places}
-                onChange={(e) =>
-                  setKeywordSelection({
-                    ...keywordSelection,
-                    places: e.target.value,
-                  })
-                }
-                placeholder="예: 주요 배경, 도시 이름"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>물건 (Items)</Label>
-              <Input
-                value={keywordSelection.items}
-                onChange={(e) =>
-                  setKeywordSelection({
-                    ...keywordSelection,
-                    items: e.target.value,
-                  })
-                }
-                placeholder="예: 중요 아이템"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>집단 (Groups)</Label>
-              <Input
-                value={keywordSelection.groups}
-                onChange={(e) =>
-                  setKeywordSelection({
-                    ...keywordSelection,
-                    groups: e.target.value,
-                  })
-                }
-                placeholder="예: 조직, 길드"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>세계 (Worldviews)</Label>
-              <Input
-                value={keywordSelection.worldviews}
-                onChange={(e) =>
-                  setKeywordSelection({
-                    ...keywordSelection,
-                    worldviews: e.target.value,
-                  })
-                }
-                placeholder="예: 마법 시스템, 역사"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>사건 (Plots)</Label>
-              <Input
-                value={keywordSelection.plots}
-                onChange={(e) =>
-                  setKeywordSelection({
-                    ...keywordSelection,
-                    plots: e.target.value,
-                  })
-                }
-                placeholder="예: 주요 갈등, 사건"
-              />
+
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+            <div className="grid grid-cols-2 gap-6 py-4">
+              {extractedKeywords ? (
+                Object.entries(extractedKeywords).map(
+                  ([category, keywords]) => {
+                    const categoryLabel: { [key: string]: string } = {
+                      characters: '인물 (Characters)',
+                      locations: '장소 (Locations)',
+                      events: '사건 (Events)',
+                      groups: '집단 (Groups)',
+                      items: '물건 (Items)',
+                      worlds: '세계 (Worlds)',
+                    };
+                    const isAllSelected =
+                      keywords.length > 0 &&
+                      (selectedKeywords[category] || []).length ===
+                        keywords.length;
+
+                    return (
+                      <div
+                        key={category}
+                        className="space-y-3 border rounded-lg p-4 bg-muted/20"
+                      >
+                        <h4 className="font-semibold flex items-center gap-2">
+                          <Checkbox
+                            checked={isAllSelected}
+                            onCheckedChange={(checked) =>
+                              handleCategoryToggle(category, checked === true)
+                            }
+                          />
+                          {categoryLabel[category] || category}
+                          <Badge variant="secondary" className="ml-auto">
+                            {keywords.length}
+                          </Badge>
+                        </h4>
+                        <div className="space-y-2">
+                          {keywords.length > 0 ? (
+                            keywords.map((keyword) => (
+                              <div
+                                key={keyword}
+                                className="flex items-center space-x-2"
+                              >
+                                <Checkbox
+                                  id={`kw-${category}-${keyword}`}
+                                  checked={(
+                                    selectedKeywords[category] || []
+                                  ).includes(keyword)}
+                                  onCheckedChange={() =>
+                                    handleKeywordToggle(category, keyword)
+                                  }
+                                />
+                                <label
+                                  htmlFor={`kw-${category}-${keyword}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                >
+                                  {keyword}
+                                </label>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              추출된 키워드가 없습니다.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  },
+                )
+              ) : (
+                <div className="col-span-2 flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="w-8 h-8 animate-spin mb-4" />
+                  <p>AI가 원문을 분석하고 있습니다...</p>
+                </div>
+              )}
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsKeywordSelectionOpen(false)}
-            >
-              취소
-            </Button>
-            <Button onClick={handleKeywordSubmit}>설정집 자동 생성</Button>
+
+          <DialogFooter className="flex-col sm:flex-col gap-4 border-t pt-4">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="confirm-publish"
+                  checked={isKeywordSelectionConfirmed}
+                  onCheckedChange={(checked) =>
+                    setIsKeywordSelectionConfirmed(checked === true)
+                  }
+                />
+                <label
+                  htmlFor="confirm-publish"
+                  className="text-sm text-muted-foreground cursor-pointer"
+                >
+                  위 내용으로 설정집 분석을 진행합니다.
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsKeywordSelectionOpen(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  onClick={handleKeywordSubmit}
+                  disabled={
+                    !isKeywordSelectionConfirmed || analysisMutation.isPending
+                  }
+                >
+                  {analysisMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      분석 중...
+                    </>
+                  ) : (
+                    '분석 시작'
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -741,140 +1332,554 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
 
       {/* Final Review Modal */}
       <Dialog open={isFinalReviewOpen} onOpenChange={setIsFinalReviewOpen}>
-        <DialogContent className="max-w-[90vw] h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col p-0 gap-0 rounded-xl border shadow-2xl">
+          <DialogHeader className="p-6 pb-4 shrink-0 border-b bg-background z-10">
             <DialogTitle>설정집 변경 사항 확인 (최종 검수)</DialogTitle>
             <DialogDescription>
-              AI가 생성한 설정집 변경 사항을 확인하세요. 왼쪽은 이전 버전,
-              오른쪽은 업데이트된 버전입니다.
+              AI가 생성한 설정집 변경 사항을 확인하세요. 카테고리별로 상세
+              내용을 검토하고 수정할 수 있습니다.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden flex gap-4 py-4">
-            {/* Left Column: Before */}
-            <div className="flex-1 border rounded-md p-4 flex flex-col bg-muted/20">
-              <h4 className="font-semibold mb-4 text-center">이전 설정집</h4>
-              <div className="flex-1 overflow-y-auto pr-2">
-                <div className="space-y-4">
-                  <div className="p-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground h-full min-h-[200px]">
-                    <BookOpen className="w-12 h-12 mb-4 opacity-20" />
-                    <p>기존 설정집 데이터가 없습니다.</p>
-                    <p className="text-sm">(첫 연재 시에는 비어있습니다)</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Arrow Icon */}
-            <div className="flex items-center justify-center">
-              <ArrowRight className="w-8 h-8 text-muted-foreground" />
-            </div>
-
-            {/* Right Column: After */}
-            <div className="flex-1 border rounded-md p-4 flex flex-col bg-muted/20">
-              <h4 className="font-semibold mb-4 text-center">
-                업데이트된 설정집
-              </h4>
-              <div className="flex-1 overflow-y-auto pr-2">
-                <div className="space-y-4">
-                  {/* Mock Changed Item */}
-                  <div className="border border-orange-500 bg-orange-500/5 rounded-lg p-4 relative">
-                    <div className="absolute top-2 right-2">
-                      <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold">
-                        변경됨
-                      </span>
-                    </div>
-                    <h5 className="font-bold mb-2">주인공 (강민우)</h5>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      인물 / 주요 인물
-                    </p>
-                    <div className="text-sm space-y-1">
-                      <p>
-                        <span className="font-semibold">특징:</span> 정의로움,
-                        불의를 참지 못함,{' '}
-                        <span className="text-orange-600 font-bold bg-orange-100 px-1 rounded">
-                          새로운 능력 각성
-                        </span>
-                      </p>
-                      <p>
-                        <span className="font-semibold">상태:</span>{' '}
-                        <span className="text-orange-600 font-bold bg-orange-100 px-1 rounded">
-                          부상 회복 중
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Mock New Item */}
-                  <div className="border border-green-500 bg-green-500/5 rounded-lg p-4 relative">
-                    <div className="absolute top-2 right-2">
-                      <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">
-                        신규
-                      </span>
-                    </div>
-                    <h5 className="font-bold mb-2">마력의 수정</h5>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      물건 / 아이템
-                    </p>
-                    <div className="text-sm">
-                      <p>
-                        동굴 깊은 곳에서 발견된 푸른 빛을 내는 수정. 강력한
-                        마력을 품고 있다.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Mock Unchanged Item */}
-                  <div className="border bg-card rounded-lg p-4 opacity-70">
-                    <h5 className="font-bold mb-2">오래된 검</h5>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      물건 / 무기
-                    </p>
-                    <div className="text-sm">
-                      <p>녹이 슬었지만 여전히 날카로운 검.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Category Tabs */}
+          <div className="px-6 py-4 shrink-0 bg-background border-b z-10">
+            <div className="flex gap-2 p-1 bg-muted/50 rounded-lg overflow-x-auto w-max">
+              {categories.map((cat) => (
+                <Button
+                  key={cat.id}
+                  variant={activeDiffCategory === cat.id ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveDiffCategory(cat.id)}
+                  className={cn(
+                    'flex items-center gap-2 px-4',
+                    activeDiffCategory === cat.id && 'shadow-sm',
+                  )}
+                >
+                  <cat.icon className="w-4 h-4" />
+                  {cat.label}
+                </Button>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center gap-4 bg-yellow-500/10 p-4 rounded-md border border-yellow-500/50">
-              <AlertTriangle className="w-5 h-5 text-yellow-600" />
-              <p className="text-sm text-yellow-700 font-medium">
-                연재 버튼을 누르면 현재 내용으로 확정되며, 이후에는 수정할 수
-                없습니다.
-              </p>
-            </div>
+          {/* Unified Scroll Container (Grid Layout) */}
+          <div className="flex-1 overflow-y-auto p-8 scroll-auto bg-muted/5">
+            <div className="max-w-[1800px] mx-auto space-y-8">
+              {/* Column Headers */}
+              <div className="grid grid-cols-2 gap-12 mb-6 px-1">
+                <h4 className="font-bold text-lg flex items-center gap-3 text-muted-foreground">
+                  <span className="w-3 h-3 rounded-full bg-muted-foreground/30" />
+                  이전 설정집
+                </h4>
+                <h4 className="font-bold text-lg flex items-center gap-3 text-foreground">
+                  <span className="w-3 h-3 rounded-full bg-primary" />
+                  업데이트된 설정집
+                </h4>
+              </div>
 
-            <div className="flex items-center gap-4 justify-end">
-              <span className="text-sm text-muted-foreground">
-                확인을 위해 "연재합니다"를 입력해주세요:
-              </span>
-              <Input
-                value={reviewConfirmText}
-                onChange={(e) => setReviewConfirmText(e.target.value)}
-                className="w-40"
-                placeholder="연재합니다"
-              />
-              <Button
-                variant="outline"
-                onClick={() => setIsFinalReviewOpen(false)}
-              >
-                취소
-              </Button>
-              <Button
-                onClick={handleFinalPublish}
-                disabled={reviewConfirmText !== '연재합니다'}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                연재하기
-              </Button>
+              {/* Rows */}
+              {settingBookDiff?.after
+                .filter((item) => item.category === activeDiffCategory)
+                .map((afterItem) => {
+                  const beforeItem = settingBookDiff.before.find(
+                    (b) => b.id === afterItem.id,
+                  );
+                  return (
+                    <div
+                      key={afterItem.id}
+                      className="grid grid-cols-2 gap-12 items-stretch group"
+                    >
+                      {/* Left: Before (Read-only) */}
+                      <div>
+                        {beforeItem ? (
+                          <div className="border bg-card/50 rounded-xl p-6 h-full opacity-60 hover:opacity-100 transition-opacity">
+                            <div className="flex items-start justify-between mb-4">
+                              <h5 className="font-bold text-lg text-muted-foreground">
+                                {beforeItem.name || beforeItem.title}
+                              </h5>
+                            </div>
+
+                            {/* Specific Fields Display (Read-only) */}
+                            {beforeItem.category === 'characters' && (
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {beforeItem.role && (
+                                  <Badge variant="secondary" className="px-2">
+                                    {beforeItem.role}
+                                  </Badge>
+                                )}
+                                {beforeItem.age && (
+                                  <Badge variant="outline" className="px-2">
+                                    {beforeItem.age}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                            {beforeItem.category === 'places' &&
+                              beforeItem.location && (
+                                <div className="mb-4 text-sm text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {beforeItem.location}
+                                </div>
+                              )}
+                            {beforeItem.category === 'items' &&
+                              beforeItem.type && (
+                                <div className="mb-4">
+                                  <Badge variant="outline">
+                                    {beforeItem.type}
+                                  </Badge>
+                                </div>
+                              )}
+                            {beforeItem.category === 'groups' &&
+                              beforeItem.members &&
+                              beforeItem.members.length > 0 && (
+                                <div className="mb-4 flex flex-wrap gap-1">
+                                  {beforeItem.members.map((m, i) => (
+                                    <Badge
+                                      key={i}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {m}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words leading-relaxed">
+                              {beforeItem.description}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="h-full border-2 border-dashed border-muted rounded-xl flex flex-col items-center justify-center text-muted-foreground bg-muted/5 min-h-[200px]">
+                            <Plus className="w-8 h-8 mb-2 opacity-20" />
+                            <span className="text-sm font-medium opacity-50">
+                              신규 추가 항목
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: After (Editable) */}
+                      <div>
+                        <div
+                          className={cn(
+                            'border rounded-xl p-6 h-full relative group transition-all bg-card shadow-sm hover:shadow-md',
+                            afterItem.status === 'NEW' &&
+                              'border-green-500/50 bg-green-500/5',
+                            afterItem.status === 'MODIFIED' &&
+                              'border-orange-500/50 bg-orange-500/5',
+                            afterItem.status === 'DELETED' &&
+                              'border-red-500/50 bg-red-500/5 opacity-70',
+                          )}
+                        >
+                          {/* Badge at Top-Left */}
+                          <div className="absolute top-4 left-4 flex gap-2 z-10">
+                            {afterItem.status !== 'UNCHANGED' && (
+                              <Badge
+                                variant={
+                                  afterItem.status === 'NEW'
+                                    ? 'default'
+                                    : afterItem.status === 'MODIFIED'
+                                      ? 'secondary'
+                                      : 'destructive'
+                                }
+                                className={cn(
+                                  'text-[10px] px-2 py-0.5 font-bold shadow-none',
+                                  afterItem.status === 'NEW' && 'bg-green-600',
+                                  afterItem.status === 'MODIFIED' &&
+                                    'bg-orange-500 text-white',
+                                )}
+                              >
+                                {afterItem.status}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Buttons at Top-Right */}
+                          <div className="absolute top-4 right-4 flex gap-2 z-10">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => toggleEditItem(afterItem.id)}
+                            >
+                              {editingItems.has(afterItem.id) ? (
+                                <Check className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <Edit2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDiffDelete(afterItem.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </div>
+
+                          <div className="space-y-4 pt-4 mt-2">
+                            <div>
+                              <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">
+                                {afterItem.category === 'worldviews' ||
+                                afterItem.category === 'plots'
+                                  ? '제목'
+                                  : '이름'}
+                              </Label>
+                              <Input
+                                value={afterItem.name}
+                                readOnly={!editingItems.has(afterItem.id)}
+                                onChange={(e) =>
+                                  handleDiffChange(
+                                    afterItem.id,
+                                    'name',
+                                    e.target.value,
+                                  )
+                                }
+                                className={cn(
+                                  'font-bold text-lg px-2 -mx-2 h-auto py-1 transition-colors',
+                                  editingItems.has(afterItem.id)
+                                    ? 'bg-background border-input'
+                                    : 'bg-transparent border-transparent hover:border-transparent cursor-default',
+                                )}
+                              />
+                            </div>
+
+                            {/* Specific Fields Inputs */}
+                            {afterItem.category === 'characters' && (
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                    역할
+                                  </Label>
+                                  <Input
+                                    value={afterItem.role || ''}
+                                    readOnly={!editingItems.has(afterItem.id)}
+                                    onChange={(e) =>
+                                      handleDiffChange(
+                                        afterItem.id,
+                                        'role',
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={cn(
+                                      'px-2 -mx-2 transition-colors',
+                                      editingItems.has(afterItem.id)
+                                        ? 'bg-background border-input'
+                                        : 'bg-transparent border-transparent hover:border-transparent cursor-default',
+                                    )}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                    나이
+                                  </Label>
+                                  <Input
+                                    value={afterItem.age || ''}
+                                    readOnly={!editingItems.has(afterItem.id)}
+                                    onChange={(e) =>
+                                      handleDiffChange(
+                                        afterItem.id,
+                                        'age',
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={cn(
+                                      'px-2 -mx-2 transition-colors',
+                                      editingItems.has(afterItem.id)
+                                        ? 'bg-background border-input'
+                                        : 'bg-transparent border-transparent hover:border-transparent cursor-default',
+                                    )}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {afterItem.category === 'places' && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  위치
+                                </Label>
+                                <Input
+                                  value={afterItem.location || ''}
+                                  readOnly={!editingItems.has(afterItem.id)}
+                                  onChange={(e) =>
+                                    handleDiffChange(
+                                      afterItem.id,
+                                      'location',
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={cn(
+                                    'px-2 -mx-2 transition-colors',
+                                    editingItems.has(afterItem.id)
+                                      ? 'bg-background border-input'
+                                      : 'bg-transparent border-transparent hover:border-transparent cursor-default',
+                                  )}
+                                />
+                              </div>
+                            )}
+                            {afterItem.category === 'items' && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  종류
+                                </Label>
+                                <Input
+                                  value={afterItem.type || ''}
+                                  readOnly={!editingItems.has(afterItem.id)}
+                                  onChange={(e) =>
+                                    handleDiffChange(
+                                      afterItem.id,
+                                      'type',
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={cn(
+                                    'px-2 -mx-2 transition-colors',
+                                    editingItems.has(afterItem.id)
+                                      ? 'bg-background border-input'
+                                      : 'bg-transparent border-transparent hover:border-transparent cursor-default',
+                                  )}
+                                />
+                              </div>
+                            )}
+                            {afterItem.category === 'groups' && (
+                              <div>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  구성원 (쉼표로 구분)
+                                </Label>
+                                <Input
+                                  value={afterItem.members?.join(', ') || ''}
+                                  readOnly={!editingItems.has(afterItem.id)}
+                                  onChange={(e) =>
+                                    handleDiffChange(
+                                      afterItem.id,
+                                      'members',
+                                      e.target.value
+                                        .split(',')
+                                        .map((s) => s.trim()),
+                                    )
+                                  }
+                                  className={cn(
+                                    'px-2 -mx-2 transition-colors',
+                                    editingItems.has(afterItem.id)
+                                      ? 'bg-background border-input'
+                                      : 'bg-transparent border-transparent hover:border-transparent cursor-default',
+                                  )}
+                                />
+                              </div>
+                            )}
+
+                            <div>
+                              <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wider">
+                                설명
+                              </Label>
+                              <Textarea
+                                value={afterItem.description}
+                                readOnly={!editingItems.has(afterItem.id)}
+                                onChange={(e) =>
+                                  handleDiffChange(
+                                    afterItem.id,
+                                    'description',
+                                    e.target.value,
+                                  )
+                                }
+                                className={cn(
+                                  'min-h-[120px] resize-none leading-relaxed px-2 -mx-2 transition-colors',
+                                  editingItems.has(afterItem.id)
+                                    ? 'bg-background border-input'
+                                    : 'bg-transparent border-transparent hover:border-transparent cursor-default resize-none focus-visible:ring-0',
+                                )}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {/* Empty State */}
+              {!settingBookDiff?.after.filter(
+                (item) => item.category === activeDiffCategory,
+              ).length && (
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground opacity-50">
+                  <BookOpen className="w-16 h-16 mb-4 stroke-1" />
+                  <p className="text-lg">변경 사항이 없습니다.</p>
+                </div>
+              )}
             </div>
           </div>
+
+          <DialogFooter className="flex-col sm:flex-col gap-4 border-t pt-4 px-6 pb-6 bg-background z-10">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="confirm-final-review"
+                  checked={isFinalReviewConfirmed}
+                  onCheckedChange={(checked) =>
+                    setIsFinalReviewConfirmed(checked === true)
+                  }
+                />
+                <label
+                  htmlFor="confirm-final-review"
+                  className="text-sm text-muted-foreground cursor-pointer"
+                >
+                  <span className="text-yellow-600 font-bold mr-1">주의:</span>
+                  변경 사항을 확인하였으며, 설정집 업데이트 및 연재 진행에
+                  동의합니다.
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsFinalReviewOpen(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  onClick={() => confirmPublishMutation.mutate()}
+                  disabled={
+                    confirmPublishMutation.isPending || !isFinalReviewConfirmed
+                  }
+                >
+                  {confirmPublishMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      생성 중...
+                    </>
+                  ) : (
+                    '생성'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rename Work Modal */}
+      <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>작품 이름 변경</DialogTitle>
+            <DialogDescription>
+              변경할 작품의 새로운 이름을 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={renameTitle}
+              onChange={(e) => setRenameTitle(e.target.value)}
+              placeholder="작품 이름"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  renameWorkMutation.mutate();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRenameOpen(false)}>
+              취소
+            </Button>
+            <Button
+              onClick={() => renameWorkMutation.mutate()}
+              disabled={renameWorkMutation.isPending || !renameTitle.trim()}
+            >
+              {renameWorkMutation.isPending ? '변경 중...' : '변경'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Work Alert Dialog */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>작품을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 작업은 되돌릴 수 없습니다. 작품과 관련된 모든 데이터(회차,
+              설정집 등)가 영구적으로 삭제됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteWorkMutation.mutate()}
+              disabled={deleteWorkMutation.isPending}
+            >
+              {deleteWorkMutation.isPending ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rename Episode Modal */}
+      <Dialog open={isRenameEpisodeOpen} onOpenChange={setIsRenameEpisodeOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>원문 이름 변경</DialogTitle>
+            <DialogDescription>
+              변경할 원문의 새로운 이름을 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={renameEpisodeTitle}
+              onChange={(e) => setRenameEpisodeTitle(e.target.value)}
+              placeholder="원문 이름"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  renameEpisodeMutation.mutate();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRenameEpisodeOpen(false)}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={() => renameEpisodeMutation.mutate()}
+              disabled={
+                renameEpisodeMutation.isPending || !renameEpisodeTitle.trim()
+              }
+            >
+              {renameEpisodeMutation.isPending ? '변경 중...' : '변경'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Episode Alert Dialog */}
+      <AlertDialog
+        open={isDeleteEpisodeAlertOpen}
+        onOpenChange={setIsDeleteEpisodeAlertOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>원문을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 작업은 되돌릴 수 없습니다. 원문이 영구적으로 삭제됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteEpisodeMutation.mutate()}
+              disabled={deleteEpisodeMutation.isPending}
+            >
+              {deleteEpisodeMutation.isPending ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

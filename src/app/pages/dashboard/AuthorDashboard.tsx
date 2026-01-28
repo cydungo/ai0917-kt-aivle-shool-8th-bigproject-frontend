@@ -27,7 +27,7 @@ import {
 import { maskName } from '../../utils/format';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { ThemeToggle } from '../../components/ui/theme-toggle';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
@@ -39,7 +39,6 @@ import { AuthorWorks } from './author/AuthorWorks';
 import { AuthorNotice } from './author/AuthorNotice';
 import { AuthorMyPage } from './author/AuthorMyPage';
 import { AuthorIPExpansion } from './author/AuthorIPExpansion';
-import { AuthorContestTemplates } from './author/AuthorContestTemplates';
 import { AuthorAccount } from './author/AuthorAccount';
 
 import { Logo } from '../../components/common/Logo';
@@ -67,7 +66,10 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
       console.error('User ID is missing');
       return;
     }
-    await authService.changeAuthorPassword(data);
+    // API 변경: /api/v1/signup/password/reset 사용 (resetPassword 메서드 활용)
+    // resetPassword는 { siteEmail, newPassword, newPasswordConfirm }을 인자로 받음
+    // data 객체에 이미 siteEmail, newPassword, newPasswordConfirm이 포함되어 있음 (PasswordChangeModal에서 전달)
+    await authService.resetPassword(data);
   };
 
   // Fetch User Profile
@@ -139,7 +141,10 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
         )}
 
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
+        <div
+          className="h-16 flex items-center px-6 border-b border-sidebar-border cursor-pointer"
+          onClick={() => handleMenuClick('home')}
+        >
           <Logo />
         </div>
 
@@ -196,23 +201,6 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
           >
             <Database className="w-5 h-5" />
             <span className="text-sm font-medium">IP 확장</span>
-          </button>
-
-          <button
-            onClick={() => handleMenuClick('contest-templates')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-              activeMenu === 'contest-templates'
-                ? 'text-white dark:text-black'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            }`}
-            style={
-              activeMenu === 'contest-templates'
-                ? { backgroundColor: 'var(--role-primary)' }
-                : {}
-            }
-          >
-            <Trophy className="w-5 h-5" />
-            <span className="text-sm font-medium">공모전</span>
           </button>
 
           <button
@@ -345,23 +333,21 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
             <Breadcrumb>
               <BreadcrumbList>
                 {breadcrumbs.map((item, index) => (
-                  <BreadcrumbItem key={index}>
-                    {index < breadcrumbs.length - 1 ? (
-                      <>
+                  <React.Fragment key={index}>
+                    <BreadcrumbItem>
+                      {item.onClick ? (
                         <BreadcrumbLink
+                          className="cursor-pointer"
                           onClick={item.onClick}
-                          className={
-                            item.onClick ? 'cursor-pointer hover:underline' : ''
-                          }
                         >
                           {item.label}
                         </BreadcrumbLink>
-                        <BreadcrumbSeparator />
-                      </>
-                    ) : (
-                      <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                    )}
-                  </BreadcrumbItem>
+                      ) : (
+                        <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                      )}
+                    </BreadcrumbItem>
+                    {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+                  </React.Fragment>
                 ))}
               </BreadcrumbList>
             </Breadcrumb>
@@ -450,7 +436,6 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
               <AuthorWorks integrationId={integrationId} />
             )}
             {activeMenu === 'ip-expansion' && <AuthorIPExpansion />}
-            {activeMenu === 'contest-templates' && <AuthorContestTemplates />}
             {activeMenu === 'notice' && (
               <AuthorNotice integrationId={integrationId} />
             )}

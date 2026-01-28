@@ -26,10 +26,11 @@ async function enableMocking() {
   // Auto Mode: Check if Backend is reachable
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
+  console.log('[App] Checking backend availability...');
   try {
     // Try to reach the server with a short timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 800); // 800ms timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // Increased timeout to 2000ms
 
     await fetch(backendUrl, {
       method: 'HEAD', // Lightweight check
@@ -41,7 +42,8 @@ async function enableMocking() {
     console.log('[App] Backend detected. MSW skipped.');
     return;
   } catch (error) {
-    console.log('[App] Backend unreachable. Starting MSW...');
+    // Expected error if backend is down
+    console.log('[App] Backend unreachable or check timed out. Starting MSW...');
   }
 
   const { worker } = await import('./mocks/browser');

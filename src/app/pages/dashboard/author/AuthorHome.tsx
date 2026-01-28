@@ -11,12 +11,7 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Trophy,
   Megaphone,
-  PenTool,
-  TrendingUp,
-  Plus,
-  LayoutDashboard,
   Loader2,
 } from 'lucide-react';
 import { useContext, useEffect, useState } from 'react';
@@ -58,18 +53,10 @@ export function AuthorHome({ integrationId }: AuthorHomeProps) {
     queryFn: () => authorService.getDashboardNotices(0, 5),
   });
 
-  // Fetch Contest Templates
-  const { data: contests } = useQuery({
-    queryKey: ['author', 'contest-templates'],
-    queryFn: authorService.getContestTemplates,
-  });
-
   const notices = noticesPage?.content || [];
-  const contestList = contests || [];
 
   // Carousel States
   const [currentNoticeIndex, setCurrentNoticeIndex] = useState(0);
-  const [currentContestIndex, setCurrentContestIndex] = useState(0);
 
   const handleNextNotice = () => {
     if (notices.length === 0) return;
@@ -83,20 +70,7 @@ export function AuthorHome({ integrationId }: AuthorHomeProps) {
     );
   };
 
-  const handleNextContest = () => {
-    if (contestList.length === 0) return;
-    setCurrentContestIndex((prev) => (prev + 1) % contestList.length);
-  };
-
-  const handlePrevContest = () => {
-    if (contestList.length === 0) return;
-    setCurrentContestIndex(
-      (prev) => (prev - 1 + contestList.length) % contestList.length,
-    );
-  };
-
   const currentNotice = notices[currentNoticeIndex];
-  const currentContest = contestList[currentContestIndex];
 
   // Notice Detail State
   const [selectedNotice, setSelectedNotice] = useState<any>(null);
@@ -109,8 +83,6 @@ export function AuthorHome({ integrationId }: AuthorHomeProps) {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
-      {/* Header removed */}
-
       {/* 1. 상단 통계 카드 (기존 유지) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-border">
@@ -178,8 +150,8 @@ export function AuthorHome({ integrationId }: AuthorHomeProps) {
         </Card>
       </div>
 
-      {/* 2. 배너 위젯 섹션 (공지사항 & 공모전) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* 2. 배너 위젯 섹션 (공지사항) */}
+      <div className="grid grid-cols-1 gap-6">
         {/* 공지사항 위젯 */}
         <Card className="border-border relative overflow-hidden group">
           <CardHeader className="pb-2">
@@ -236,72 +208,6 @@ export function AuthorHome({ integrationId }: AuthorHomeProps) {
                   size="icon"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/50 hover:bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={handleNextNotice}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 공모전 위젯 */}
-        <Card className="border-border relative overflow-hidden group bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Trophy className="w-5 h-5 text-amber-500" />
-              진행 중인 공모전
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="h-[140px] flex flex-col justify-center relative">
-            {currentContest ? (
-              <div className="space-y-2 px-8 transition-all duration-300">
-                <div className="flex justify-between items-start">
-                  <Badge variant="outline" className="bg-background/80">
-                    {currentContest.deadline}
-                  </Badge>
-                  <Badge className="bg-amber-500 hover:bg-amber-600">
-                    {currentContest.prize}
-                  </Badge>
-                </div>
-                <h3 className="text-lg font-bold line-clamp-1">
-                  {currentContest.title}
-                </h3>
-                <div className="flex gap-2 text-xs text-muted-foreground">
-                  <span>#{currentContest.category}</span>
-                  <span>|</span>
-                  <span>{currentContest.organizer || '주최사'}</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="link"
-                  className="p-0 h-auto text-indigo-600 dark:text-indigo-400"
-                  onClick={() => onNavigate('contest-templates')}
-                >
-                  자세히 보기 &rarr;
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground">
-                진행 중인 공모전이 없습니다.
-              </div>
-            )}
-
-            {/* Navigation Arrows */}
-            {contestList.length > 1 && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/50 hover:bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={handlePrevContest}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/50 hover:bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={handleNextContest}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
