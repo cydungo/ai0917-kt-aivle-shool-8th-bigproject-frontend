@@ -505,6 +505,11 @@ export const handlers = [
       totalElements: 10,
     }),
   ),
+  // Author-Manager: Generate Author Code
+  http.post(`${BACKEND_URL}/author/manager/code`, () => {
+    const code = `AUTH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    return HttpResponse.json({ code });
+  }),
 
   // 5.2 Works
   http.get(`${BACKEND_URL}/api/v1/author/works`, () =>

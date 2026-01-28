@@ -29,7 +29,6 @@ import { ManagerWorkAnalysis } from './manager/ManagerWorkAnalysis';
 import { ManagerIPTrend } from './manager/ManagerIPTrend';
 import { ManagerIPExpansion } from './manager/ManagerIPExpansion';
 import { ManagerAuthorManagement } from './manager/ManagerAuthorManagement';
-import { Manager3DAssets } from './manager/Manager3DAssets';
 import { ManagerNotice } from './manager/ManagerNotice';
 import { ManagerContestTemplates } from './manager/ManagerContestTemplates';
 import { ManagerMyPage } from './manager/ManagerMyPage';
@@ -138,22 +137,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
             <span className="text-sm font-medium">IP 확장</span>
           </button>
 
-          <button
-            onClick={() => handleMenuClick('3d-assets')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-              activeMenu === '3d-assets'
-                ? 'text-white dark:text-black'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            }`}
-            style={
-              activeMenu === '3d-assets'
-                ? { backgroundColor: 'var(--role-primary)' }
-                : {}
-            }
-          >
-            <Grid3x3 className="w-5 h-5" />
-            <span className="text-sm font-medium">3D 배경 에셋</span>
-          </button>
+          
 
           <button
             onClick={() => handleMenuClick('work-analysis')}
@@ -365,7 +349,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     <span className="text-foreground">
                       {activeMenu === 'work-analysis' && '작품 분석'}
-                      {activeMenu === '3d-assets' && '3D 배경 에셋'}
                       {activeMenu === 'ip-trend-analysis' && 'IP 트렌드 분석'}
                       {activeMenu === 'ip-expansion' && 'IP 확장'}
                       {activeMenu === 'author-management' && '작가'}
@@ -414,7 +397,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
             <ManagerHome onNavigate={handleMenuClick} />
           )}
           {activeMenu === 'work-analysis' && <ManagerWorkAnalysis />}
-          {activeMenu === '3d-assets' && <Manager3DAssets />}
           {activeMenu === 'notice' && <ManagerNotice />}
           {activeMenu === 'ip-trend-analysis' && <ManagerIPTrend />}
           {activeMenu === 'ip-expansion' && <ManagerIPExpansion />}

@@ -16,22 +16,20 @@ import {
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import {
-  Users,
   Search,
   Filter,
-  Calendar,
   ChevronRight,
   Loader2,
   Share2,
   CheckCircle,
   Lock,
   ClipboardList,
-  UserCheck,
+  Plus,
 } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { useQuery } from '@tanstack/react-query';
 import { authorService } from '../../../services/authorService';
-import { IPProposalDto, IPMatchingDto } from '../../../types/author';
+import { IPProposalDto } from '../../../types/author';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -56,18 +54,14 @@ export function AuthorIPExpansion({
   const [selectedProposal, setSelectedProposal] =
     useState<IPProposalDto | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isGenerateOpen, setIsGenerateOpen] = useState(false);
+  const [generatedAuthorCode, setGeneratedAuthorCode] = useState('');
 
   useEffect(() => {
     const breadcrumbs: { label: string; onClick?: () => void }[] = [
       { label: '홈', onClick: () => onNavigate('home') },
-      { label: 'IP 확장', onClick: () => setActiveTab('proposals') },
+      { label: 'IP 제안서', onClick: () => setActiveTab('proposals') },
     ];
-
-    if (activeTab === 'proposals') {
-      breadcrumbs.push({ label: '제안서 검토' });
-    } else if (activeTab === 'matching') {
-      breadcrumbs.push({ label: '담당자 매칭' });
-    }
 
     setBreadcrumbs(breadcrumbs);
   }, [setBreadcrumbs, onNavigate, activeTab]);
@@ -79,14 +73,6 @@ export function AuthorIPExpansion({
   });
 
   const proposalList = proposals || [];
-
-  // Fetch Matching
-  const { data: matchings, isLoading: isMatchingsLoading } = useQuery({
-    queryKey: ['author', 'ip-matching'],
-    queryFn: authorService.getIPMatching,
-  });
-
-  const matchingList = matchings || [];
 
   const handleOpenDetail = (proposal: IPProposalDto) => {
     setSelectedProposal(proposal);
@@ -105,29 +91,27 @@ export function AuthorIPExpansion({
               제안서 검토
               <ClipboardList className="w-3 h-3 text-muted-foreground" />
             </TabsTrigger>
-            <TabsTrigger
-              value="matching"
-              className="px-6 flex items-center gap-2"
-            >
-              담당자 매칭
-              <UserCheck className="w-3 h-3 text-muted-foreground" />
-            </TabsTrigger>
           </TabsList>
         </div>
 
         {/* 제안서 검토 탭 */}
         <TabsContent value="proposals" className="mt-6 space-y-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="제안서 검색..."
-                className="pl-8"
-              />
-            </div>
-            <Button variant="outline" size="sm" className="h-9">
-              <Filter className="mr-2 h-4 w-4" /> 필터
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              onClick={async () => {
+                try {
+                  const code = await authorService.generateAuthorCode();
+                  setGeneratedAuthorCode(code);
+                  setIsGenerateOpen(true);
+                } catch (err) {
+                  toast.error('작가 ID 생성에 실패했습니다.');
+                }
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> 작가 ID 생성
             </Button>
           </div>
 
@@ -186,80 +170,23 @@ export function AuthorIPExpansion({
           )}
         </TabsContent>
 
-        {/* 담당자 매칭 탭 */}
-        <TabsContent value="matching" className="mt-6 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>매칭 현황</CardTitle>
-              <CardDescription>
-                현재 진행 중인 담당자 매칭 현황입니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isMatchingsLoading ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {matchingList.length > 0 ? (
-                    matchingList.map((match) => (
-                      <div
-                        key={match.id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg bg-muted/30"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
-                            <Users className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold">
-                              {match.managerName}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {match.department} | {match.role}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              {(match.tags || []).map((tag, index) => (
-                                <Badge
-                                  key={index}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Calendar className="mr-1 h-3 w-3" />
-                            <span>
-                              {match.matchedAt
-                                ? format(
-                                    new Date(match.matchedAt),
-                                    'yyyy.MM.dd',
-                                  )
-                                : '-'}{' '}
-                              매칭됨
-                            </span>
-                          </div>
-                          <Button size="sm">메시지 보내기</Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      진행 중인 매칭이 없습니다.
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        
       </Tabs>
+
+      {/* Generated Author ID Modal */}
+      <Dialog open={isGenerateOpen} onOpenChange={setIsGenerateOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>생성된 작가 ID</DialogTitle>
+            <DialogDescription>
+              아래 코드를 복사하여 필요한 곳에 입력하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input readOnly value={generatedAuthorCode} />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Proposal Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
