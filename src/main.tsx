@@ -7,29 +7,34 @@ import { ThemeProvider } from './app/components/theme-provider';
 
 // MSW Setup
 async function enableMocking() {
-  if (import.meta.env.MODE !== 'development') {
-    return;
-  }
-
-  // Manual Override via VITE_USE_MSW
+  // 1. Manual Override via VITE_USE_MSW (Highest Priority)
+  // This allows enabling MSW in production/Vercel if explicitly set
   const useMsw = import.meta.env.VITE_USE_MSW;
+
   if (useMsw === 'true') {
     console.log('[App] VITE_USE_MSW is true. Starting MSW...');
     const { worker } = await import('./mocks/browser');
     return worker.start({ onUnhandledRequest: 'bypass' });
   }
+
   if (useMsw === 'false') {
     console.log('[App] VITE_USE_MSW is false. MSW skipped.');
     return;
   }
 
-  // Auto Mode: Check if Backend is reachable
+  // 2. Default Behavior: Only run in development mode
+  if (import.meta.env.MODE !== 'development') {
+    return;
+  }
+
+  // 3. Auto Mode (Development Only): Check if Backend is reachable
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
+  console.log('[App] Checking backend availability...');
   try {
     // Try to reach the server with a short timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 800); // 800ms timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // Increased timeout to 2000ms
 
     await fetch(backendUrl, {
       method: 'HEAD', // Lightweight check
@@ -41,7 +46,10 @@ async function enableMocking() {
     console.log('[App] Backend detected. MSW skipped.');
     return;
   } catch (error) {
-    console.log('[App] Backend unreachable. Starting MSW...');
+    // Expected error if backend is down
+    console.log(
+      '[App] Backend unreachable or check timed out. Starting MSW...',
+    );
   }
 
   const { worker } = await import('./mocks/browser');

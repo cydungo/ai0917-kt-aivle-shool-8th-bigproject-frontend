@@ -44,6 +44,9 @@ export interface WorkCreateRequestDto {
   writer?: string;
   description: string;
   status?: WorkStatus;
+  synopsis?: string;
+  genre?: string;
+  coverImageUrl?: string;
 }
 
 export interface WorkUpdateRequestDto {
@@ -142,6 +145,58 @@ export interface EpisodeDetailDto extends EpisodeDto {
   content: string;
 }
 
+// Publish Process
+export interface KeywordExtractionRequestDto {
+  content: string;
+  episodeId?: number;
+}
+
+export interface KeywordExtractionResponseDto {
+  keywords: {
+    characters: string[];
+    locations: string[];
+    events: string[];
+    groups: string[];
+    items: string[];
+    worlds: string[];
+  };
+}
+
+export interface PublishAnalysisRequestDto {
+  selectedKeywords: {
+    characters: string[];
+    locations: string[];
+    events: string[];
+    groups: string[];
+    items: string[];
+    worlds: string[];
+  };
+}
+
+export interface SettingBookDiffDto {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  status: 'NEW' | 'MODIFIED' | 'DELETED' | 'UNCHANGED' | 'UPDATED';
+  // Specific fields
+  title?: string; // for worldview, plot
+  role?: string;
+  age?: string;
+  traits?: string[];
+  location?: string;
+  type?: string;
+  members?: string[];
+  tags?: string[];
+  importance?: 'Main' | 'Sub';
+  order?: number;
+}
+
+export interface PublishAnalysisResponseDto {
+  before: SettingBookDiffDto[];
+  after: SettingBookDiffDto[];
+}
+
 // IP Expansion
 export interface IPProposalDto {
   id: number;
@@ -160,27 +215,6 @@ export interface IPMatchingDto {
   role: string;
   tags: string[];
   matchedAt: string;
-}
-
-// Contest Template
-export interface ContestTemplateDto {
-  id: number;
-  title: string;
-  organizer: string;
-  category: string;
-  prize: string;
-  deadline: string;
-  description: string;
-  isAiSupported: boolean;
-}
-
-export interface ContestTemplateCreateRequestDto {
-  title: string;
-  organizer: string;
-  category: string;
-  prize: string;
-  deadline: string;
-  description: string;
 }
 
 // My Page

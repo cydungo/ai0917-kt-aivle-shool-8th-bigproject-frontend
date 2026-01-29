@@ -268,75 +268,93 @@ export function AuthorLorebookPanel({
 
     switch (activeCategory) {
       case 'characters':
-        content = characters?.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            tags={[item.role, item.age].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
+        content = characters
+          ?.slice()
+          .sort((a, b) => b.id - a.id)
+          .map((item) => (
+            <LorebookCard
+              key={item.id}
+              item={item}
+              title={item.name}
+              description={item.description}
+              tags={[item.role, item.age].filter(Boolean) as string[]}
+              {...commonProps}
+            />
+          ));
         break;
       case 'places':
-        content = places?.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            tags={[item.location].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
+        content = places
+          ?.slice()
+          .sort((a, b) => b.id - a.id)
+          .map((item) => (
+            <LorebookCard
+              key={item.id}
+              item={item}
+              title={item.name}
+              description={item.description}
+              tags={[item.location].filter(Boolean) as string[]}
+              {...commonProps}
+            />
+          ));
         break;
       case 'items':
-        content = items?.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            tags={[item.type].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
+        content = items
+          ?.slice()
+          .sort((a, b) => b.id - a.id)
+          .map((item) => (
+            <LorebookCard
+              key={item.id}
+              item={item}
+              title={item.name}
+              description={item.description}
+              tags={[item.type].filter(Boolean) as string[]}
+              {...commonProps}
+            />
+          ));
         break;
       case 'groups':
-        content = groups?.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            {...commonProps}
-          />
-        ));
+        content = groups
+          ?.slice()
+          .sort((a, b) => b.id - a.id)
+          .map((item) => (
+            <LorebookCard
+              key={item.id}
+              item={item}
+              title={item.name}
+              description={item.description}
+              {...commonProps}
+            />
+          ));
         break;
       case 'worldviews':
-        content = worldviews?.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.title}
-            description={item.description}
-            tags={[item.category]}
-            {...commonProps}
-          />
-        ));
+        content = worldviews
+          ?.slice()
+          .sort((a, b) => b.id - a.id)
+          .map((item) => (
+            <LorebookCard
+              key={item.id}
+              item={item}
+              title={item.title}
+              description={item.description}
+              tags={[item.category]}
+              {...commonProps}
+            />
+          ));
         break;
       case 'plots':
-        content = plots?.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.title}
-            description={item.description}
-            tags={[item.importance].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
+        content = plots
+          ?.slice()
+          .sort((a, b) => b.id - a.id)
+          .map((item) => (
+            <LorebookCard
+              key={item.id}
+              item={item}
+              title={item.title}
+              description={item.description}
+              tags={[item.importance].filter(Boolean) as string[]}
+              {...commonProps}
+            />
+          ));
         break;
     }
 
@@ -585,12 +603,12 @@ export function AuthorLorebookPanel({
         className,
       )}
     >
-      <div className="h-12 px-4 border-b border-border flex items-center justify-between bg-card shrink-0">
-        <h3 className="font-semibold text-sm flex items-center gap-2">
+      <div className="h-12 px-4 border-b border-border flex items-center justify-between bg-card shrink-0 whitespace-nowrap overflow-hidden">
+        <h3 className="font-semibold text-sm flex items-center gap-2 shrink-0">
           <Settings className="w-4 h-4 text-purple-500" />
           설정집
         </h3>
-        <div className="flex gap-1">
+        <div className="flex gap-1 shrink-0 ml-auto">
           <Button
             variant="ghost"
             size="icon"
@@ -612,8 +630,9 @@ export function AuthorLorebookPanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-6">
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-scroll overflow-x-hidden h-full">
+        <div className="p-4 space-y-6 min-w-[320px]">
           {/* Work Info */}
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2">

@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import {
   Tabs,
@@ -19,16 +19,12 @@ import {
   TabsTrigger,
 } from '../../components/ui/tabs';
 import {
-  Loader2,
-  Play,
-  RefreshCw,
-  Terminal,
-  MessageSquare,
-  Maximize2,
-  X,
-  Sparkles,
-  Server,
-} from 'lucide-react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -38,470 +34,486 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '../../components/ui/dialog';
-
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
+  Play,
+  RotateCcw,
+  Save,
+  Book,
+  Code2,
+  Send,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
+  Copy,
+  Trash2,
+} from 'lucide-react';
+import { cn } from '../../components/ui/utils';
+import { toast } from 'sonner';
 
-const PROMPT_TEMPLATES = [
+// API Method Types
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+// Template Interface
+interface ApiTemplate {
+  id: string;
+  name: string;
+  description: string;
+  method: HttpMethod;
+  endpoint: string;
+  headers: string;
+  body: string;
+}
+
+// Default Templates based on project_apis.csv
+const API_TEMPLATES: ApiTemplate[] = [
   {
-    id: 'free',
-    label: '자유 입력 (Free)',
-    description: '빈 화면에서 자유롭게 입력합니다.',
-    content: '',
+    id: 'ai_generate',
+    name: '🤖 AI Chat / Generate',
+    description: '기본적인 AI 텍스트 생성 요청입니다.',
+    method: 'POST',
+    endpoint: '/api/v1/ai/generate',
+    headers: '{\n  "Content-Type": "application/json"\n}',
+    body: '{\n  "prompt": "판타지 소설의 첫 문장을 써줘",\n  "temperature": 0.7,\n  "max_tokens": 500\n}',
   },
   {
-    id: 'novel_start',
-    label: '📖 소설 도입부 생성',
-    description: '장르와 주인공 설정을 바탕으로 첫 장면을 만듭니다.',
-    content: `장르: 판타지\n주인공 이름: 강민우\n주인공 특징: 마력을 느끼지 못하는 마법사 가문의 장남\n\n위 설정을 바탕으로 독자의 호기심을 자극하는 소설의 첫 도입부(약 500자)를 흥미진진하게 작성해줘.`,
+    id: 'analyze_work',
+    name: '📊 작품 AI 분석',
+    description: '특정 작품에 대한 AI 분석을 요청합니다.',
+    method: 'POST',
+    endpoint: '/api/v1/manager/analyze/analysis',
+    headers: '{\n  "Content-Type": "application/json"\n}',
+    body: '{\n  "workId": "WORK_ID_HERE",\n  "analysisType": "comprehensive"\n}',
   },
   {
-    id: 'character_creation',
-    label: '👤 입체적 캐릭터 빌딩',
-    description: '단순한 설정을 깊이 있는 캐릭터로 확장합니다.',
-    content: `이름: \n나이: \n직업: \n성격 키워드: \n\n위 정보를 바탕으로 입체적인 등장인물 설정을 상세히 만들어줘.\n1. 외모 묘사\n2. 말투와 습관\n3. 남들에게 말 못 할 비밀\n4. 이 캐릭터의 치명적인 약점`,
+    id: 'generate_draft',
+    name: '📝 IP 확장 초안 생성',
+    description: '설정집 기반으로 IP 확장 제안서 초안을 생성합니다.',
+    method: 'POST',
+    endpoint: '/api/v1/manager/ipext/proposals/ai-draft',
+    headers: '{\n  "Content-Type": "application/json"\n}',
+    body: '{\n  "settings": ["setting_id_1", "setting_id_2"],\n  "category": "webtoon",\n  "keywords": ["action", "fantasy"]\n}',
   },
   {
-    id: 'plot_twist',
-    label: '⚡ 반전 전개 아이디어',
-    description: '위기 상황을 타개할 반전 아이디어를 제안받습니다.',
-    content: `현재 상황: 주인공이 믿었던 동료에게 배신당해 절벽 끝에 몰림.\n\n이 상황에서 독자가 전혀 예상하지 못한 충격적인 반전 전개 아이디어 3가지를 제안해줘. (각 아이디어는 개연성이 있어야 함)`,
+    id: 'upload_manuscript',
+    name: '📄 원문 파일 업로드',
+    description: '분석을 위해 원문 파일을 업로드합니다. (Multipart)',
+    method: 'POST',
+    endpoint: '/api/v1/author/{userId}/{title}/manuscript/upload',
+    headers: '{}', // Multipart/form-data is handled automatically by browser usually, but user might need to simulate
+    body: '// 이 요청은 FormData 처리가 필요하므로\n// 실제 구현에서는 파일 선택 UI가 필요합니다.\n// 현재는 JSON 테스트에 최적화되어 있습니다.',
   },
 ];
 
 /**
- * AI Lab Page (Ver 2.0 - 아지트 에디션)
+ * AILabPage (Ver 3.0 - API Developer Console)
  *
- * 🏠 여기가 우리의 아지트야!
- * AI 기능을 맘껏 테스트하고, 모달이나 각종 UI 컴포넌트들을 실험해보는 공간이지.
- *
- * [새로 추가된 것들]
- * 1. ✨ 모달(Dialog) 놀이터: 팝업창 띄우는 법을 마스터해보자!
- * 2. 🤖 AI 페르소나 테스트: AI 말투를 바꿔보는 실험
+ * 🛠️ API 개발자 콘솔
+ * Postman 없이도 앱 내에서 직접 백엔드 API를 테스트하고 디버깅할 수 있는 도구입니다.
+ * 프로젝트의 디자인 시스템을 따르며, 자주 사용하는 AI 관련 API 템플릿을 제공합니다.
  */
 export default function AILabPage() {
-  // 1. 상태 관리 (State Management)
-  const [prompt, setPrompt] = useState('');
-  const [result, setResult] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [jsonData, setJsonData] = useState<any>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedPersona, setSelectedPersona] = useState('friend');
-  const [selectedTemplate, setSelectedTemplate] = useState('free');
-
-  // API 설정 상태
-  const [useRealApi, setUseRealApi] = useState(false);
-  const [apiUrl, setApiUrl] = useState(
-    'http://localhost:8000/api/v1/ai/generate',
+  // --- State Management ---
+  const [method, setMethod] = useState<HttpMethod>('POST');
+  const [baseUrl, setBaseUrl] = useState(
+    import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000',
   );
+  const [endpoint, setEndpoint] = useState('/api/v1/ai/generate');
+  const [headers, setHeaders] = useState(
+    '{\n  "Content-Type": "application/json"\n}',
+  );
+  const [body, setBody] = useState('{\n  "prompt": "Hello, AI!"\n}');
 
-  // 타자기 효과를 위한 Ref
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [response, setResponse] = useState<any>(null);
+  const [responseStatus, setResponseStatus] = useState<number | null>(null);
+  const [responseTime, setResponseTime] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('body');
 
-  // 2. AI 응답 처리 (Simulation or Real API)
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  // --- Handlers ---
 
-    setIsStreaming(true);
-    setResult('');
-    setJsonData(null);
-
-    // 이전 요청 취소
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    if (useRealApi) {
-      await handleRealApiCall();
-    } else {
-      handleSimulation();
+  const handleTemplateSelect = (templateId: string) => {
+    const template = API_TEMPLATES.find((t) => t.id === templateId);
+    if (template) {
+      setMethod(template.method);
+      setEndpoint(template.endpoint);
+      setHeaders(template.headers);
+      setBody(template.body);
+      toast.success(`'${template.name}' 템플릿을 불러왔습니다.`);
     }
   };
 
-  // 2-1. 시뮬레이션 모드
-  const handleSimulation = () => {
-    // AI 페르소나에 따른 응답 변화 (재미 요소!)
-    const dummyResponse = `[AI 친구]: 안녕! 네가 입력한 "${prompt}"에 대해 생각해봤어.\n\n이건 정말 흥미로운 주제인걸? 내가 분석한 내용을 알려줄게.\n\n1. ✨ 핵심은 바로 이것!\n2. 💡 이런 아이디어는 어때?\n3. 🚀 당장 시도해보자!\n\n(이 응답은 실제 AI가 아니라, 우리가 만든 시뮬레이션이야. 멋지지?)`;
+  const handleSendRequest = async () => {
+    setIsLoading(true);
+    setResponse(null);
+    setResponseStatus(null);
+    setResponseTime(null);
 
-    const dummyJson = {
-      status: 'success',
-      model: 'friend-bot-v1',
-      tokens: {
-        prompt: prompt.length,
-        completion: dummyResponse.length,
-      },
-      metadata: {
-        vibe: 'friendly',
-        timestamp: new Date().toISOString(),
-      },
-    };
+    const startTime = performance.now();
+    const fullUrl = `${baseUrl.replace(/\/$/, '')}${endpoint}`;
 
-    let currentIndex = 0;
-
-    intervalRef.current = setInterval(() => {
-      if (currentIndex < dummyResponse.length) {
-        setResult((prev) => prev + dummyResponse[currentIndex]);
-        currentIndex++;
-      } else {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setIsStreaming(false);
-        setJsonData(dummyJson);
-      }
-    }, 30);
-  };
-
-  // 2-2. Real API 모드 (FastAPI 연동)
-  const handleRealApiCall = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // 토큰이 있다면 추가 (없으면 무시됨)
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          // 필요한 다른 파라미터들도 여기에 추가 가능
-          temperature: 0.7,
-        }),
-        signal: abortControllerRef.current?.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      // Parse Headers
+      let parsedHeaders = {};
+      try {
+        parsedHeaders = JSON.parse(headers);
+      } catch (e) {
+        toast.error('헤더 형식이 올바르지 않은 JSON입니다.');
+        setIsLoading(false);
+        return;
       }
 
-      // 스트리밍 응답 처리 (Server-Sent Events or Chunked Transfer)
-      if (response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let fullText = '';
+      // Add Authorization if token exists
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        parsedHeaders = { ...parsedHeaders, Authorization: `Bearer ${token}` };
+      }
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      // Prepare Options
+      const options: RequestInit = {
+        method,
+        headers: parsedHeaders,
+      };
 
-          const chunk = decoder.decode(value, { stream: true });
-
-          // JSON 응답인 경우와 텍스트 스트림인 경우 구분 필요
-          // 여기서는 단순 텍스트 스트리밍 또는 줄바꿈된 JSON 스트림이라고 가정
-          // 실제 백엔드 구현에 따라 파싱 로직을 조정해야 함
-
-          // 1. 단순 텍스트 누적
-          fullText += chunk;
-          setResult((prev) => prev + chunk);
+      // Add Body for non-GET/HEAD requests
+      if (method !== 'GET') {
+        try {
+          // Validate JSON body
+          JSON.parse(body);
+          options.body = body;
+        } catch (e) {
+          toast.error('Body 형식이 올바르지 않은 JSON입니다.');
+          setIsLoading(false);
+          return;
         }
+      }
 
-        setJsonData({
-          status: 'success',
-          source: 'FastAPI',
-          rawResponse: 'Streaming Completed',
-        });
+      const res = await fetch(fullUrl, options);
+      const endTime = performance.now();
+
+      setResponseStatus(res.status);
+      setResponseTime(Math.round(endTime - startTime));
+
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        setResponse(data);
       } else {
-        // 스트리밍이 아닌 단일 JSON 응답일 경우
-        const data = await response.json();
-        setResult(data.answer || JSON.stringify(data, null, 2));
-        setJsonData(data);
+        const text = await res.text();
+        setResponse(text);
+      }
+
+      if (res.ok) {
+        toast.success('요청이 성공했습니다.');
+      } else {
+        toast.error(`요청 실패: ${res.status}`);
       }
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log('Request aborted');
-      } else {
-        setResult(`❌ 오류 발생: ${error.message}`);
-        setJsonData({ error: error.message });
-      }
+      setResponse({ error: error.message });
+      toast.error('네트워크 오류가 발생했습니다.');
     } finally {
-      setIsStreaming(false);
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (abortControllerRef.current) abortControllerRef.current.abort();
-    };
-  }, []);
-
-  function handleTemplateChange(value: string): void {
-    throw new Error('Function not implemented.');
-  }
+  const formatJson = (jsonString: string, setter: (val: string) => void) => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      setter(JSON.stringify(parsed, null, 2));
+      toast.success('JSON 포맷팅 완료');
+    } catch (e) {
+      toast.error('유효하지 않은 JSON입니다.');
+    }
+  };
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl space-y-8 animate-in fade-in duration-500">
-      {/* 헤더 영역 */}
-      <div className="flex justify-between items-center border-b pb-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-8 w-8 text-purple-500" />
-            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
-              AI Creative Lab
-            </h1>
-          </div>
-          <p className="text-muted-foreground text-lg">
-            우리의 상상력이 실현되는 비밀 아지트 ⛺
+    <div className="container mx-auto p-6 max-w-7xl h-[calc(100vh-4rem)] flex flex-col gap-6 animate-in fade-in duration-500">
+      {/* 1. Header Section */}
+      <div className="flex justify-between items-center shrink-0">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Code2 className="h-6 w-6 text-primary" />
+            API Developer Console
+          </h1>
+          <p className="text-muted-foreground">
+            백엔드 API를 직접 테스트하고 응답을 검증하는 개발자 도구입니다.
           </p>
         </div>
 
-        {/* 모달(Dialog) 실험실 */}
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="gap-2 border-dashed border-2">
-              <Maximize2 className="h-4 w-4" />
-              모달 띄워보기
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>🎉 짠! 이게 바로 모달이야</DialogTitle>
-              <DialogDescription>
-                사용자의 주의를 집중시키고 싶을 때 사용하는 팝업창이지. 배경이
-                어두워지면서(Overlay) 이 창만 돋보이게 돼.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div className="p-4 bg-slate-100 dark:bg-slate-900 rounded-lg text-sm">
-                "로그인이 필요합니다" 또는 "정말 삭제하시겠습니까?" 같은 중요한
-                메시지를 띄울 때 딱이야!
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" onClick={() => setModalOpen(false)}>
-                확인했어! (닫기)
+        <div className="flex items-center gap-2">
+          {/* Documentation Modal */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Book className="h-4 w-4" />
+                사용 가이드
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>📚 API 콘솔 사용법</DialogTitle>
+                <DialogDescription>
+                  Postman과 유사한 방식으로 API를 테스트할 수 있습니다.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <span className="bg-primary/10 text-primary p-1 rounded">
+                      1
+                    </span>
+                    템플릿 선택
+                  </h3>
+                  <p className="text-sm text-muted-foreground ml-7">
+                    우측 상단의 '템플릿 불러오기'에서 자주 사용되는 AI API
+                    요청을 미리 불러올 수 있습니다.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <span className="bg-primary/10 text-primary p-1 rounded">
+                      2
+                    </span>
+                    요청 설정
+                  </h3>
+                  <p className="text-sm text-muted-foreground ml-7">
+                    HTTP 메서드(GET, POST 등)와 URL을 확인하고, 필요한 경우
+                    Body(JSON) 내용을 수정하세요. 토큰(Authorization)은 로그인
+                    상태라면 자동으로 헤더에 포함됩니다.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <span className="bg-primary/10 text-primary p-1 rounded">
+                      3
+                    </span>
+                    결과 확인
+                  </h3>
+                  <p className="text-sm text-muted-foreground ml-7">
+                    'Send Request' 버튼을 누르면 우측 패널에 응답 결과, 상태
+                    코드, 소요 시간이 표시됩니다.
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">확인했습니다</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Select onValueChange={handleTemplateSelect}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="템플릿 불러오기" />
+            </SelectTrigger>
+            <SelectContent>
+              {API_TEMPLATES.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-12">
-        {/* 왼쪽: 컨트롤 패널 (4칸 차지) */}
-        <div className="md:col-span-4 space-y-6">
-          <Card className="border-2 border-purple-100 dark:border-purple-900">
-            <CardHeader className="bg-slate-50 dark:bg-slate-900/50">
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-purple-500" />
-                Prompt Station
+      {/* 2. Main Workspace (Split View) */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+        {/* Left: Request Panel */}
+        <Card className="flex flex-col h-full border-2 border-muted/50 shadow-sm overflow-hidden">
+          <CardHeader className="bg-muted/30 pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Send className="h-4 w-4" /> Request
               </CardTitle>
-              <CardDescription>AI 친구에게 말을 걸어보자</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">
-                  AI 페르소나 (말투 선택)
-                </Label>
-                <Select
-                  value={selectedPersona}
-                  onValueChange={setSelectedPersona}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="페르소나 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="friend">다정한 친구 (반말)</SelectItem>
-                    <SelectItem value="expert">
-                      냉철한 전문가 (존댓말)
-                    </SelectItem>
-                    <SelectItem value="writer">
-                      감성적인 소설가 (문학적)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Badge variant="outline" className="font-mono text-xs">
+                {baseUrl}
+              </Badge>
+            </div>
+          </CardHeader>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">
-                  프롬프트 템플릿 (빠른 시작)
-                </Label>
-                <Select
-                  value={selectedTemplate}
-                  onValueChange={handleTemplateChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="템플릿 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROMPT_TEMPLATES.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedTemplate !== 'free' && (
-                  <p className="text-[10px] text-muted-foreground ml-1">
-                    *{' '}
-                    {
-                      PROMPT_TEMPLATES.find((t) => t.id === selectedTemplate)
-                        ?.description
-                    }
-                  </p>
-                )}
-              </div>
-
-              <Textarea
-                placeholder="오늘 기분은 어때? AI에게 하고 싶은 말을 적어봐..."
-                className="min-h-[200px] resize-none focus-visible:ring-purple-500"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
-              <Button
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
-                onClick={handleGenerate}
-                disabled={isStreaming || !prompt.trim()}
-                size="lg"
+          <CardContent className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
+            {/* URL Bar */}
+            <div className="flex gap-2">
+              <Select
+                value={method}
+                onValueChange={(v) => setMethod(v as HttpMethod)}
               >
-                {isStreaming ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    열심히 생각하는 중... 🧠
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-5 w-5" />
-                    실행 (Run)
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* 개발자 노트 (팁) */}
-          <Card className="bg-yellow-50/50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center text-yellow-700 dark:text-yellow-500">
-                <Terminal className="mr-2 h-4 w-4" />
-                멘토의 쪽지 📝
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-muted-foreground space-y-2">
-              <p>
-                <span className="font-bold text-foreground">
-                  💡 멘토의 조언:
-                </span>{' '}
-                POSTMAN은 JSON 데이터를 날것으로 보여주지만, 여기서는
-                <strong> 스트리밍 응답을 실시간 타자기 효과</strong>로 볼 수
-                있고, 위의 <strong>페르소나 선택</strong>처럼 미리 정의된 시스템
-                프롬프트를 쉽게 주입해서 테스트할 수 있어! 시나리오 검증에 훨씬
-                유리하지. 😉
-              </p>
-              <div className="pt-2 border-t border-yellow-200 dark:border-yellow-800/30 mt-2">
-                <div className="flex items-center justify-between mb-2">
-                  <Label
-                    htmlFor="api-mode"
-                    className="font-bold text-foreground flex items-center gap-2"
+                <SelectTrigger className="w-[110px] font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GET" className="font-bold text-blue-500">
+                    GET
+                  </SelectItem>
+                  <SelectItem value="POST" className="font-bold text-green-500">
+                    POST
+                  </SelectItem>
+                  <SelectItem value="PUT" className="font-bold text-orange-500">
+                    PUT
+                  </SelectItem>
+                  <SelectItem
+                    value="PATCH"
+                    className="font-bold text-yellow-500"
                   >
-                    <Server className="h-3 w-3" /> Real API 모드
-                  </Label>
-                  <Switch
-                    id="api-mode"
-                    checked={useRealApi}
-                    onCheckedChange={setUseRealApi}
-                  />
-                </div>
-
-                {useRealApi && (
-                  <div className="space-y-2 animate-in slide-in-from-top-2">
-                    <Label className="text-[10px]">
-                      API Endpoint (FastAPI)
-                    </Label>
-                    <Input
-                      value={apiUrl}
-                      onChange={(e) => setApiUrl(e.target.value)}
-                      className="h-7 text-xs bg-white dark:bg-black"
-                      placeholder="http://..."
-                    />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 오른쪽: 결과 화면 (8칸 차지) */}
-        <div className="md:col-span-8 space-y-6">
-          <Tabs defaultValue="preview" className="w-full">
-            <div className="flex items-center justify-between mb-4">
-              <TabsList className="bg-slate-100 dark:bg-slate-800 p-1">
-                <TabsTrigger
-                  value="preview"
-                  className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950"
-                >
-                  📱 미리보기 (Preview)
-                </TabsTrigger>
-                <TabsTrigger
-                  value="json"
-                  className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950"
-                >
-                  ⚙️ 데이터 (JSON)
-                </TabsTrigger>
-              </TabsList>
-
-              {/* 상태 뱃지 */}
-              {isStreaming ? (
-                <Badge
-                  variant="outline"
-                  className="border-purple-500 text-purple-500 animate-pulse gap-1"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                  </span>
-                  Streaming...
-                </Badge>
-              ) : result ? (
-                <Badge
-                  variant="default"
-                  className="bg-green-500 hover:bg-green-600"
-                >
-                  완료됨 ✨
-                </Badge>
-              ) : (
-                <Badge variant="secondary">대기 중</Badge>
-              )}
+                    PATCH
+                  </SelectItem>
+                  <SelectItem value="DELETE" className="font-bold text-red-500">
+                    DELETE
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
+                className="font-mono text-sm flex-1"
+                placeholder="/api/v1/..."
+              />
             </div>
 
-            <TabsContent value="preview" className="mt-0">
-              <Card className="min-h-[500px] flex flex-col shadow-sm border-slate-200 dark:border-slate-800">
-                <CardContent className="flex-1 p-6 bg-slate-50/50 dark:bg-slate-950/50 rounded-lg font-mono text-sm leading-7 overflow-auto whitespace-pre-wrap">
-                  {result ? (
-                    <div className="animate-in fade-in duration-300">
-                      {result}
-                      {isStreaming && (
-                        <span className="inline-block w-2 h-4 ml-1 bg-purple-500 animate-pulse align-middle" />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4 opacity-50">
-                      <Sparkles className="h-12 w-12 text-slate-300" />
-                      <p>AI 친구가 여기서 답변을 기다리고 있어...</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {/* Tabs for Body/Headers */}
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <TabsList className="h-8">
+                  <TabsTrigger value="body" className="text-xs h-7">
+                    Body (JSON)
+                  </TabsTrigger>
+                  <TabsTrigger value="headers" className="text-xs h-7">
+                    Headers
+                  </TabsTrigger>
+                </TabsList>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() =>
+                    activeTab === 'body'
+                      ? formatJson(body, setBody)
+                      : formatJson(headers, setHeaders)
+                  }
+                >
+                  <RotateCcw className="h-3 w-3" /> Format
+                </Button>
+              </div>
 
-            <TabsContent value="json" className="mt-0">
-              <Card className="min-h-[500px] border-slate-200 dark:border-slate-800">
-                <CardContent className="p-0">
-                  <pre className="h-[500px] p-6 bg-[#1e1e1e] text-[#d4d4d4] rounded-lg overflow-auto text-xs font-mono leading-relaxed">
-                    {jsonData
-                      ? JSON.stringify(jsonData, null, 2)
-                      : '// 데이터가 도착하면 여기에 표시돼.\n// 백엔드 개발자와 소통할 때 이 화면을 보여주면 좋아!'}
-                  </pre>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+              <TabsContent
+                value="body"
+                className="flex-1 mt-0 relative min-h-[200px]"
+              >
+                <Textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  className="font-mono text-xs leading-relaxed h-full resize-none bg-slate-950 text-slate-50 p-4 border-0 focus-visible:ring-1"
+                  placeholder="{ ... }"
+                />
+              </TabsContent>
+
+              <TabsContent
+                value="headers"
+                className="flex-1 mt-0 relative min-h-[200px]"
+              >
+                <Textarea
+                  value={headers}
+                  onChange={(e) => setHeaders(e.target.value)}
+                  className="font-mono text-xs leading-relaxed h-full resize-none bg-slate-950 text-slate-50 p-4 border-0 focus-visible:ring-1"
+                  placeholder='{ "Content-Type": "application/json" }'
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+
+          <CardFooter className="border-t p-4 bg-muted/10">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleSendRequest}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4 fill-current" />
+                  Send Request
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Right: Response Panel */}
+        <Card className="flex flex-col h-full border-2 border-muted/50 shadow-sm overflow-hidden">
+          <CardHeader className="bg-muted/30 pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" /> Response
+              </CardTitle>
+
+              <div className="flex items-center gap-2">
+                {responseStatus && (
+                  <Badge
+                    variant={
+                      responseStatus >= 200 && responseStatus < 300
+                        ? 'default'
+                        : 'destructive'
+                    }
+                  >
+                    Status: {responseStatus}
+                  </Badge>
+                )}
+                {responseTime && (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    {responseTime}ms
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="flex-1 p-0 relative bg-slate-50 dark:bg-slate-900 overflow-auto">
+            {response ? (
+              <pre className="p-4 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200">
+                {typeof response === 'object'
+                  ? JSON.stringify(response, null, 2)
+                  : response}
+              </pre>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 opacity-50">
+                <HelpCircle className="h-10 w-10" />
+                <p className="text-sm">
+                  요청을 보내면 여기에 결과가 표시됩니다.
+                </p>
+              </div>
+            )}
+          </CardContent>
+
+          {response && (
+            <CardFooter className="border-t p-2 bg-muted/10 flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    typeof response === 'object'
+                      ? JSON.stringify(response, null, 2)
+                      : response,
+                  );
+                  toast.success('클립보드에 복사되었습니다.');
+                }}
+              >
+                <Copy className="h-3 w-3" />
+                Copy Response
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
       </div>
     </div>
   );
