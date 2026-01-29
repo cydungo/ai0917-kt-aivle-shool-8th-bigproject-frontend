@@ -1,4 +1,4 @@
-import { Megaphone, Plus, Award } from "lucide-react";
+import { Megaphone, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Button } from "../../../components/ui/button";
@@ -33,15 +33,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     content?: string;
     writer?: string;
   }
-  interface DashboardContest {
-    id: number | string;
-    title: string;
-    organizer: string;
-    deadline: string;
-    category: string;
-  }
   const [notices, setNotices] = useState<DashboardNotice[]>([]);
-  const [contests, setContests] = useState<DashboardContest[]>([]);
   const [noticeModalOpen, setNoticeModalOpen] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState<DashboardNotice | null>(
     null
@@ -88,24 +80,12 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
     }
   }, []);
 
-  const fetchDashboardContests = useCallback(async () => {
-    try {
-      const res = await authAxios.get<DashboardContest[]>(
-        `/api/v1/manager/dashboard/contest`
-      );
-      setContests(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setContests([]);
-    }
-  }, [authAxios]);
-
   useEffect(() => {
     setTimeout(() => {
       fetchDashboard();
       fetchDashboardNotices();
-      fetchDashboardContests();
     }, 0);
-  }, [fetchDashboard, fetchDashboardNotices, fetchDashboardContests]);
+  }, [fetchDashboard, fetchDashboardNotices]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -189,60 +169,6 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
           </DialogContent>
         </Dialog>
 
-        {/* Contest Section */}
-        <Card className="border-border">
-          <CardHeader className="border-b border-border p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <CardTitle className="text-foreground truncate">
-                  공모전
-                </CardTitle>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 h-8 w-8 flex-shrink-0"
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-border">
-              {contests.map((contest) => (
-                <div
-                  key={contest.id}
-                  className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="text-sm text-foreground font-medium mb-1">
-                        {contest.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {contest.organizer}
-                      </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className="border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 text-xs"
-                    >
-                      {contest.category}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs text-muted-foreground">
-                      마감: {contest.deadline}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

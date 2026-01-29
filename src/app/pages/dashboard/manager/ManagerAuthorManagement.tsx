@@ -364,7 +364,7 @@ export function ManagerAuthorManagement() {
                 try {
                   setLinking(true);
                   const res = await apiClient.post(
-                    `/api/v1/manager/author/${encodeURIComponent(manualAuthorId.trim())}`,
+                    `/api/v1/manager/authors/${encodeURIComponent(manualAuthorId.trim())}`,
                   );
                   const data = res.data;
                   if (data?.authorId) {
