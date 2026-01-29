@@ -18,12 +18,14 @@ interface PasswordChangeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (data: any) => Promise<void>;
+  email?: string;
 }
 
 export function PasswordChangeModal({
   open,
   onOpenChange,
   onSubmit,
+  email,
 }: PasswordChangeModalProps) {
   const navigate = useNavigate();
   const [passwordForm, setPasswordForm] = useState({
@@ -79,13 +81,17 @@ export function PasswordChangeModal({
     try {
       if (onSubmit) {
         await onSubmit({
+          siteEmail: email,
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
           newPasswordConfirm: passwordForm.confirmPassword,
         });
       } else {
-        await authService.changePassword({
-          currentPassword: passwordForm.currentPassword,
+        if (!email) {
+          throw new Error('이메일 정보가 없습니다.');
+        }
+        await authService.resetPassword({
+          siteEmail: email,
           newPassword: passwordForm.newPassword,
           newPasswordConfirm: passwordForm.confirmPassword,
         });

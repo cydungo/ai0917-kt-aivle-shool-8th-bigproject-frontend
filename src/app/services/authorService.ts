@@ -4,8 +4,6 @@ import {
   AuthorDashboardSummaryDto,
   AuthorMyPageDto,
   AuthorNoticeDto,
-  ContestTemplateDto,
-  ContestTemplateCreateRequestDto,
   ExtractSettingRequest,
   ExtractSettingResponse,
   IPMatchingDto,
@@ -23,6 +21,10 @@ import {
   WorkUpdateRequestDto,
   EpisodeDto,
   EpisodeDetailDto,
+  KeywordExtractionRequestDto,
+  KeywordExtractionResponseDto,
+  PublishAnalysisRequestDto,
+  PublishAnalysisResponseDto,
 } from '../types/author';
 import { PageResponse } from '../types/common';
 
@@ -99,10 +101,10 @@ export const authorService = {
     return response.data;
   },
 
-  createEpisode: async (workId: string, title: string) => {
+  createEpisode: async (workId: string, title: string, subtitle?: string) => {
     const response = await apiClient.post<EpisodeDto>(
       `/api/v1/author/works/${workId}/episodes`,
-      { title },
+      { title, subtitle },
     );
     return response.data;
   },
@@ -120,9 +122,53 @@ export const authorService = {
     return response.data;
   },
 
+  updateEpisodeTitle: async (
+    workId: string,
+    episodeId: string,
+    title: string,
+  ) => {
+    const response = await apiClient.patch<EpisodeDetailDto>(
+      `/api/v1/author/works/${workId}/episodes/${episodeId}`,
+      { title },
+    );
+    return response.data;
+  },
+
+  deleteEpisode: async (workId: string, episodeId: string) => {
+    await apiClient.delete(
+      `/api/v1/author/works/${workId}/episodes/${episodeId}`,
+    );
+  },
+
   publishEpisode: async (workId: string, episodeId: string) => {
-    const response = await apiClient.post<EpisodeDto>(
+    const response = await apiClient.post(
       `/api/v1/author/works/${workId}/episodes/${episodeId}/publish`,
+    );
+    return response.data;
+  },
+
+  publishKeywords: async (
+    workId: string,
+    data: KeywordExtractionRequestDto,
+  ) => {
+    const response = await apiClient.post<KeywordExtractionResponseDto>(
+      `/api/v1/author/works/${workId}/publish/keywords`,
+      data,
+    );
+    return response.data;
+  },
+
+  publishAnalysis: async (workId: string, data: PublishAnalysisRequestDto) => {
+    const response = await apiClient.post<PublishAnalysisResponseDto>(
+      `/api/v1/author/works/${workId}/publish/analysis`,
+      data,
+    );
+    return response.data;
+  },
+
+  publishConfirm: async (workId: string) => {
+    const response = await apiClient.post(
+      `/api/v1/author/works/${workId}/publish/confirm`,
     );
     return response.data;
   },
@@ -304,23 +350,7 @@ export const authorService = {
     if (data?.authorId) return String(data.authorId);
     return JSON.stringify(data);
   },
-
-  // Contest Templates
-  getContestTemplates: async () => {
-    const response = await apiClient.get<ContestTemplateDto[]>(
-      '/api/v1/author/contest/templates',
-    );
-    return response.data;
-  },
-
-  createContestTemplate: async (data: ContestTemplateCreateRequestDto) => {
-    const response = await apiClient.post<ContestTemplateDto>(
-      '/api/v1/author/contest/templates',
-      data,
-    );
-    return response.data;
-  },
-
+  
   // My Page
   getMyPage: async (userId: string) => {
     const response = await apiClient.get<AuthorMyPageDto>(

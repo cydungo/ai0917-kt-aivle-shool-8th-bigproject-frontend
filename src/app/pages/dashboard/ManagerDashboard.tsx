@@ -30,7 +30,6 @@ import { ManagerIPTrend } from './manager/ManagerIPTrend';
 import { ManagerIPExpansion } from './manager/ManagerIPExpansion';
 import { ManagerAuthorManagement } from './manager/ManagerAuthorManagement';
 import { ManagerNotice } from './manager/ManagerNotice';
-import { ManagerContestTemplates } from './manager/ManagerContestTemplates';
 import { ManagerMyPage } from './manager/ManagerMyPage';
 import { ManagerSettings } from './manager/ManagerSettings';
 import { PasswordChangeModal } from '../../components/common/PasswordChangeModal';
@@ -97,7 +96,10 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
           </Button>
         )}
 
-        <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
+        <div 
+          className="h-16 flex items-center px-6 border-b border-sidebar-border cursor-pointer"
+          onClick={() => handleMenuClick('home')}
+        >
           <Logo />
         </div>
 
@@ -401,7 +403,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
           {activeMenu === 'ip-trend-analysis' && <ManagerIPTrend />}
           {activeMenu === 'ip-expansion' && <ManagerIPExpansion />}
           {activeMenu === 'author-management' && <ManagerAuthorManagement />}
-          {activeMenu === 'contest-templates' && <ManagerContestTemplates />}
           {activeMenu === 'mypage' && (
             <ManagerMyPage
               userData={userData}
@@ -416,6 +417,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
       <PasswordChangeModal
         open={showPasswordModal}
         onOpenChange={setShowPasswordModal}
+        email={userData?.email}
       />
     </div>
   );
