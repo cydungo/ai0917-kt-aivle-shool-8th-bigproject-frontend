@@ -176,23 +176,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
           </button>
 
           <button
-            onClick={() => handleMenuClick('contest-templates')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-              activeMenu === 'contest-templates'
-                ? 'text-white dark:text-black'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            }`}
-            style={
-              activeMenu === 'contest-templates'
-                ? { backgroundColor: 'var(--role-primary)' }
-                : {}
-            }
-          >
-            <Award className="w-5 h-5" />
-            <span className="text-sm font-medium">공모전 템플릿</span>
-          </button>
-
-          <button
             onClick={() => handleMenuClick('author-management')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
               activeMenu === 'author-management'
@@ -354,7 +337,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
                       {activeMenu === 'ip-trend-analysis' && 'IP 트렌드 분석'}
                       {activeMenu === 'ip-expansion' && 'IP 확장'}
                       {activeMenu === 'author-management' && '작가'}
-                      {activeMenu === 'contest-templates' && '공모전 템플릿'}
                       {activeMenu === 'notice' && '공지사항'}
                       {activeMenu === 'mypage' && '마이페이지'}
                       {activeMenu === 'settings' && '설정'}

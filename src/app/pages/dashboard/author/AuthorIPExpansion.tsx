@@ -82,17 +82,6 @@ export function AuthorIPExpansion({
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-start">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger
-              value="proposals"
-              className="px-6 flex items-center gap-2"
-            >
-              제안서 검토
-              <ClipboardList className="w-3 h-3 text-muted-foreground" />
-            </TabsTrigger>
-          </TabsList>
-        </div>
 
         {/* 제안서 검토 탭 */}
         <TabsContent value="proposals" className="mt-6 space-y-6">

@@ -19,12 +19,20 @@ import {
 } from '../../../components/ui/table';
 import { Badge } from '../../../components/ui/badge';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '../../../components/ui/dialog';
 import { DialogFooter, DialogDescription } from '../../../components/ui/dialog';
+import { toast } from 'sonner';
 import {
   Search,
   User,
@@ -59,9 +67,11 @@ interface AuthorDetail extends Author {
 export function ManagerAuthorManagement() {
   const [page, setPage] = useState(0);
   const [keyword, setKeyword] = useState('');
+  const [sort, setSort] = useState<'name,asc' | 'workCount,desc'>('name,asc');
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null);
   const [showIdModal, setShowIdModal] = useState(false);
   const [manualAuthorId, setManualAuthorId] = useState('');
+  const [linking, setLinking] = useState(false);
 
   // Fetch Summary
   const { data: summary } = useQuery<AuthorSummary>({
@@ -74,10 +84,10 @@ export function ManagerAuthorManagement() {
 
   // Fetch Authors List
   const { data: authorPage } = useQuery({
-    queryKey: ['manager', 'authors', 'list', page, keyword],
+    queryKey: ['manager', 'authors', 'list', page, keyword, sort],
     queryFn: async () => {
-      const res = await apiClient.get('/api/v1/manager/authors/list', {
-        params: { page, size: 10, keyword, sort: 'createdAt,desc' },
+      const res = await apiClient.get('/api/v1/manager/authors', {
+        params: { page, size: 10, keyword, sort },
       });
       return res.data;
     },
@@ -168,6 +178,20 @@ export function ManagerAuthorManagement() {
                   onKeyDown={handleSearch}
                 />
               </div>
+              <Select
+                value={sort}
+                onValueChange={(v) =>
+                  setSort(v as 'name,asc' | 'workCount,desc')
+                }
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="정렬" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name,asc">이름순</SelectItem>
+                  <SelectItem value="workCount,desc">작품수순</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" onClick={() => setShowIdModal(true)}>
                 작가 ID 입력
               </Button>
@@ -324,27 +348,39 @@ export function ManagerAuthorManagement() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>작가 ID 입력</DialogTitle>
-            <DialogDescription>작가 상세 정보를 확인할 ID를 입력하세요.</DialogDescription>
+            <DialogDescription>운영자와 작가의 매칭 기능 • 작가에게서 전달받은 키를 입력하세요.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input
-              placeholder="예: 123"
+              placeholder="예: AUTH-ABCDE"
               value={manualAuthorId}
               onChange={(e) => setManualAuthorId(e.target.value)}
             />
           </div>
           <DialogFooter>
             <Button
-              onClick={() => {
-                const id = Number(manualAuthorId);
-                if (!Number.isNaN(id) && id > 0) {
-                  setSelectedAuthorId(id);
+              disabled={linking || !manualAuthorId.trim()}
+              onClick={async () => {
+                try {
+                  setLinking(true);
+                  const res = await apiClient.post(
+                    `/api/v1/manager/author/${encodeURIComponent(manualAuthorId.trim())}`,
+                  );
+                  const data = res.data;
+                  if (data?.authorId) {
+                    setSelectedAuthorId(Number(data.authorId));
+                  }
+                  toast.success('작가와 운영자 연동이 완료되었습니다.');
                   setShowIdModal(false);
                   setManualAuthorId('');
+                } catch (e) {
+                  toast.error('연동에 실패했습니다. 키를 확인해주세요.');
+                } finally {
+                  setLinking(false);
                 }
               }}
             >
-              조회
+              연동
             </Button>
           </DialogFooter>
         </DialogContent>

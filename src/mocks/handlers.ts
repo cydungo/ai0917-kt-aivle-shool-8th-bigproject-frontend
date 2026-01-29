@@ -461,6 +461,56 @@ export const handlers = [
       totalPages: Math.ceil(total / size),
     });
   }),
+  http.get(`${BACKEND_URL}/api/v1/manager/authors`, ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') || 0);
+    const size = Number(url.searchParams.get('size') || 10);
+    const keyword = (url.searchParams.get('keyword') || '').toLowerCase();
+    const sort = url.searchParams.get('sort') || 'name,asc';
+    const total = 120;
+
+    const all = generateList(total, (i) => {
+      const id = i;
+      const name = NAMES[i % NAMES.length];
+      const email = `author${id}@example.com`;
+      const workCount = 3 + (i % 7);
+      const createdAt = new Date(Date.now() - i * 86400000 * 3).toISOString();
+      const status = i % 10 === 0 ? 'INACTIVE' : 'ACTIVE';
+      return { id, name, email, workCount, createdAt, status };
+    });
+
+    const filtered = keyword
+      ? all.filter((a) => a.name.toLowerCase().includes(keyword))
+      : all;
+
+    const [field, direction] = sort.split(',');
+    const sorted = [...filtered].sort((a, b) => {
+      const dir = direction === 'desc' ? -1 : 1;
+      if (field === 'name') {
+        return a.name.localeCompare(b.name) * dir;
+      }
+      if (field === 'workCount') {
+        return (a.workCount - b.workCount) * dir;
+      }
+      if (field === 'createdAt') {
+        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
+      }
+      return 0;
+    });
+
+    const start = page * size;
+    const content = sorted.slice(start, start + size);
+    const totalElements = sorted.length;
+    const totalPages = Math.max(1, Math.ceil(totalElements / size));
+
+    return HttpResponse.json({
+      content,
+      page,
+      size,
+      totalElements,
+      totalPages,
+    });
+  }),
   http.get(`${BACKEND_URL}/api/v1/manager/authors/:id`, ({ params }) => {
     const id = Number(params.id);
     return HttpResponse.json({
@@ -594,6 +644,17 @@ export const handlers = [
   http.post(`${BACKEND_URL}/author/manager/code`, () => {
     const code = `AUTH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     return HttpResponse.json({ code });
+  }),
+  http.post(`${BACKEND_URL}/api/v1/author/manager/code`, () => {
+    const code = `AUTH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    return HttpResponse.json({ code });
+  }),
+  // Manager-Author Link by PWD
+  http.post(`${BACKEND_URL}/api/v1/manager/author/:pwd`, ({ params }) => {
+    const pwd = String(params.pwd || '');
+    const n = pwd.length;
+    const authorId = (n * 97) % 100 + 1;
+    return HttpResponse.json({ success: true, authorId });
   }),
 
   // 5.2 Works
