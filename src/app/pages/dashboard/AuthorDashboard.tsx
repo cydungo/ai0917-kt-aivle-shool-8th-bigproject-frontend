@@ -185,7 +185,7 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
             <span className="text-sm font-medium">작품</span>
           </button>
 
-          {/* IP 확장 */}
+          {/* IP 제안서 */}
           <button
             onClick={() => handleMenuClick('ip-expansion')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
@@ -200,7 +200,7 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
             }
           >
             <Database className="w-5 h-5" />
-            <span className="text-sm font-medium">IP 확장</span>
+            <span className="text-sm font-medium">IP 제안서</span>
           </button>
 
           <button

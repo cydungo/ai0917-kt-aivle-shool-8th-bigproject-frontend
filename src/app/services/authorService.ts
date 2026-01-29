@@ -341,6 +341,16 @@ export const authorService = {
     return response.data;
   },
 
+  // Author ID Code Generation (Author-Manager linkage)
+  generateAuthorCode: async (): Promise<string> => {
+    const response = await apiClient.post('/api/v1/author/manager/code');
+    const data = response.data;
+    if (typeof data === 'string') return data;
+    if (data?.code) return String(data.code);
+    if (data?.authorId) return String(data.authorId);
+    return JSON.stringify(data);
+  },
+  
   // My Page
   getMyPage: async (userId: string) => {
     const response = await apiClient.get<AuthorMyPageDto>(

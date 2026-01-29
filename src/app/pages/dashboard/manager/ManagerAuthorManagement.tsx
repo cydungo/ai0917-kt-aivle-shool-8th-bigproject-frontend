@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../components/ui/dialog';
+import { DialogFooter, DialogDescription } from '../../../components/ui/dialog';
 import {
   Search,
   User,
@@ -59,6 +60,8 @@ export function ManagerAuthorManagement() {
   const [page, setPage] = useState(0);
   const [keyword, setKeyword] = useState('');
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | null>(null);
+  const [showIdModal, setShowIdModal] = useState(false);
+  const [manualAuthorId, setManualAuthorId] = useState('');
 
   // Fetch Summary
   const { data: summary } = useQuery<AuthorSummary>({
@@ -154,15 +157,20 @@ export function ManagerAuthorManagement() {
         <CardHeader className="border-b">
           <div className="flex justify-between items-center">
             <CardTitle>작가 목록</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="작가 이름 검색..."
-                className="pl-9"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                onKeyDown={handleSearch}
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="작가 이름 검색..."
+                  className="pl-9"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onKeyDown={handleSearch}
+                />
+              </div>
+              <Button variant="outline" onClick={() => setShowIdModal(true)}>
+                작가 ID 입력
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -309,6 +317,36 @@ export function ManagerAuthorManagement() {
               Loading...
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Manual Author ID Modal */}
+      <Dialog open={showIdModal} onOpenChange={setShowIdModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>작가 ID 입력</DialogTitle>
+            <DialogDescription>작가 상세 정보를 확인할 ID를 입력하세요.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="예: 123"
+              value={manualAuthorId}
+              onChange={(e) => setManualAuthorId(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                const id = Number(manualAuthorId);
+                if (!Number.isNaN(id) && id > 0) {
+                  setSelectedAuthorId(id);
+                  setShowIdModal(false);
+                  setManualAuthorId('');
+                }
+              }}
+            >
+              조회
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
