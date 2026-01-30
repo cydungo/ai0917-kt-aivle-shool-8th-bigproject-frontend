@@ -66,30 +66,33 @@ function CreateIPExpansionDialog({
     budget: string;
     targetAges: string[];
     targetGender: string;
+    dossiers: string[];
   }) => void;
 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(
     null,
   );
-  const [selectedAuthorId, setSelectedAuthorId] = useState<string>("");
-  const [selectedWorkId, setSelectedWorkId] = useState<string>("");
+  const [selectedAuthorIds, setSelectedAuthorIds] = useState<string[]>([]);
+  const [selectedWorkIds, setSelectedWorkIds] = useState<string[]>([]);
   const [projectName, setProjectName] = useState("");
   const [budget, setBudget] = useState("");
   const [targetAges, setTargetAges] = useState<string[]>([]);
   const [targetGender, setTargetGender] = useState<string>("all");
+  const [dossiers, setDossiers] = useState<string[]>([]);
 
   // Reset states when dialog opens
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
       setSelectedFormat(null);
-      setSelectedAuthorId("");
-      setSelectedWorkId("");
+      setSelectedAuthorIds([]);
+      setSelectedWorkIds([]);
       setProjectName("");
       setBudget("");
       setTargetAges([]);
       setTargetGender("all");
+      setDossiers([]);
     }
   }, [isOpen]);
 
@@ -98,22 +101,39 @@ function CreateIPExpansionDialog({
       prev.includes(age) ? prev.filter((a) => a !== age) : [...prev, age],
     );
   };
+  const toggleDossier = (key: string) => {
+    setDossiers((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  };
 
-  // Fetch works to get the title for summary
+  // Fetch works for selected authors (aggregate)
   const { data: works } = useQuery({
-    queryKey: ["manager", "authors", "works", selectedAuthorId],
+    queryKey: ["manager", "authors", "works", "multi", selectedAuthorIds.slice().sort().join(",")],
     queryFn: async () => {
-      if (!selectedAuthorId) return [];
-      const res = await apiClient.get(
-        `/api/v1/manager/authors/${selectedAuthorId}/works`,
+      if (!selectedAuthorIds.length) return [];
+      const results = await Promise.all(
+        selectedAuthorIds.map((aid) =>
+          apiClient.get(`/api/v1/manager/authors/${aid}/works`),
+        ),
       );
-      return res.data as { id: number; title: string }[];
+      const merged = results.flatMap((r, idx) => {
+        const aid = selectedAuthorIds[idx];
+        const arr = (r.data as { id: number; title: string }[]) || [];
+        return arr.map((w) => ({ ...w, authorId: Number(aid) }));
+      });
+      return merged as { id: number; title: string; authorId: number }[];
     },
-    enabled: !!selectedAuthorId,
+    enabled: selectedAuthorIds.length > 0,
   });
 
   const selectedWorkTitle =
-    works?.find((w) => String(w.id) === selectedWorkId)?.title || "";
+    works && selectedWorkIds.length
+      ? works
+          .filter((w) => selectedWorkIds.includes(String(w.id)))
+          .map((w) => w.title)
+          .join(", ")
+      : "";
 
   const { data: authors } = useQuery({
     queryKey: ["manager", "authors", "list"],
@@ -127,7 +147,12 @@ function CreateIPExpansionDialog({
   });
 
   const selectedAuthorName =
-    authors?.find((a) => String(a.id) === selectedAuthorId)?.name || "";
+    authors && selectedAuthorIds.length
+      ? authors
+          .filter((a) => selectedAuthorIds.includes(String(a.id)))
+          .map((a) => a.name)
+          .join(", ")
+      : "";
 
   const handleCreate = () => {
     const createdId = Date.now();
@@ -135,13 +160,14 @@ function CreateIPExpansionDialog({
       id: createdId,
       format: selectedFormat,
       projectName,
-      authorId: selectedAuthorId,
+      authorId: selectedAuthorIds.join(","),
       authorName: selectedAuthorName,
-      workId: selectedWorkId,
+      workId: selectedWorkIds.join(","),
       workTitle: selectedWorkTitle || "",
       budget,
       targetAges,
       targetGender,
+      dossiers,
     });
     onClose();
   };
@@ -317,20 +343,44 @@ function CreateIPExpansionDialog({
               <div className="space-y-2">
                 <Label>작가 선택</Label>
                 <LinkedAuthorsSelect
-                  value={selectedAuthorId}
+                  values={selectedAuthorIds}
                   onChange={(v) => {
-                    setSelectedAuthorId(v);
-                    setSelectedWorkId("");
+                    setSelectedAuthorIds(v);
+                    setSelectedWorkIds([]);
                   }}
                 />
               </div>
               <div className="space-y-2">
                 <Label>작품 선택</Label>
                 <AuthorWorksSelect
-                  authorId={selectedAuthorId}
-                  value={selectedWorkId}
-                  onChange={(v) => setSelectedWorkId(v)}
+                  authorIds={selectedAuthorIds}
+                  values={selectedWorkIds}
+                  onChange={(v) => setSelectedWorkIds(v)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  종류별 설정집{" "}
+                  <span className="text-xs font-normal text-slate-500 ml-1">
+                    (선택)
+                  </span>
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {["인물", "세계관", "서사", "장소", "물건", "집단"].map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleDossier(key)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium border transition ${
+                        dossiers.includes(key)
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-700 border-slate-300 hover:border-slate-400"
+                      }`}
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>프로젝트명</Label>
@@ -548,7 +598,7 @@ function CreateIPExpansionDialog({
             <Button
               onClick={() => setCurrentStep(currentStep + 1)}
               disabled={
-                (currentStep === 1 && !selectedAuthorId) ||
+                (currentStep === 1 && selectedAuthorIds.length === 0) ||
                 (currentStep === 2 && !selectedFormat)
               }
               className={`${getThemeClass("bg")} text-white hover:opacity-90 transition-opacity`}
@@ -586,6 +636,7 @@ export function ManagerIPExpansion() {
     budget: string;
     targetAges: string[];
     targetGender: string;
+    dossiers: string[];
   };
   const [createdProject, setCreatedProject] = useState<
     | CreatedProject
@@ -1056,11 +1107,11 @@ export function ManagerIPExpansion() {
 }
 
 function LinkedAuthorsSelect({
-  value,
+  values,
   onChange,
 }: {
-  value: string;
-  onChange: (v: string) => void;
+  values: string[];
+  onChange: (v: string[]) => void;
 }) {
   const { data } = useQuery({
     queryKey: ["manager", "authors", "linked", "list"],
@@ -1077,63 +1128,92 @@ function LinkedAuthorsSelect({
     },
   });
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder="연동된 작가를 선택하세요" />
-      </SelectTrigger>
-      <SelectContent>
-        {data?.map((a) => (
-          <SelectItem key={a.id} value={String(a.id)}>
-            {a.name}
-          </SelectItem>
-        ))}
-        {!data || data.length === 0 ? (
-          <SelectItem value="__empty" disabled>
-            연동된 작가 없음
-          </SelectItem>
-        ) : null}
-      </SelectContent>
-    </Select>
+    <div className="border border-slate-200 rounded-md p-2 max-h-48 overflow-auto">
+      {data?.map((a) => {
+        const id = String(a.id);
+        const checked = values.includes(id);
+        return (
+          <label key={a.id} className="flex items-center gap-2 py-1 px-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="accent-slate-900"
+              checked={checked}
+              onChange={() => {
+                if (checked) {
+                  onChange(values.filter((v) => v !== id));
+                } else {
+                  onChange([...values, id]);
+                }
+              }}
+            />
+            <span className="text-sm">{a.name}</span>
+          </label>
+        );
+      })}
+      {!data || data.length === 0 ? (
+        <div className="text-xs text-slate-500 px-2 py-1">연동된 작가 없음</div>
+      ) : null}
+    </div>
   );
 }
 
 function AuthorWorksSelect({
-  authorId,
-  value,
+  authorIds,
+  values,
   onChange,
 }: {
-  authorId: string;
-  value: string;
-  onChange: (v: string) => void;
+  authorIds: string[];
+  values: string[];
+  onChange: (v: string[]) => void;
 }) {
   const { data } = useQuery({
-    queryKey: ["manager", "authors", "works", authorId],
+    queryKey: ["manager", "authors", "works", "multi", authorIds.slice().sort().join(",")],
     queryFn: async () => {
-      if (!authorId) return [];
-      const res = await apiClient.get(
-        `/api/v1/manager/authors/${authorId}/works`,
+      if (!authorIds.length) return [];
+      const results = await Promise.all(
+        authorIds.map((aid) =>
+          apiClient.get(`/api/v1/manager/authors/${aid}/works`),
+        ),
       );
-      return res.data as { id: number; title: string }[];
+      const merged = results.flatMap((r, idx) => {
+        const aid = authorIds[idx];
+        const arr = (r.data as { id: number; title: string }[]) || [];
+        return arr.map((w) => ({ ...w, authorId: Number(aid) }));
+      });
+      return merged as { id: number; title: string; authorId: number }[];
     },
-    enabled: !!authorId,
+    enabled: authorIds.length > 0,
   });
   return (
-    <Select value={value} onValueChange={onChange} disabled={!authorId}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder={authorId ? "작품을 선택하세요" : "작가를 먼저 선택하세요"} />
-      </SelectTrigger>
-      <SelectContent>
-        {data?.map((w) => (
-          <SelectItem key={w.id} value={String(w.id)}>
-            {w.title}
-          </SelectItem>
-        ))}
-        {authorId && (!data || data.length === 0) ? (
-          <SelectItem value="__empty" disabled>
-            선택된 작가의 작품이 없습니다
-          </SelectItem>
-        ) : null}
-      </SelectContent>
-    </Select>
+    <div className="border border-slate-200 rounded-md p-2 max-h-48 overflow-auto">
+      {!authorIds.length ? (
+        <div className="text-xs text-slate-500 px-2 py-1">작가를 먼저 선택하세요</div>
+      ) : (
+        data?.map((w) => {
+          const id = String(w.id);
+          const checked = values.includes(id);
+          return (
+            <label key={w.id} className="flex items-center gap-2 py-1 px-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="accent-slate-900"
+                checked={checked}
+                onChange={() => {
+                  if (checked) {
+                    onChange(values.filter((v) => v !== id));
+                  } else {
+                    onChange([...values, id]);
+                  }
+                }}
+              />
+              <span className="text-sm">{w.title}</span>
+            </label>
+          );
+        })
+      )}
+      {authorIds.length > 0 && (!data || data.length === 0) ? (
+        <div className="text-xs text-slate-500 px-2 py-1">선택된 작가의 작품이 없습니다</div>
+      ) : null}
+    </div>
   );
 }
