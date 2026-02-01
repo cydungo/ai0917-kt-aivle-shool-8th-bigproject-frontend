@@ -736,8 +736,16 @@ export function AuthorLorebookPanel({
                 {searchResults.map((item) => (
                   <Card key={item.id} className="bg-muted/50">
                     <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
-                      <CardTitle className="text-sm font-medium">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
                         {item.name || item.title}
+                        {item.similarity && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-1 h-5 font-normal"
+                          >
+                            {Math.round(item.similarity * 100)}%
+                          </Badge>
+                        )}
                       </CardTitle>
                       <div className="flex gap-1">
                         <Button

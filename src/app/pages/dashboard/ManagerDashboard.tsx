@@ -31,7 +31,7 @@ import { ManagerAuthorManagement } from './manager/ManagerAuthorManagement';
 import { ManagerNotice } from './manager/ManagerNotice';
 import { ManagerMyPage } from './manager/ManagerMyPage';
 import { ManagerSettings } from './manager/ManagerSettings';
-import { PasswordChangeModal } from '../../components/common/PasswordChangeModal';
+import { PasswordChangeModal } from '../../components/dashboard/PasswordChangeModal';
 import { Logo } from '../../components/common/Logo';
 
 interface ManagerDashboardProps {
@@ -95,7 +95,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
           </Button>
         )}
 
-        <div 
+        <div
           className="h-16 flex items-center px-6 border-b border-sidebar-border cursor-pointer"
           onClick={() => handleMenuClick('home')}
         >
@@ -156,7 +156,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
             }
           >
             <TrendingUp className="w-5 h-5" />
-            <span className="text-sm font-medium">IP 트렌드 분석</span>
+            <span className="text-sm font-medium">IP 트렌드</span>
           </button>
 
           <button
@@ -212,7 +212,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
                 <div className="text-sm font-medium text-sidebar-foreground truncate">
                   {maskName(userName)}
                 </div>
-                <div className="text-xs text-muted-foreground">Manager</div>
+                <div className="text-xs text-muted-foreground">운영자</div>
               </div>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`}
@@ -259,7 +259,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
                 <div className="text-sm text-sidebar-foreground font-medium">
                   {maskName(userName)}
                 </div>
-                <div className="text-xs text-muted-foreground">PD</div>
+                <div className="text-xs text-muted-foreground">운영자</div>
               </div>
             </div>
 
@@ -269,13 +269,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
             >
               <User className="w-4 h-4" />
               <span className="text-sm">마이페이지</span>
-            </button>
-            <button
-              onClick={() => handleMenuClick('settings')}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="text-sm">설정</span>
             </button>
             <div className="border-t border-sidebar-border my-2"></div>
             <button
@@ -381,7 +374,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
       <PasswordChangeModal
         open={showPasswordModal}
         onOpenChange={setShowPasswordModal}
-        email={userData?.email}
       />
     </div>
   );

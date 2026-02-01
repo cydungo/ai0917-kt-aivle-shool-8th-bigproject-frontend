@@ -18,20 +18,18 @@ interface PasswordChangeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (data: any) => Promise<void>;
-  email?: string;
 }
 
 export function PasswordChangeModal({
   open,
   onOpenChange,
   onSubmit,
-  email,
 }: PasswordChangeModalProps) {
   const navigate = useNavigate();
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
-    confirmPassword: '',
+    newPasswordRetype: '',
   });
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
@@ -56,7 +54,7 @@ export function PasswordChangeModal({
     special: /[!@#$%^&*(),.?":{}|<> ]/.test(passwordForm.newPassword),
     match:
       passwordForm.newPassword !== '' &&
-      passwordForm.newPassword === passwordForm.confirmPassword,
+      passwordForm.newPassword === passwordForm.newPasswordRetype,
   };
 
   const handlePasswordChange = async () => {
@@ -81,30 +79,24 @@ export function PasswordChangeModal({
     try {
       if (onSubmit) {
         await onSubmit({
-          siteEmail: email,
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
-          newPasswordConfirm: passwordForm.confirmPassword,
+          newPasswordRetype: passwordForm.newPasswordRetype,
         });
       } else {
-        if (!email) {
-          throw new Error('이메일 정보가 없습니다.');
-        }
-        await authService.resetPassword({
-          siteEmail: email,
+        await authService.changePassword({
+          currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
-          newPasswordConfirm: passwordForm.confirmPassword,
+          newPasswordRetype: passwordForm.newPasswordRetype,
         });
       }
-      alert('비밀번호가 성공적으로 변경되었습니다. 다시 로그인해주세요.');
+      alert('비밀번호가 성공적으로 변경되었습니다.');
       onOpenChange(false);
       setPasswordForm({
         currentPassword: '',
         newPassword: '',
-        confirmPassword: '',
+        newPasswordRetype: '',
       });
-      await authService.logout();
-      navigate('/');
     } catch (error: any) {
       console.error('Password change failed', error);
       alert(
@@ -124,7 +116,7 @@ export function PasswordChangeModal({
           setPasswordForm({
             currentPassword: '',
             newPassword: '',
-            confirmPassword: '',
+            newPasswordRetype: '',
           });
         }
         onOpenChange(val);
@@ -225,11 +217,11 @@ export function PasswordChangeModal({
               <Input
                 id="confirm-password"
                 type={showConfirmPwd ? 'text' : 'password'}
-                value={passwordForm.confirmPassword}
+                value={passwordForm.newPasswordRetype}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setPasswordForm({
                     ...passwordForm,
-                    confirmPassword: e.target.value,
+                    newPasswordRetype: e.target.value,
                   })
                 }
               />
@@ -248,7 +240,7 @@ export function PasswordChangeModal({
               </Button>
             </div>
             {passwordForm.newPassword !== '' &&
-              passwordForm.newPassword !== passwordForm.confirmPassword && (
+              passwordForm.newPassword !== passwordForm.newPasswordRetype && (
                 <p className="text-xs text-red-500">
                   비밀번호가 일치하지 않습니다.
                 </p>

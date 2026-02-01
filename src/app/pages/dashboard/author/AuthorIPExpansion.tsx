@@ -72,6 +72,11 @@ export function AuthorIPExpansion({
     queryFn: authorService.getIPProposals,
   });
 
+  const { data: myManager } = useQuery({
+    queryKey: ['author', 'my-manager'],
+    queryFn: authorService.getMyManager,
+  });
+
   const proposalList = proposals || [];
 
   const handleOpenDetail = (proposal: IPProposalDto) => {
@@ -82,26 +87,28 @@ export function AuthorIPExpansion({
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-
         {/* 제안서 검토 탭 */}
         <TabsContent value="proposals" className="mt-6 space-y-6">
           <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9"
-              onClick={async () => {
-                try {
-                  const code = await authorService.generateAuthorCode();
-                  setGeneratedAuthorCode(code);
-                  setIsGenerateOpen(true);
-                } catch (err) {
-                  toast.error('작가 ID 생성에 실패했습니다.');
-                }
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" /> 작가 ID 생성
-            </Button>
+            {/* 운영자와 매칭되지 않은 경우에만 작가 ID 생성 버튼 표시 */}
+            {(!myManager || !myManager.ok) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={async () => {
+                  try {
+                    const code = await authorService.generateAuthorCode();
+                    setGeneratedAuthorCode(code);
+                    setIsGenerateOpen(true);
+                  } catch (err) {
+                    toast.error('작가 ID 생성에 실패했습니다.');
+                  }
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" /> 작가 ID 생성
+              </Button>
+            )}
           </div>
 
           {isProposalsLoading ? (
@@ -158,8 +165,6 @@ export function AuthorIPExpansion({
             </div>
           )}
         </TabsContent>
-
-        
       </Tabs>
 
       {/* Generated Author ID Modal */}

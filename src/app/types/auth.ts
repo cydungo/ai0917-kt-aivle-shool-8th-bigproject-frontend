@@ -19,6 +19,7 @@ export interface AuthMeResponse {
   birthday?: string;
   birthYear?: string;
   mobile?: string;
+  createdAt?: string;
 }
 
 export interface SignupPendingResponse {

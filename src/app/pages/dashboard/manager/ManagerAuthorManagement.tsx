@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import apiClient from '../../../api/axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { managerService } from '../../../services/managerService';
 import {
   Card,
   CardHeader,
@@ -43,26 +43,11 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
-
-interface AuthorSummary {
-  totalAuthors: number;
-  newAuthors: number;
-  activeAuthors: number;
-}
-
-interface Author {
-  id: number;
-  name: string;
-  email: string;
-  workCount: number;
-  createdAt: string;
-  status: 'ACTIVE' | 'INACTIVE';
-}
-
-interface AuthorDetail extends Author {
-  recentWorks: { id: number; title: string; createdAt: string }[];
-  lastLogin: string;
-}
+import {
+  AuthorSummaryDto,
+  ManagerAuthorDto,
+  ManagerAuthorDetailDto,
+} from '../../../types/manager';
 
 export function ManagerAuthorManagement() {
   const [page, setPage] = useState(0);
@@ -72,37 +57,33 @@ export function ManagerAuthorManagement() {
   const [showIdModal, setShowIdModal] = useState(false);
   const [manualAuthorId, setManualAuthorId] = useState('');
   const [linking, setLinking] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch Summary
-  const { data: summary } = useQuery<AuthorSummary>({
+  const { data: summary } = useQuery<AuthorSummaryDto>({
     queryKey: ['manager', 'authors', 'summary'],
-    queryFn: async () => {
-      const res = await apiClient.get('/api/v1/manager/authors/summary');
-      return res.data;
-    },
+    queryFn: () => managerService.getAuthorsSummary(),
   });
 
   // Fetch Authors List
   const { data: authorPage } = useQuery({
     queryKey: ['manager', 'authors', 'list', page, keyword, sort],
-    queryFn: async () => {
-      const res = await apiClient.get('/api/v1/manager/authors', {
-        params: { page, size: 10, keyword, sort },
-      });
-      return res.data;
-    },
+    queryFn: () =>
+      managerService.getAuthors({
+        page,
+        size: 10,
+        keyword,
+        sort,
+      }),
   });
 
   // Fetch Author Detail
-  const { data: authorDetail } = useQuery<AuthorDetail>({
+  const { data: authorDetail } = useQuery<ManagerAuthorDetailDto | null>({
     queryKey: ['manager', 'authors', 'detail', selectedAuthorId],
-    queryFn: async () => {
-      if (!selectedAuthorId) return null;
-      const res = await apiClient.get(
-        `/api/v1/manager/authors/${selectedAuthorId}`,
-      );
-      return res.data;
-    },
+    queryFn: () =>
+      selectedAuthorId
+        ? managerService.getAuthorDetail(selectedAuthorId)
+        : null,
     enabled: !!selectedAuthorId,
   });
 
@@ -210,7 +191,7 @@ export function ManagerAuthorManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {authorPage?.content?.map((author: Author) => (
+              {authorPage?.content?.map((author: ManagerAuthorDto) => (
                 <TableRow
                   key={author.id}
                   className="cursor-pointer hover:bg-slate-50"
@@ -316,7 +297,7 @@ export function ManagerAuthorManagement() {
                   <BookOpen className="w-4 h-4" /> 최근 작품
                 </h4>
                 <div className="border rounded-lg divide-y">
-                  {authorDetail.recentWorks?.map((work) => (
+                  {authorDetail.recentWorks?.map((work: any) => (
                     <div
                       key={work.id}
                       className="p-3 flex justify-between items-center"
@@ -348,7 +329,9 @@ export function ManagerAuthorManagement() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>작가 ID 입력</DialogTitle>
-            <DialogDescription>운영자와 작가의 매칭 기능 • 작가에게서 전달받은 키를 입력하세요.</DialogDescription>
+            <DialogDescription>
+              운영자와 작가의 매칭 기능 • 작가에게서 전달받은 키를 입력하세요.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input
@@ -363,13 +346,15 @@ export function ManagerAuthorManagement() {
               onClick={async () => {
                 try {
                   setLinking(true);
-                  const res = await apiClient.post(
-                    `/api/v1/manager/authors/${encodeURIComponent(manualAuthorId.trim())}`,
+                  const data = await managerService.matchAuthor(
+                    encodeURIComponent(manualAuthorId.trim()),
                   );
-                  const data = res.data;
                   if (data?.authorId) {
                     setSelectedAuthorId(Number(data.authorId));
                   }
+                  await queryClient.invalidateQueries({
+                    queryKey: ['manager', 'authors'],
+                  });
                   toast.success('작가와 운영자 연동이 완료되었습니다.');
                   setShowIdModal(false);
                   setManualAuthorId('');

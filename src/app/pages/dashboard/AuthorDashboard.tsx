@@ -31,7 +31,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { ThemeToggle } from '../../components/ui/theme-toggle';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
-import { PasswordChangeModal } from '../../components/common/PasswordChangeModal';
+import { PasswordChangeModal } from '../../components/dashboard/PasswordChangeModal';
 
 // Import sub-components
 import { AuthorHome } from './author/AuthorHome';
@@ -60,17 +60,6 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
 
   // Password Change State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-
-  const handlePasswordChangeSubmit = async (data: any) => {
-    if (!userData || !userData.userId) {
-      console.error('User ID is missing');
-      return;
-    }
-    // API 변경: /api/v1/signup/password/reset 사용 (resetPassword 메서드 활용)
-    // resetPassword는 { siteEmail, newPassword, newPasswordConfirm }을 인자로 받음
-    // data 객체에 이미 siteEmail, newPassword, newPasswordConfirm이 포함되어 있음 (PasswordChangeModal에서 전달)
-    await authService.resetPassword(data);
-  };
 
   // Fetch User Profile
   const { data: userData } = useQuery({
@@ -454,7 +443,6 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
       <PasswordChangeModal
         open={showPasswordModal}
         onOpenChange={setShowPasswordModal}
-        onSubmit={handlePasswordChangeSubmit}
       />
     </div>
   );

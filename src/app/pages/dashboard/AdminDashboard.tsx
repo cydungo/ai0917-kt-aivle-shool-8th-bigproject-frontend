@@ -20,7 +20,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { useState, useRef, useEffect } from 'react';
 import { ThemeToggle } from '../../components/ui/theme-toggle';
-import { PasswordChangeModal } from '../../components/common/PasswordChangeModal';
+import { PasswordChangeModal } from '../../components/dashboard/PasswordChangeModal';
 import { AdminHome } from './admin/AdminHome';
 import { AdminNotices } from './admin/AdminNotices';
 import { AdminPermissions } from './admin/AdminPermissions';
@@ -204,7 +204,7 @@ export function AdminDashboard({ onLogout, onHome }: AdminDashboardProps) {
         )}
 
         {/* Logo */}
-        <div 
+        <div
           className="h-16 flex items-center px-6 border-b border-sidebar-border mb-4 cursor-pointer"
           onClick={() => handleMenuClick('home')}
         >
@@ -284,9 +284,7 @@ export function AdminDashboard({ onLogout, onHome }: AdminDashboardProps) {
                 <div className="text-sm font-medium text-sidebar-foreground">
                   {maskName(userName)}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Administrator
-                </div>
+                <div className="text-xs text-muted-foreground">관리자</div>
               </div>
               <ChevronDown
                 className={`w-4 h-4 text-muted-foreground transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`}
@@ -320,7 +318,7 @@ export function AdminDashboard({ onLogout, onHome }: AdminDashboardProps) {
                 <div className="text-sm text-sidebar-foreground font-medium">
                   {maskName(userName)}
                 </div>
-                <div className="text-xs text-muted-foreground">Admin</div>
+                <div className="text-xs text-muted-foreground">관리자</div>
               </div>
             </div>
 

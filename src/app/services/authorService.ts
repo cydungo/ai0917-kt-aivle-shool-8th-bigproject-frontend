@@ -1,5 +1,4 @@
 import apiClient from '../api/axios';
-import axios from 'axios';
 import {
   AuthorDashboardSummaryDto,
   AuthorMyPageDto,
@@ -15,6 +14,7 @@ import {
   LorebookPlaceDto,
   LorebookItemDto,
   LorebookGroupDto,
+  LorebookSimilarityRequestDto,
   WorkCreateRequestDto,
   WorkResponseDto,
   WorkStatus,
@@ -25,30 +25,18 @@ import {
   KeywordExtractionResponseDto,
   PublishAnalysisRequestDto,
   PublishAnalysisResponseDto,
+  AuthorManagerResponseDto,
 } from '../types/author';
 import { PageResponse } from '../types/common';
-
-// AI Service URL could be different from Main Backend
-const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL;
+import { AuthMeResponse } from '../types/auth';
 
 export const authorService = {
   // AI Service
   extractSettings: async (data: ExtractSettingRequest) => {
-    if (!AI_BASE_URL) {
-      throw new Error('AI_BASE_URL is not defined');
-    }
-    const response = await axios.post<ExtractSettingResponse>(
-      `${AI_BASE_URL}/novel`,
+    // Redirected to Backend
+    const response = await apiClient.post<ExtractSettingResponse>(
+      '/api/v1/ai/author/episodes/novel_save',
       data,
-      {
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'Content-Type': 'application/json',
-        },
-        // Explicitly set withCredentials to false as the original code didn't use it
-        // and it might be a cross-origin request to a server not expecting cookies
-        withCredentials: false,
-      },
     );
     return response.data;
   },
@@ -147,20 +135,33 @@ export const authorService = {
     return response.data;
   },
 
-  publishKeywords: async (
-    workId: string,
-    data: KeywordExtractionRequestDto,
-  ) => {
+  getEpisodeCategories: async (episodeId: string) => {
+    // Redirected to Backend
     const response = await apiClient.post<KeywordExtractionResponseDto>(
-      `/api/v1/author/works/${workId}/publish/keywords`,
-      data,
+      `/api/v1/ai/author/categories`,
+      { episodeId },
     );
     return response.data;
   },
 
   publishAnalysis: async (workId: string, data: PublishAnalysisRequestDto) => {
+    // Redirected to Backend
     const response = await apiClient.post<PublishAnalysisResponseDto>(
-      `/api/v1/author/works/${workId}/publish/analysis`,
+      `/api/v1/ai/author/setting`,
+      { workId, ...data },
+    );
+    return response.data;
+  },
+
+  searchLorebookSimilarity: async (
+    workId: string,
+    data: LorebookSimilarityRequestDto,
+  ) => {
+    // Note: User requested POST /api/v1/author/lorebooks/{id}/userQ
+    // Assuming {id} refers to workId or a specific lorebook container ID.
+    // Based on "search for lorebook entries", likely workId.
+    const response = await apiClient.post<any[]>(
+      `/api/v1/author/lorebooks/${workId}/userQ`,
       data,
     );
     return response.data;
@@ -178,9 +179,9 @@ export const authorService = {
     return response.data;
   },
 
-  updateWork: async (p0: string, data: WorkUpdateRequestDto) => {
+  updateWork: async (id: number, data: WorkUpdateRequestDto) => {
     const response = await apiClient.patch<number>(
-      '/api/v1/author/works',
+      `/api/v1/author/works/${id}`,
       data,
     );
     return response.data;
@@ -342,36 +343,35 @@ export const authorService = {
   },
 
   // Author ID Code Generation (Author-Manager linkage)
-  generateAuthorCode: async (): Promise<string> => {
+  generateAuthorCode: async () => {
     const response = await apiClient.post('/api/v1/author/manager/code');
     const data = response.data;
+
+    // Check if data is an object and has 'code' property
+    if (data && typeof data === 'object' && 'code' in data) {
+      return String(data.code);
+    }
+
     if (typeof data === 'string') return data;
-    if (data?.code) return String(data.code);
-    if (data?.authorId) return String(data.authorId);
     return JSON.stringify(data);
   },
-  
+
+  // Get My Manager Info
+  getMyManager: async () => {
+    const response = await apiClient.get<AuthorManagerResponseDto>(
+      '/api/v1/author/manager',
+    );
+    return response.data;
+  },
+
   // My Page
-  getMyPage: async (userId: string) => {
-    const response = await apiClient.get<AuthorMyPageDto>(
-      `/api/v1/author/${userId}/mypage`,
-    );
+  getMyPage: async () => {
+    const response = await apiClient.get<AuthMeResponse>(`/api/v1/auth/me`);
     return response.data;
   },
 
-  updateProfile: async (userId: string, data: any) => {
-    const response = await apiClient.patch(
-      `/api/v1/author/${userId}/mypage/profile`,
-      data,
-    );
-    return response.data;
-  },
-
-  changePassword: async (userId: string, data: any) => {
-    const response = await apiClient.patch(
-      `/api/v1/author/${userId}/mypage/pwd`,
-      data,
-    );
+  changePassword: async (data: any) => {
+    const response = await apiClient.post(`/api/v1/auth/password/reset`, data);
     return response.data;
   },
 };

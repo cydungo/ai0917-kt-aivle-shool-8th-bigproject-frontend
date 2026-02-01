@@ -40,6 +40,7 @@ const TITLES = [
   '어느 날 공주가 되어버렸다',
   '재혼 황후',
   '황제의 외동딸',
+  '황제의 외동딸',
   '픽 미 업',
   '디펜스 게임의 폭군이 되었다',
   '게임 속 바바리안으로 살아남기',
@@ -107,38 +108,6 @@ const NAMES = [
   '위드',
   '서윤',
 ];
-
-const ROLES = [
-  '주인공',
-  '히로인',
-  '라이벌',
-  '조력자',
-  '최종 보스',
-  '스승',
-  '동료',
-  '악역',
-  '엑스트라',
-  '가족',
-];
-
-let contestTemplates = generateList(10, (i) => ({
-  id: i,
-  title: `2026 ${getRandomItem(GENRES)} 공모전`,
-  organizer: getRandomItem([
-    '네이버웹툰',
-    '카카오페이지',
-    '리디북스',
-    '문피아',
-    '조아라',
-  ]),
-  prize: `${(i + 1) * 1000}만원`,
-  deadline: `2026-12-${31 - i}`,
-  category: getRandomItem(GENRES),
-  status: 'OPEN',
-  description:
-    '이 공모전은 신인 작가 발굴을 위한 최고의 기회입니다. 당신의 상상력을 펼쳐보세요!',
-  isAiSupported: i % 2 === 0,
-}));
 
 // ----------------------------------------------------------------------
 // Handlers Definition
@@ -209,6 +178,13 @@ export const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
+  http.post(`${BACKEND_URL}/api/v1/auth/password/reset`, async () => {
+    return HttpResponse.json({
+      success: true,
+      message: 'Password reset successful',
+    });
+  }),
+
   http.get(`${BACKEND_URL}/api/v1/auth/naver/login`, () =>
     HttpResponse.json({
       url: 'https://nid.naver.com/oauth2.0/authorize?mock=true',
@@ -256,7 +232,7 @@ export const handlers = [
       adminCount: 5,
       managerCount: 12,
       authorCount: 1232,
-      deactivatedCount: 45, // Added mock data
+      deactivatedCount: 45,
     }),
   ),
   http.get(`${BACKEND_URL}/api/v1/admin/access/users`, ({ request }) => {
@@ -282,7 +258,7 @@ export const handlers = [
           lastLoginAt: new Date().toISOString(),
           lastAt:
             role === 'DEACTIVATED'
-              ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days later
+              ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
               : undefined,
           createdAt: new Date().toISOString(),
         };
@@ -300,12 +276,14 @@ export const handlers = [
     const page = Number(url.searchParams.get('page') || 0);
     const size = Number(url.searchParams.get('size') || 10);
     const keyword = url.searchParams.get('keyword') || '';
- 
+
     const content = generateList(size, (i) => {
       const id = page * size + i;
       const titleBase = `[공지] 시스템 점검 안내 ${id}`;
       const title =
-        keyword && !titleBase.includes(keyword) ? `${titleBase} (${keyword})` : titleBase;
+        keyword && !titleBase.includes(keyword)
+          ? `${titleBase} (${keyword})`
+          : titleBase;
       return {
         id,
         title,
@@ -316,7 +294,7 @@ export const handlers = [
         createdAt: new Date(Date.now() - id * 86400000).toISOString(),
       };
     });
- 
+
     return HttpResponse.json({
       content,
       totalElements: 50,
@@ -344,16 +322,6 @@ export const handlers = [
         id: i,
         title: `[운영] ${i}월 운영 가이드라인`,
         createdAt: '2026-01-25',
-      })),
-    ),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/manager/dashboard/contest`, () =>
-    HttpResponse.json(
-      generateList(3, (i) => ({
-        id: i,
-        title: `제${i}회 SF 공모전`,
-        status: 'ONGOING',
-        endDate: '2026-02-28',
       })),
     ),
   ),
@@ -414,6 +382,58 @@ export const handlers = [
   ),
 
   // 4.5 Trends & Contest & Authors
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend`, () =>
+    HttpResponse.json({
+      summary: {
+        currentMonthCount: 1,
+        totalCount: 24,
+        lastUpdate: '2025-01-15',
+        topKeywords: ['회빙환', 'OSMU'],
+      },
+    }),
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/list`, ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get('page') || 0);
+    const size = Number(url.searchParams.get('size') || 10);
+    const total = 60;
+
+    return HttpResponse.json({
+      content: generateList(size, (i) => ({
+        id: page * size + i,
+        title: `2025년 ${((page * size + i) % 12) + 1}월 IP 트렌드 분석`,
+        date: new Date(Date.now() - (page * size + i) * 86400000 * 30)
+          .toISOString()
+          .split('T')[0],
+        summary: '판타지 장르의 웹툰화 전환율 상승에 따른 IP 확장 전략 제언',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+      })),
+      page,
+      size,
+      totalElements: total,
+      totalPages: Math.ceil(total / size),
+    });
+  }),
+
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/iptrend/preview/:id`,
+    ({ params }) => {
+      return HttpResponse.json({
+        id: Number(params.id),
+        title: 'IP 트렌드 분석 리포트',
+        analysisDate: '2025-01-15',
+        content: '<p>분석 내용입니다...</p>',
+        pdfUrl: 'https://example.com/report.pdf',
+      });
+    },
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/exists-today`, () =>
+    HttpResponse.json(false),
+  ),
+
   http.get(`${BACKEND_URL}/api/v1/manager/iptrend/genre`, () =>
     HttpResponse.json([
       { genre: '판타지', growth: 12.5 },
@@ -421,16 +441,44 @@ export const handlers = [
       { genre: '무협', growth: -2.1 },
     ]),
   ),
-  http.get(`${BACKEND_URL}/api/v1/manager/contest/list`, () =>
-    HttpResponse.json({
-      content: generateList(5, (i) => ({
-        id: i,
-        title: `2026 ${getRandomItem(GENRES)} 공모전`,
-        prize: '1억원',
-        status: 'OPEN',
-      })),
-    }),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/report`, () => {
+    const blob = new Blob(['Dummy PDF Content'], { type: 'application/pdf' });
+    return new HttpResponse(blob, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="latest_report.pdf"',
+      },
+    });
+  }),
+
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/iptrend/download/:id`,
+    ({ params }) => {
+      const id = params.id;
+      const blob = new Blob([`Dummy PDF Content for Report ${id}`], {
+        type: 'application/pdf',
+      });
+      return new HttpResponse(blob, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="report_${id}.pdf"`,
+        },
+      });
+    },
   ),
+
+  http.post(`${BACKEND_URL}/api/v1/manager/iptrend/generate`, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return HttpResponse.json({
+      success: true,
+      message: 'Report generation started',
+    });
+  }),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/scheduler/run`, () => {
+    return HttpResponse.json({ success: true, message: 'Scheduler triggered' });
+  }),
 
   // Manager Author Management
   http.get(`${BACKEND_URL}/api/v1/manager/authors/summary`, () =>
@@ -498,7 +546,10 @@ export const handlers = [
         return (a.workCount - b.workCount) * dir;
       }
       if (field === 'createdAt') {
-        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
+        return (
+          (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) *
+          dir
+        );
       }
       return 0;
     });
@@ -553,368 +604,507 @@ export const handlers = [
     );
   }),
 
+  http.post(`${BACKEND_URL}/api/v1/manager/authors/:pwd`, ({ params }) => {
+    const pwd = String(params.pwd);
+    // Mock logic: accept any 6-digit code or legacy AUTH- code
+    if ((pwd.length === 6 && /^\d+$/.test(pwd)) || pwd.startsWith('AUTH-')) {
+      return HttpResponse.json({
+        authorId: 123,
+        name: '김작가',
+      });
+    }
+    // Otherwise return 404 or 400
+    return new HttpResponse(null, { status: 404 });
+  }),
+
   // ======================================================================
   // 5. Author API
   // ======================================================================
 
-  // 5.5 Serialization (New)
-  http.post(
-    `${BACKEND_URL}/api/v1/author/works/:workId/publish/keywords`,
-    async () => {
-      // Simulate AI processing delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+  // 5.0 Manager & Invite Code
+  http.get(`${BACKEND_URL}/api/v1/author/manager`, () => {
+    // Mock: 50% chance of being matched
+    // You can toggle this logic or inspect localStorage to simulate states
+    const isMatched = Math.random() > 0.5;
+
+    if (isMatched) {
       return HttpResponse.json({
-        keywords: {
-          characters: ['강민우', '이수연', '김철수', '박영희'],
-          locations: ['서울 타워', '지하 벙커', '아카데미'],
-          events: ['게이트 발생', '각성', '첫 번째 임무'],
-          groups: ['헌터 협회', '블랙 길드'],
-          items: ['엑스칼리버', '치유 물약'],
-          worlds: ['대격변 이후', '마력 각성 시대'],
-        },
+        ok: true,
+        managerIntegrationId: 'admin',
+        managerName: '김운영',
+        managerSiteEmail: 'manager@test.com',
       });
-    },
-  ),
-
-  http.post(
-    `${BACKEND_URL}/api/v1/author/works/:workId/publish/analysis`,
-    async ({ request }) => {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const body = (await request.json()) as any;
-      const selected = body.selectedKeywords || {};
-
-      // Generate dummy changes based on selection
-      const after = [
-        {
-          id: '1',
-          category: 'characters',
-          name: '강민우',
-          description: 'S급 헌터로 각성함 (Updated)',
-          status: 'UPDATED',
-        },
-        {
-          id: 'new-1',
-          category: 'items',
-          name: '마석',
-          description: '마력을 담은 돌 (New)',
-          status: 'NEW',
-        },
-      ];
-
-      // Add selected keywords as new items if not already present
-      Object.keys(selected).forEach((cat) => {
-        selected[cat]?.forEach((kw: string, idx: number) => {
-          if (kw !== '강민우') {
-            after.push({
-              id: `gen-${cat}-${idx}`,
-              category: cat,
-              name: kw,
-              description: `AI가 추출한 ${kw} 설정입니다.`,
-              status: 'NEW',
-            });
-          }
-        });
-      });
-
+    } else {
       return HttpResponse.json({
-        before: [
-          {
-            id: '1',
-            category: 'characters',
-            name: '강민우',
-            description: '평범한 대학생',
-            status: 'UNCHANGED',
-          },
-        ],
-        after,
+        ok: false,
+        managerIntegrationId: null,
+        managerName: null,
+        managerSiteEmail: null,
       });
-    },
-  ),
-
-  http.post(
-    `${BACKEND_URL}/api/v1/author/works/:workId/publish/confirm`,
-    async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return HttpResponse.json({
-        success: true,
-        publishedAt: new Date().toISOString(),
-      });
-    },
-  ),
-
-  // 5.1 Dashboard
-  http.get(`${BACKEND_URL}/api/v1/author/dashboard/summary`, () =>
-    HttpResponse.json({
-      ongoingWorks: 3,
-      createdLorebooks: 5,
-      completedWorks: 2,
-      totalViews: 154200,
-      monthlyGrowth: 12.4,
-    }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/author/dashboard/notice`, () =>
-    HttpResponse.json({
-      content: generateList(10, (i) => ({
-        id: i,
-        title: `[공지] 작가님 필독! ${i}월 정산 안내 및 가이드라인`,
-        isNew: i < 3,
-        createdAt: new Date().toISOString().split('T')[0],
-      })),
-      totalPages: 1,
-      totalElements: 10,
-    }),
-  ),
-  // Author-Manager: Generate Author Code
-  http.post(`${BACKEND_URL}/author/manager/code`, () => {
-    const code = `AUTH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    return HttpResponse.json({ code });
+    }
   }),
+
   http.post(`${BACKEND_URL}/api/v1/author/manager/code`, () => {
-    const code = `AUTH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    return HttpResponse.json({ code });
-  }),
-  // Manager-Author Link by PWD
-  http.post(`${BACKEND_URL}/api/v1/manager/author/:pwd`, ({ params }) => {
-    const pwd = String(params.pwd || '');
-    const n = pwd.length;
-    const authorId = (n * 97) % 100 + 1;
-    return HttpResponse.json({ success: true, authorId });
-  }),
-
-  // 5.2 Works
-  http.get(`${BACKEND_URL}/api/v1/author/works`, () =>
-    HttpResponse.json(
-      generateList(15, (i) => ({
-        id: i,
-        title: TITLES[i % TITLES.length] || `새로운 작품 ${i}`,
-        description: '이 작품은 대단한 작품입니다.',
-        genre: GENRES[i % GENRES.length],
-        status: i % 2 === 0 ? 'SERIES' : 'DRAFT', // WorkStatus: SERIES, COMPLETED, DRAFT
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        coverImage: 'https://via.placeholder.com/150',
-        episodeCount: 50 + i * 5,
-      })),
-    ),
-  ),
-  // Work Creation
-  http.post(`${BACKEND_URL}/api/v1/author/works`, async ({ request }) => {
-    const body = (await request.json()) as any;
+    // Return 6-digit code as Map<String, Object>
     return HttpResponse.json({
-      id: Date.now(),
-      title: body.title,
-      writer: '홍길동',
-      synopsis: body.synopsis || '',
-      genre: body.genre || '',
-      coverImageUrl: body.coverImageUrl || '',
-      description: body.description || '',
-      status: 'ONGOING',
-      statusDescription: '연재 중',
-      createdAt: new Date().toISOString(),
+      code: Math.floor(100000 + Math.random() * 900000).toString(),
+      expiresIn: 300,
     });
   }),
 
-  // Work Detail
-  http.get(`${BACKEND_URL}/api/v1/author/works/:workId`, ({ params }) =>
-    HttpResponse.json({
-      id: Number(params.workId),
-      title: TITLES[Number(params.workId) % TITLES.length],
-      description: '상세 설명입니다.',
-      status: 'SERIES',
-      genre: GENRES[Number(params.workId) % GENRES.length],
-      createdAt: '2026-01-01',
-      updatedAt: new Date().toISOString(),
-    }),
-  ),
-  http.get(
-    `${BACKEND_URL}/api/v1/author/works/:workId/episodes`,
-    ({ params }) =>
-      HttpResponse.json(
-        generateList(50, (i) => ({
-          id: i,
-          workId: Number(params.workId),
-          title: `제 ${i}화 - ${['각성', '만남', '위기', '절정', '결말', '새로운 시작', '비밀', '배신', '화해', '전투'][i % 10]}`,
-          order: i,
-          status: 'PUBLISHED',
-          updatedAt: new Date().toISOString(),
-          viewCount: 1000 + i * 50,
-        })),
-      ),
-  ),
-  http.get(
-    `${BACKEND_URL}/api/v1/author/works/:workId/episodes/:episodeId`,
-    ({ params }) =>
-      HttpResponse.json({
-        id: Number(params.episodeId),
-        workId: Number(params.workId),
-        title: `제 ${params.episodeId}화 - 상세 내용`,
-        content:
-          `이곳은 ${TITLES[Number(params.workId) % TITLES.length]}의 ${params.episodeId}화 본문입니다.\n\n` +
-          `[제 ${params.episodeId}화]\n\n` +
-          `주인공은 깊은 숨을 내쉬었다. 차가운 공기가 폐부 깊숙이 스며들며 날카로운 통증을 안겨주었다. 하지만 지금은 그 고통조차 사치였다. 눈앞에 펼쳐진 광경은 그야말로 지옥도 그 자체였다.\n\n` +
-          `"이제 시작이다."\n\n` +
-          `그는 검을 꽉 쥐었다. 손바닥에 땀이 배어 나왔지만, 눈빛만은 흔들리지 않았다. 검끝이 미세하게 떨리고 있었지만, 그것은 두려움 때문이 아니었다. 그것은 억눌린 분노, 그리고 반드시 살아남겠다는 생존 본능의 발로였다.\n\n` +
-          `앞에 서 있는 거대한 몬스터는 ${TITLES[Number(params.workId) % TITLES.length]} 세계관 최강의 적 중 하나였다. 놈의 숨소리 하나하나가 대지를 울리고, 놈이 내뿜는 살기는 주변의 공기마저 얼어붙게 만들었다. 붉게 타오르는 눈동자는 마치 심연을 들여다보는 듯했다.\n\n` +
-          `"덤벼라! 네놈의 뼈와 살을 분리해주마!"\n\n` +
-          `주인공이 고함을 지르며 땅을 박차고 나갔다. 그의 움직임은 바람보다 빨랐고, 그의 검격은 번개보다 매서웠다. 몬스터가 거대한 팔을 휘둘렀지만, 주인공은 종이 한 장 차이로 그것을 피했다. 굉음과 함께 바닥이 갈라졌다.\n\n` +
-          `'빈틈이다!'\n\n` +
-          `몬스터의 겨드랑이 사이로 파고든 주인공은 회심의 일격을 날렸다. 검푸른 피가 솟구쳤다. 몬스터가 고통에 찬 비명을 질렀다. 그 소리는 마치 천둥소리처럼 전장에 울려 퍼졌다.\n\n` +
-          `하지만 싸움은 쉽게 끝나지 않았다. 몬스터는 상처를 입자 더욱 광포해졌다. 놈의 몸에서 뿜어져 나오는 검은 오라가 주변을 잠식하기 시작했다. 주인공은 본능적으로 위험을 감지하고 뒤로 물러섰다.\n\n` +
-          `"크아아아!"\n\n` +
-          `몬스터의 입에서 검은 화염이 뿜어져 나왔다. 주인공은 마력을 끌어올려 방어막을 펼쳤다. 화염과 방어막이 충돌하며 거대한 폭발이 일어났다. 시야가 하얗게 멀었다.\n\n` +
-          `얼마나 지났을까. 흙먼지가 가라앉자, 처참한 몰골의 두 존재가 드러났다. 주인공은 가쁜 숨을 몰아쉬며 비틀거렸고, 몬스터 역시 한쪽 무릎을 꿇은 채 거친 숨을 내쉬고 있었다.\n\n` +
-          `그렇게 싸움은 끝이 났다. 하지만 이것은 시작에 불과했다. 더 큰 어둠이, 더 거대한 시련이 그를 기다리고 있었다.\n` +
-          `다음 화에 계속...`,
-        status: 'PUBLISHED',
-      }),
-  ),
-  http.put(
-    `${BACKEND_URL}/api/v1/author/works/:workId/episodes/:episodeId`,
-    async ({ request }) => {
-      const body = await request.json();
-      return HttpResponse.json({
-        success: true,
-        message: '저장되었습니다.',
-        data: body,
-      });
-    },
-  ),
-
-  // 5.3 Manuscript
-  http.get(`${BACKEND_URL}/api/v1/author/manuscript/list`, () =>
+  // 5.1 Works
+  http.get(`${BACKEND_URL}/api/v1/author/works`, () =>
     HttpResponse.json(
-      generateList(20, (i) => ({
+      generateList(5, (i) => ({
         id: i,
-        title: `${getRandomItem(TITLES)} - 원고 ${i}`,
-        status: getRandomItem(['ANALYZING', 'COMPLETED', 'FAILED']),
-        fileSize: '1.2MB',
-        fileName: `manuscript_${i}.docx`,
+        title: TITLES[i % TITLES.length],
+        description: '이 작품은...',
+        status: i % 2 === 0 ? 'SERIALIZING' : 'COMPLETED',
+        synopsis: '시놉시스 내용입니다.',
+        genre: GENRES[i % GENRES.length],
+        coverImageUrl: `https://via.placeholder.com/300?text=Work+${i}`,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })),
     ),
   ),
 
-  // 5.4 Lorebook
+  http.get(`${BACKEND_URL}/api/v1/author/works/:workId`, ({ params }) => {
+    const id = Number(params.workId);
+    return HttpResponse.json({
+      id,
+      title: TITLES[id % TITLES.length],
+      description: '작품 상세 설명...',
+      status: 'SERIALIZING',
+      synopsis: '이 작품은 주인공이...',
+      genre: GENRES[id % GENRES.length],
+      coverImageUrl: `https://via.placeholder.com/300?text=Work+${id}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }),
+
+  http.post(`${BACKEND_URL}/api/v1/author/works`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    return HttpResponse.json(Math.floor(Math.random() * 1000));
+  }),
+
+  http.patch(`${BACKEND_URL}/api/v1/author/works`, async ({ request }) => {
+    return HttpResponse.json(1);
+  }),
+
+  http.delete(`${BACKEND_URL}/api/v1/author/works/:workId`, () => {
+    return new HttpResponse(null, { status: 200 });
+  }),
+
+  // 5.2 Episodes
+  http.get(
+    `${BACKEND_URL}/api/v1/author/works/:workId/episodes`,
+    ({ params }) => {
+      return HttpResponse.json(
+        generateList(10, (i) => ({
+          id: i,
+          workId: Number(params.workId),
+          title: `${i}화. ${getRandomItem(['새로운 시작', '위기', '기회', '전투', '승리'])}`,
+          subtitle: '부제입니다',
+          status: i % 2 === 0 ? 'PUBLISHED' : 'DRAFT',
+          isReadOnly: i % 3 === 0, // Some are read-only
+          createdAt: new Date().toISOString(),
+          publishedAt: i % 2 === 0 ? new Date().toISOString() : null,
+        })),
+      );
+    },
+  ),
+
+  http.get(
+    `${BACKEND_URL}/api/v1/author/works/:workId/episodes/:episodeId`,
+    ({ params }) => {
+      const id = Number(params.episodeId);
+      return HttpResponse.json({
+        id,
+        workId: Number(params.workId),
+        title: `${id}화. 상세 내용`,
+        subtitle: '부제',
+        content: `이곳은 ${id}화의 본문 내용입니다.\n\n주인공은 검을 들었다. "이건... 엑스칼리버?"\n\n그는 놀란 표정을 지었다.`,
+        status: 'DRAFT',
+        createdAt: new Date().toISOString(),
+      });
+    },
+  ),
+
+  http.post(
+    `${BACKEND_URL}/api/v1/author/works/:workId/episodes`,
+    async ({ request }) => {
+      return HttpResponse.json({
+        id: Math.floor(Math.random() * 1000),
+        title: '새 에피소드',
+        status: 'DRAFT',
+      });
+    },
+  ),
+
+  http.put(
+    `${BACKEND_URL}/api/v1/author/works/:workId/episodes/:episodeId`,
+    async ({ request }) => {
+      const body = (await request.json()) as any;
+      return HttpResponse.json({
+        id: Number(1),
+        content: body.content,
+      });
+    },
+  ),
+
+  http.patch(
+    `${BACKEND_URL}/api/v1/author/works/:workId/episodes/:episodeId`,
+    async ({ request }) => {
+      return HttpResponse.json({
+        id: Number(1),
+      });
+    },
+  ),
+
+  http.delete(
+    `${BACKEND_URL}/api/v1/author/works/:workId/episodes/:episodeId`,
+    () => {
+      return new HttpResponse(null, { status: 200 });
+    },
+  ),
+
+  // 5.3 Lorebooks (Settings)
   http.get(`${BACKEND_URL}/api/v1/author/lorebook`, () =>
     HttpResponse.json(
       generateList(5, (i) => ({
         id: i,
-        title: `${TITLES[i % TITLES.length]} 설정집`,
-        description: '작품의 세계관, 인물, 사건 등을 정리한 설정집입니다.',
+        title: `설정집 ${i}`,
+        description: '설정집 설명',
         updatedAt: new Date().toISOString(),
-        count: 15 + i * 3,
-      })),
-    ),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/characters`, () =>
-    HttpResponse.json(
-      generateList(15, (i) => ({
-        id: i,
-        name: NAMES[i % NAMES.length],
-        role: ROLES[i % ROLES.length],
-        description: `${NAMES[i % NAMES.length]}은(는) 이 작품의 ${ROLES[i % ROLES.length]}입니다. 성격은 냉철하지만 내면은 따뜻합니다.`,
-        traits: ['정의', '검술', '마법', '지략', '행운'],
-        imageUrl: `https://via.placeholder.com/150?text=${NAMES[i % NAMES.length]}`,
-      })),
-    ),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/worldview`, () =>
-    HttpResponse.json(
-      generateList(10, (i) => ({
-        id: i,
-        title: `세계관 설정 - ${['마법탑', '황궁', '북부 대공령', '마계', '천계', '아카데미', '길드', '던전', '신전', '암시장'][i % 10]}`,
-        category: ['지리', '역사', '마법', '종교', '문화'][i % 5],
-        description:
-          '이 구역은 대륙의 중심에 위치하며, 강력한 마력의 흐름이 모이는 곳입니다. 고대부터 전해져 내려오는 전설이 깃들어 있습니다.',
-        tags: ['중요', '위험', '비밀', '보물'],
-      })),
-    ),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/plot`, () =>
-    HttpResponse.json(
-      generateList(12, (i) => ({
-        id: i,
-        title: `주요 사건 ${i + 1} - ${['전쟁 발발', '황제 서거', '마왕 부활', '아카데미 입학', '첫 번째 시련', '동료의 배신', '각성', '최종 결전'][i % 8]}`,
-        description:
-          '스토리의 큰 줄기가 되는 사건입니다. 주인공의 운명을 크게 바꾸는 계기가 됩니다.',
-        order: i + 1,
-        importance: i % 3 === 0 ? 'Main' : 'Sub',
       })),
     ),
   ),
 
-  // 5.5 IP Expansion (Author View)
-  http.get(`${BACKEND_URL}/api/v1/author/ip-expansion/proposals`, () =>
-    HttpResponse.json(
-      generateList(8, (i) => ({
-        id: i,
-        title: `웹툰화 제안 - ${getRandomItem(TITLES)}`,
-        status: i < 3 ? 'ACCEPTED' : i < 5 ? 'REJECTED' : 'PENDING',
-        statusDescription: i < 3 ? '계약 완료' : i < 5 ? '거절됨' : '검토 중',
-        sender: getRandomItem(['네이버웹툰', '카카오페이지', '리디북스']),
-        content: `안녕하세요, ${getRandomItem(TITLES)} 작품을 웹툰으로 제작하고 싶습니다. \n\n상세 조건은 다음과 같습니다.\n1. 계약금: 1억원\n2. 러닝개런티: 5%\n3. 제작사: 스튜디오A`,
-        receivedAt: new Date(Date.now() - i * 86400000).toISOString(),
-        acceptedAt: i < 3 ? new Date().toISOString() : undefined,
-      })),
-    ),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/author/ip-expansion/matching`, () =>
-    HttpResponse.json(
-      generateList(5, (i) => ({
-        id: i,
-        managerName: `김매니저${i}`,
-        department: 'IP사업팀',
-        role: '담당 매니저',
-        tags: ['웹툰', '영화', '드라마'],
-        matchedAt: new Date().toISOString(),
-      })),
-    ),
-  ),
-
-  http.post(
-    `${BACKEND_URL}/api/v1/author/ip-expansion/proposals/:id/accept`,
+  // Lorebook Characters
+  http.get(
+    `${BACKEND_URL}/api/v1/author/lorebook/:workId/characters`,
     ({ params }) => {
+      return HttpResponse.json(
+        generateList(5, (i) => ({
+          id: i,
+          name: NAMES[i % NAMES.length],
+          description: '성격이 급하고 정의롭다.',
+          role: '주연',
+          age: '20세',
+          tags: ['검사', '천재'],
+        })),
+      );
+    },
+  ),
+
+  // Lorebook Worldview
+  http.get(
+    `${BACKEND_URL}/api/v1/author/lorebook/:workId/worldview`,
+    ({ params }) => {
+      return HttpResponse.json(
+        generateList(3, (i) => ({
+          id: i,
+          title: `세계관 ${i}`,
+          content: '이 세계는 마법이 존재하며...',
+          tags: ['판타지', '중세'],
+        })),
+      );
+    },
+  ),
+
+  // Lorebook Plot
+  http.get(
+    `${BACKEND_URL}/api/v1/author/lorebook/:workId/plot`,
+    ({ params }) => {
+      return HttpResponse.json(
+        generateList(3, (i) => ({
+          id: i,
+          title: `사건 ${i}`,
+          content: '대륙 전쟁 발발...',
+          order: i,
+        })),
+      );
+    },
+  ),
+
+  // Lorebook Places
+  http.get(
+    `${BACKEND_URL}/api/v1/author/lorebook/:workId/places`,
+    ({ params }) => {
+      return HttpResponse.json(
+        generateList(4, (i) => ({
+          id: i,
+          name: `장소 ${i}`,
+          description: '매우 위험한 던전이다.',
+          location: '북부',
+        })),
+      );
+    },
+  ),
+
+  // Lorebook Items
+  http.get(
+    `${BACKEND_URL}/api/v1/author/lorebook/:workId/items`,
+    ({ params }) => {
+      return HttpResponse.json(
+        generateList(6, (i) => ({
+          id: i,
+          name: `아이템 ${i}`,
+          description: '전설 등급의 무기.',
+          type: '무기',
+          grade: 'S급',
+        })),
+      );
+    },
+  ),
+
+  // Lorebook Groups
+  http.get(
+    `${BACKEND_URL}/api/v1/author/lorebook/:workId/groups`,
+    ({ params }) => {
+      return HttpResponse.json(
+        generateList(3, (i) => ({
+          id: i,
+          name: `길드 ${i}`,
+          description: '최강의 길드.',
+          leader: NAMES[i % NAMES.length],
+        })),
+      );
+    },
+  ),
+
+  // Lorebook Search
+  http.get(`${BACKEND_URL}/api/v1/author/lorebook/:workId/search`, () =>
+    HttpResponse.json(
+      generateList(3, (i) => ({
+        id: i,
+        name: `검색결과 ${i}`,
+        description: '검색된 내용입니다.',
+        category: 'characters',
+      })),
+    ),
+  ),
+
+  // 5.4 Publish Confirm
+  http.post(
+    `${BACKEND_URL}/api/v1/author/works/:workId/publish/confirm`,
+    () => {
+      return HttpResponse.json({ success: true });
+    },
+  ),
+
+  // 5.5 Serialization & AI Analysis (Replaces AI Server Calls)
+  http.post(
+    `${BACKEND_URL}/api/v1/author/episodes/:episodeId/categories`,
+    async () => {
+      // Simulate AI processing delay
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       return HttpResponse.json({
-        success: true,
-        id: params.id,
-        status: 'ACCEPTED',
+        check: {
+          인물: ['강민우', '이수연', '김철수', '박영희'],
+          장소: ['서울 타워', '지하 벙커', '아카데미'],
+          사건: ['게이트 발생', '각성', '첫 번째 임무'],
+          집단: ['헌터 협회', '블랙 길드'],
+          물건: ['엑스칼리버', '치유 물약'],
+          세계: ['대격변 이후', '마력 각성 시대'],
+        },
       });
     },
   ),
 
+  // New Endpoint: Keyword Extraction
+  http.post(`${BACKEND_URL}/api/v1/ai/author/categories`, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return HttpResponse.json({
+      check: {
+        인물: ['강민우', '이수연', '김철수'],
+        세계: ['마나', '헌터 시스템'],
+        장소: ['아카데미 기숙사', '서울 타워', '지하 벙커'],
+        사건: ['게이트 발생', '화룡의 둥지 공략'],
+        물건: ['엑스칼리버'],
+        집단: ['피닉스 길드', '헌터 협회'],
+      },
+    });
+  }),
+
+  // New Endpoint: Novel Analysis (Final Review)
+  http.post(`${BACKEND_URL}/api/v1/ai/author/setting`, async ({ request }) => {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Mock Data for Final Review Modal
+    const response = {
+      충돌: [
+        {
+          id: 'conf-1',
+          category: '인물',
+          name: '강민우',
+          reason: '성격 묘사 충돌',
+          original:
+            '냉철하고 계산적인 성격. 이익을 위해서라면 동료도 이용할 수 있다. 항상 포커페이스를 유지하며 감정을 드러내지 않는다.',
+          new: '다혈질이고 정의로운 성격. 불의를 보면 참지 못하고 나선다. 동료를 끔찍이 아끼며 감정 표현이 솔직하다.',
+        },
+        {
+          id: 'conf-2',
+          category: '설정',
+          name: '마나 운영법',
+          reason: '설정 모순 발생',
+          original:
+            '마나는 심장에서 생성되어 전신으로 퍼진다. 심장이 파괴되면 마나를 사용할 수 없다.',
+          new: '마나는 대기 중에 존재하며, 호흡을 통해 단전으로 축적된다. 신체 내부에서 생성되지 않는다.',
+        },
+        {
+          id: 'conf-3',
+          category: '장소',
+          name: '아카데미 기숙사',
+          reason: '위치 정보 불일치',
+          original: '아카데미 본관 북쪽에 위치하며, 숲과 인접해 있어 조용하다.',
+          new: '아카데미 본관 남쪽 번화가 근처에 위치하며, 항상 시끌벅적하다.',
+        },
+      ],
+      '설정 결합': [
+        {
+          id: 'upd-1',
+          category: '장소',
+          name: '서울 타워',
+          original: JSON.stringify(
+            {
+              description:
+                '서울의 랜드마크이자 헌터 협회의 본거지. 높이 555m의 마천루로, 최상층에는 협회장실이 위치해 있다.',
+              features: ['헌터 협회 본부', '결계 보호', '높이 555m'],
+              status: 'SAFE',
+            },
+            null,
+            2,
+          ),
+          new: JSON.stringify(
+            {
+              description:
+                '서울의 랜드마크이자 헌터 협회의 본거지. 높이 555m의 마천루. 최근 몬스터 습격으로 인해 외벽 일부가 파손되었으나, 여전히 굳건하게 자리를 지키고 있다.',
+              features: [
+                '헌터 협회 본부',
+                '결계 보호',
+                '높이 555m',
+                '외벽 파손',
+                '보안 강화',
+              ],
+              status: 'DAMAGED',
+            },
+            null,
+            2,
+          ),
+        },
+        {
+          id: 'upd-2',
+          category: '인물',
+          name: '이수연',
+          original: JSON.stringify(
+            {
+              role: '히로인',
+              ability: '화염 마법 (A급)',
+              affiliation: '피닉스 길드',
+            },
+            null,
+            2,
+          ),
+          new: JSON.stringify(
+            {
+              role: '히로인',
+              ability: '화염 마법 (S급으로 성장)',
+              affiliation: '피닉스 길드 (부길드장 승진)',
+              recent_event: '화룡의 둥지 공략 성공',
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+      '신규 업로드': [
+        {
+          id: 'new-1',
+          category: '물건',
+          name: '엑스칼리버',
+          description:
+            '전설 속의 성검. 빛 속성 마력을 증폭시키는 효과가 있다. 자격이 있는 자만이 뽑을 수 있다고 전해진다.',
+        },
+        {
+          id: 'new-2',
+          category: '장소',
+          name: '지하 벙커',
+          description:
+            '전쟁 대비용으로 지어진 비밀 벙커. 현재는 주인공 일행의 아지트로 사용되고 있다.',
+        },
+        {
+          id: 'new-3',
+          category: '사건',
+          name: '게이트 발생',
+          description:
+            '서울 한복판에 S급 게이트가 발생하여 비상 사태가 선포되었다.',
+        },
+        {
+          id: 'new-4',
+          category: '인물',
+          name: '김철수',
+          description:
+            '주인공의 어릴 적 친구이자 라이벌. 검술에 뛰어난 재능을 보인다.',
+        },
+      ],
+    };
+
+    return HttpResponse.json(response);
+  }),
+
+  // Publish Analysis (Save Settings)
+  http.post(`${BACKEND_URL}/api/v1/author/works/:workId/setting`, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return HttpResponse.json({
+      success: true,
+      message: '설정집이 성공적으로 반영되었습니다.',
+    });
+  }),
+
+  // Search Lorebook Similarity (Lorebook Q&A / Similarity)
   http.post(
-    `${BACKEND_URL}/api/v1/author/ip-expansion/proposals/:id/reject`,
-    ({ params }) => {
-      return HttpResponse.json({
-        success: true,
-        id: params.id,
-        status: 'REJECTED',
-      });
+    `${BACKEND_URL}/api/v1/author/lorebooks/:workId/userQ`,
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      return HttpResponse.json(
+        generateList(3, (i) => ({
+          id: i,
+          title: `유사한 설정 ${i}`,
+          content: '기존 설정집에서 발견된 유사한 내용입니다.',
+          similarity: 85 - i * 5,
+        })),
+      );
     },
   ),
 
-  // 5.6 Contest Templates
-  http.get(`${BACKEND_URL}/api/v1/author/contest/templates`, () =>
-    HttpResponse.json(contestTemplates),
-  ),
+  // 5.6 Author-Manager Linkage Code Generation
+  http.post(`${BACKEND_URL}/api/v1/author/manager/code`, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Generate a 6-digit random number string
+    const randomCode = Math.floor(Math.random() * 1000000)
+      .toString()
+      .padStart(6, '0');
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes from now
 
-  http.post(
-    `${BACKEND_URL}/api/v1/author/contest/templates`,
-    async ({ request }) => {
-      const body = (await request.json()) as any;
-      const newItem = {
-        id: contestTemplates.length + 1,
-        title: body.title,
-        organizer: body.organizer || 'User',
-        prize: body.prize,
-        category: body.category,
-        deadline: `2026-12-${31}`, // Default deadline
-        status: 'OPEN',
-        description: body.description,
-        isAiSupported: true,
-      };
-      contestTemplates = [newItem, ...contestTemplates];
-      return HttpResponse.json(newItem);
-    },
-  ),
+    return HttpResponse.json({
+      ok: true,
+      code: randomCode,
+      expiresAt: expiresAt,
+    });
+  }),
+
+  // 5.7 Get My Manager
+  http.get(`${BACKEND_URL}/api/v1/author/manager`, () => {
+    // Mock: Return a matched manager for testing "Hide Button" logic
+    // Change ok to false to test "Show Button"
+    return HttpResponse.json({
+      ok: true,
+      managerIntegrationId: 'MGR-001',
+      managerName: '김매니저',
+      managerSiteEmail: 'manager@example.com',
+    });
+  }),
 ];

@@ -1,291 +1,303 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
+  CheckCircle,
+  FileText,
+  Calendar,
+  X,
+  Maximize2,
+  Minimize2,
   TrendingUp,
   BarChart3,
-  Sparkles,
-  Globe,
-} from "lucide-react";
+  Clock,
+  Filter,
+  Download,
+} from 'lucide-react';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card";
-import { Badge } from "../../../components/ui/badge";
+} from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '../../../components/ui/dialog';
+import { cn } from '../../../components/ui/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../components/ui/select';
+import { managerService } from '../../../services/managerService';
 
 export function ManagerIPTrend() {
+  const [selectedYear, setSelectedYear] = useState('2025');
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Fetch IP Trend Dashboard Data (Summary & Stats)
+  const { data: trendData, isLoading: isTrendLoading } = useQuery({
+    queryKey: ['manager', 'iptrend', 'dashboard'],
+    queryFn: managerService.getIPTrend,
+  });
+
+  // Fetch Reports List
+  const { data: reportsData, isLoading: isReportsLoading } = useQuery({
+    queryKey: ['manager', 'iptrend', 'list', selectedYear],
+    queryFn: () => managerService.getIPTrendList(0, 10), // Pagination TODO
+  });
+
+  // Fetch Preview Data when ID is selected
+  const { data: previewData, isLoading: isPreviewLoading } = useQuery({
+    queryKey: ['manager', 'iptrend', 'preview', previewId],
+    queryFn: () =>
+      previewId
+        ? managerService.getIPTrendPreview(previewId)
+        : Promise.resolve(null),
+    enabled: !!previewId,
+  });
+
+  const stats = [
+    {
+      title: '전체 리포트',
+      value: `${trendData?.statistics?.totalReports ?? 0}건`,
+      description: '누적 생성 리포트',
+      icon: FileText,
+      color: 'text-blue-600',
+      bg: 'bg-blue-100',
+    },
+    {
+      title: '완료된 리포트',
+      value: `${trendData?.statistics?.completedReports ?? 0}건`,
+      description: '정상 처리됨',
+      icon: CheckCircle,
+      color: 'text-purple-600',
+      bg: 'bg-purple-100',
+    },
+    {
+      title: '최근 생성일',
+      value: trendData?.statistics?.lastGeneratedAt
+        ? new Date(trendData.statistics.lastGeneratedAt).toLocaleDateString()
+        : '-',
+      description: '마지막 업데이트',
+      icon: Clock,
+      color: 'text-green-600',
+      bg: 'bg-green-100',
+    },
+  ];
+
+  const handleDownload = async (id: number) => {
+    try {
+      const blob = await managerService.downloadIPTrendReport(id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Popular Genres */}
-      <Card className="border-slate-200">
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
-            인기 장르 순위
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                1
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-slate-900">
-                    판타지
-                  </span>
-                  <span className="text-sm text-slate-500">
-                    전월 대비 +24%
-                  </span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{ width: "92%" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                2
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-slate-900">
-                    로맨스
-                  </span>
-                  <span className="text-sm text-slate-500">
-                    전월 대비 +18%
-                  </span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-purple-500 rounded-full"
-                    style={{ width: "85%" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                3
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-slate-900">
-                    무협
-                  </span>
-                  <span className="text-sm text-slate-500">
-                    전월 대비 +15%
-                  </span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500 rounded-full"
-                    style={{ width: "78%" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                4
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-slate-900">
-                    현대 판타지
-                  </span>
-                  <span className="text-sm text-slate-500">
-                    전월 대비 +12%
-                  </span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-orange-500 rounded-full"
-                    style={{ width: "72%" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                5
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-slate-900">
-                    SF
-                  </span>
-                  <span className="text-sm text-slate-500">
-                    전월 대비 +8%
-                  </span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-500 rounded-full"
-                    style={{ width: "65%" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Top Works Ranking */}
-      <Card className="border-slate-200">
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-purple-600" />
-            작품 순위 (조회수 기준)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            {[
-              {
-                rank: 1,
-                title: "암흑의 영역 연대기",
-                author: "김민지",
-                views: "1,254,892",
-                change: "+15%",
-                color: "from-blue-500 to-blue-600",
-              },
-              {
-                rank: 2,
-                title: "별빛 아카데미",
-                author: "박수진",
-                views: "1,128,456",
-                change: "+22%",
-                color: "from-purple-500 to-purple-600",
-              },
-              {
-                rank: 3,
-                title: "운명의 검",
-                author: "이재원",
-                views: "987,234",
-                change: "+8%",
-                color: "from-green-500 to-green-600",
-              },
-              {
-                rank: 4,
-                title: "시간의 문",
-                author: "최현우",
-                views: "856,123",
-                change: "+12%",
-                color: "from-orange-500 to-orange-600",
-              },
-              {
-                rank: 5,
-                title: "마법 학원",
-                author: "정서연",
-                views: "745,892",
-                change: "+18%",
-                color: "from-red-500 to-red-600",
-              },
-            ].map((work) => (
-              <div
-                key={work.rank}
-                className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg hover:shadow-md transition-shadow"
-              >
-                <div
-                  className={`w-10 h-10 bg-gradient-to-br ${work.color} rounded-lg flex items-center justify-center text-white font-bold`}
-                >
-                  {work.rank}
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-slate-900">
-                    {work.title}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    {work.author}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-slate-900">
-                    {work.views}
-                  </div>
-                  <div className="text-xs text-green-600">
-                    {work.change}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Trend Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-slate-900 mb-1">
-                  급상승 키워드
-                </h4>
-                <p className="text-xs text-slate-600 mb-3">
-                  다크 판타지, 회귀물, 먼치킨
+      {/* Header & Summary Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {stats.map((stat, index) => (
+          <Card key={index} className="border-slate-200 shadow-sm">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-slate-500">
+                  {stat.title}
                 </p>
-                <Badge className="bg-blue-500 text-white text-xs">
-                  HOT
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-slate-900 mb-1">
-                  IP 확장 트렌드
-                </h4>
-                <p className="text-xs text-slate-600 mb-3">
-                  웹툰 → 드라마 전환율 상승
+                <p className="text-2xl font-bold text-slate-900">
+                  {stat.value}
                 </p>
-                <Badge className="bg-purple-500 text-white text-xs">
-                  +32%
-                </Badge>
+                <p className="text-xs text-slate-400">{stat.description}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <Globe className="w-6 h-6 text-green-600" />
+              <div className={`p-3 rounded-full ${stat.bg}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-slate-900 mb-1">
-                  글로벌 시장
-                </h4>
-                <p className="text-xs text-slate-600 mb-3">
-                  북미 판타지 수요 증가
-                </p>
-                <Badge className="bg-green-500 text-white text-xs">
-                  +45%
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      {/* Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-slate-100 pt-8">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">리포트 목록</h2>
+          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
+            {reportsData?.totalElements ?? 0}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <span className="text-sm text-slate-500">필터:</span>
+          </div>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="연도 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2025">2025년</SelectItem>
+              <SelectItem value="2024">2024년</SelectItem>
+              <SelectItem value="2023">2023년</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Reports Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {(reportsData?.content || []).map((report) => (
+          <Card
+            key={report.id}
+            className="group cursor-pointer hover:shadow-md transition-all duration-200 border-slate-200 overflow-hidden"
+            onClick={() => setPreviewId(report.id)}
+          >
+            <div className="aspect-[3/4] bg-slate-100 relative overflow-hidden">
+              {/* PDF Preview Placeholder - Replace with actual thumbnail if available */}
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                <FileText className="w-12 h-12 text-slate-300 group-hover:text-slate-400 transition-colors" />
+              </div>
+
+              {/* Overlay Actions */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <Button variant="secondary" size="sm" className="shadow-sm">
+                  미리보기
+                </Button>
+              </div>
+
+              {/* Status Badge */}
+              {/* <Badge
+                className={`absolute top-3 right-3 ${
+                  report.color || 'bg-blue-500'
+                }`}
+              >
+                월간 리포트
+              </Badge> */}
+            </div>
+
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-semibold text-slate-900 line-clamp-1">
+                    {report.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {report.date}
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-600 line-clamp-2 min-h-[40px]">
+                {report.summary}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Preview Modal (Full Screen Support) */}
+      <Dialog
+        open={!!previewId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewId(null);
+            setIsFullScreen(false);
+          }
+        }}
+      >
+        <DialogContent
+          className={cn(
+            'flex flex-col p-0 gap-0 transition-all duration-300',
+            isFullScreen
+              ? 'w-screen h-screen max-w-none rounded-none border-0'
+              : 'max-w-4xl h-[85vh] rounded-xl',
+          )}
+        >
+          {/* Modal Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur-sm z-10">
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-xl font-bold">
+                {previewData?.title || '리포트 미리보기'}
+              </DialogTitle>
+              {previewData && (
+                <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                  {previewData.analysisDate}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {previewId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => handleDownload(previewId)}
+                >
+                  <Download className="w-4 h-4" />
+                  다운로드
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                className="text-slate-500 hover:text-slate-900"
+              >
+                {isFullScreen ? (
+                  <Minimize2 className="w-5 h-5" />
+                ) : (
+                  <Maximize2 className="w-5 h-5" />
+                )}
+              </Button>
+              <DialogClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-slate-500 hover:text-red-500"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </DialogClose>
+            </div>
+          </div>
+
+          {/* PDF Viewer Area */}
+          <div className="flex-1 bg-slate-100 overflow-hidden relative">
+            {isPreviewLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : previewData?.pdfUrl ? (
+              <iframe
+                src={`${previewData.pdfUrl}#toolbar=0&navpanes=0`}
+                className="w-full h-full border-0"
+                title="PDF Preview"
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-4">
+                <FileText className="w-16 h-16 opacity-20" />
+                <p>미리보기 파일을 불러올 수 없습니다.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

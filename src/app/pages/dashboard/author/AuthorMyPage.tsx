@@ -30,7 +30,6 @@ import {
 } from '../../../components/ui/avatar';
 import { Badge } from '../../../components/ui/badge';
 import { Separator } from '../../../components/ui/separator';
-import { id } from 'date-fns/locale';
 
 interface AuthorMyPageProps {
   onChangePassword: () => void;
@@ -56,12 +55,12 @@ export function AuthorMyPage({
     if (
       authUserData &&
       confirm(
-        '정말로 계정 탈퇴(비활성화)를 신청하시겠습니까?\n이 작업은 되돌릴 수 없으며, 탈퇴 후 7일의 유예기간이 적용됩니다.',
+        '정말로 계정 탈퇴를 신청하시겠습니까?\n이 작업은 되돌릴 수 없으며, 탈퇴 후 7일의 유예기간이 적용됩니다.',
       )
     ) {
       try {
         await authService.deactivateUser({ id: authUserData.userId! });
-        alert('계정이 탈퇴되었습니다.');
+        alert('계정이 탈퇴 처리되었습니다.\n7일 후 데이터가 영구 삭제됩니다.');
         await authService.logout();
         navigate('/login');
       } catch (error) {
@@ -78,15 +77,6 @@ export function AuthorMyPage({
       </div>
     );
   }
-
-  // AuthMeResponse 타입에 createdAt 등이 선택적으로 있을 수 있다고 가정하고 캐스팅하거나 확장된 타입 사용
-  // 실제로는 AuthMeResponse에 정의되지 않은 필드라도 JS 객체에는 존재할 수 있음 (MSW에서 보냄)
-  const extendedUserData = authUserData as AuthMeResponse & {
-    createdAt?: string;
-    mobile?: string;
-    birthYear?: string;
-    gender?: string;
-  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans animate-in fade-in duration-500">
@@ -120,7 +110,7 @@ export function AuthorMyPage({
                     이름
                   </Label>
                   <div className="font-medium flex items-center gap-2">
-                    {extendedUserData.name || '-'}
+                    {authUserData.name || '-'}
                   </div>
                   <Separator />
                 </div>
@@ -129,7 +119,7 @@ export function AuthorMyPage({
                     이메일
                   </Label>
                   <div className="font-medium flex items-center gap-2">
-                    {extendedUserData.email || '-'}
+                    {authUserData.siteEmail || '-'}
                   </div>
                   <Separator />
                 </div>
@@ -139,7 +129,7 @@ export function AuthorMyPage({
                   </Label>
                   <div className="font-medium flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground/50" />
-                    {extendedUserData.mobile || '-'}
+                    {authUserData.mobile || '-'}
                   </div>
                   <Separator />
                 </div>
@@ -149,13 +139,13 @@ export function AuthorMyPage({
                   </Label>
                   <div className="font-medium flex items-center gap-2">
                     <User className="w-4 h-4 text-muted-foreground/50" />
-                    {extendedUserData.birthYear
-                      ? `${extendedUserData.birthYear}년생`
+                    {authUserData.birthYear
+                      ? `${authUserData.birthYear}년생`
                       : '-'}{' '}
                     /{' '}
-                    {extendedUserData.gender === 'M'
+                    {authUserData.gender === 'M'
                       ? '남성'
-                      : extendedUserData.gender === 'F'
+                      : authUserData.gender === 'F'
                         ? '여성'
                         : '-'}
                   </div>
@@ -167,9 +157,9 @@ export function AuthorMyPage({
                   </Label>
                   <div className="font-medium flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-muted-foreground/50" />
-                    {extendedUserData.createdAt
+                    {authUserData.createdAt
                       ? format(
-                          new Date(extendedUserData.createdAt),
+                          new Date(authUserData.createdAt),
                           'yyyy년 MM월 dd일 HH:mm',
                         )
                       : '-'}

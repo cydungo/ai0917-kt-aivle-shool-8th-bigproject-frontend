@@ -31,6 +31,7 @@ export const authService = {
 
   logout: async () => {
     const response = await apiClient.post('/api/v1/auth/logout');
+    localStorage.removeItem('accessToken');
     return response.data;
   },
 
@@ -90,10 +91,7 @@ export const authService = {
   },
 
   changePassword: async (data: any) => {
-    const response = await apiClient.patch(
-      '/api/v1/signup/password/reset',
-      data,
-    );
+    const response = await apiClient.post('/api/v1/auth/password/reset', data);
     return response.data;
   },
 };
