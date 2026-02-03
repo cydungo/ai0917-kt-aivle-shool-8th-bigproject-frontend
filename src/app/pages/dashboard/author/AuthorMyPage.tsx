@@ -59,7 +59,7 @@ export function AuthorMyPage({
       )
     ) {
       try {
-        await authService.deactivateUser({ id: authUserData.userId! });
+        await authService.deactivateUser({ id: String(authUserData.userId!) });
         alert('계정이 탈퇴 처리되었습니다.\n7일 후 데이터가 영구 삭제됩니다.');
         await authService.logout();
         navigate('/login');

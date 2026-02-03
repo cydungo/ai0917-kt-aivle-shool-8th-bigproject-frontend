@@ -13,6 +13,8 @@ export interface IPTrendReportSimpleDto {
   fileSize?: number;
 }
 
+export type IPTrendStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
+
 export interface IPTrendDashboardDto {
   latestReport: IPTrendReportSimpleDto | null;
   statistics: IPTrendStatisticsDto;
@@ -22,19 +24,21 @@ export interface IPTrendDashboardDto {
 // Keeping these for List API
 export interface IPTrendReportDto {
   id: number;
-  title: string;
-  date: string;
-  summary: string;
-  color?: string;
-  bgColor?: string;
+  fileName: string;
+  createdAt: string;
+  status: IPTrendStatus;
+  fileSize?: number;
 }
 
 export interface IPTrendPreviewDto {
   id: number;
-  title: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
   analysisDate: string;
-  content: string;
-  pdfUrl?: string;
+  createdAt: string;
+  status: IPTrendStatus;
+  metadata: any | null;
 }
 
 export interface AuthorSummaryDto {

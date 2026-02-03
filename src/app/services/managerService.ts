@@ -8,6 +8,7 @@ import {
   ManagerAuthorDto,
   ManagerAuthorDetailDto,
 } from '../types/manager';
+import { LorebookDto, IPProposalDto, IPMatchingDto } from '../types/author';
 
 export const managerService = {
   // IP Trend Analysis
@@ -90,6 +91,54 @@ export const managerService = {
 
   matchAuthor: async (pwd: string) => {
     const response = await apiClient.post(`/api/v1/manager/authors/${pwd}`);
+    return response.data;
+  },
+
+  getLorebooks: async (workId: number) => {
+    // Note: Assuming a manager-specific endpoint or using a shared one.
+    // Since manager should have access, we might need a specific endpoint.
+    // For now, let's assume there is an endpoint to get lorebooks by workId for manager.
+    const response = await apiClient.get<LorebookDto[]>(
+      `/api/v1/manager/works/${workId}/lorebooks`,
+    );
+    return response.data;
+  },
+
+  // IP Expansion
+  getIPProposals: async (page = 0, size = 12) => {
+    const response = await apiClient.get<PageResponse<IPProposalDto>>(
+      '/api/v1/manager/ip-expansion/proposals',
+      { params: { page, size } },
+    );
+    return response.data;
+  },
+
+  getIPMatching: async () => {
+    const response = await apiClient.get<IPMatchingDto[]>(
+      '/api/v1/manager/ip-expansion/matching',
+    );
+    return response.data;
+  },
+
+  createIPExpansionProject: async (data: any) => {
+    const response = await apiClient.post(
+      '/api/v1/manager/ip-expansion/proposals',
+      data,
+    );
+    return response.data;
+  },
+
+  proposeIPExpansionProject: async (id: number) => {
+    const response = await apiClient.put(
+      `/api/v1/manager/ip-expansion/proposals/${id}/propose`,
+    );
+    return response.data;
+  },
+
+  deleteIPExpansionProject: async (id: number) => {
+    const response = await apiClient.delete(
+      `/api/v1/manager/ip-expansion/proposals/${id}`,
+    );
     return response.data;
   },
 };

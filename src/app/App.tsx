@@ -28,6 +28,9 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   useEffect(() => {
     const verifySession = async () => {
       try {
@@ -43,6 +46,8 @@ export default function App() {
       } catch (error) {
         setUserType(null);
         localStorage.removeItem('userRole');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -57,6 +62,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await authService.logout();
     } catch (error) {
@@ -64,10 +70,24 @@ export default function App() {
     }
     localStorage.removeItem('userRole');
     localStorage.removeItem('msw-session-role'); // Clear MSW session role
-    // localStorage.clear(); // Avoid clearing everything if not necessary
-    setUserType(null);
-    navigate('/login');
+
+    // Navigate first to avoid LandingPage flash
+    navigate('/login', { replace: true });
+
+    // Update state in next tick to ensure navigation happened
+    setTimeout(() => {
+      setUserType(null);
+      setIsLoggingOut(false);
+    }, 0);
   };
+
+  if (isLoading || isLoggingOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

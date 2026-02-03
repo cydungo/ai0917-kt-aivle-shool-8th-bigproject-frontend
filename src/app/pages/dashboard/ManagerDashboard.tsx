@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { maskName } from '../../utils/format';
 import { Button } from '../../components/ui/button';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ThemeToggle } from '../../components/ui/theme-toggle';
 import { useQuery } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
@@ -30,7 +30,6 @@ import { ManagerIPExpansion } from './manager/ManagerIPExpansion';
 import { ManagerAuthorManagement } from './manager/ManagerAuthorManagement';
 import { ManagerNotice } from './manager/ManagerNotice';
 import { ManagerMyPage } from './manager/ManagerMyPage';
-import { ManagerSettings } from './manager/ManagerSettings';
 import { PasswordChangeModal } from '../../components/dashboard/PasswordChangeModal';
 import { Logo } from '../../components/common/Logo';
 
@@ -44,6 +43,23 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showActivityDropdown, setShowActivityDropdown] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Password Change State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -138,10 +154,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
             <span className="text-sm font-medium">IP 확장</span>
           </button>
 
-          
-
-          
-
           <button
             onClick={() => handleMenuClick('ip-trend-analysis')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
@@ -195,7 +207,10 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
         </nav>
 
         {/* Profile Section */}
-        <div className="border-t border-sidebar-border">
+        <div
+          className="border-t border-sidebar-border"
+          ref={profileDropdownRef}
+        >
           {/* Desktop: Dropdown style */}
           <div className="hidden md:block relative">
             <button
@@ -203,7 +218,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
               className="w-full flex items-center gap-3 p-3 bg-sidebar-accent hover:bg-muted transition-colors"
             >
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white dark:text-black text-sm"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white dark:text-black text-sm font-semibold"
                 style={{ backgroundColor: 'var(--role-primary)' }}
               >
                 {userName.charAt(0)}
@@ -220,13 +235,13 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
             </button>
 
             {showProfileDropdown && (
-              <div className="absolute bottom-full left-0 right-0 bg-card border-t border-border shadow-lg py-1 z-50">
+              <div className="absolute bottom-full left-4 right-4 mb-2 bg-card border border-border shadow-lg py-1 z-50">
                 <button
                   onClick={() => {
                     handleMenuClick('mypage');
                     setShowProfileDropdown(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-foreground hover:bg-accent transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-foreground hover:bg-accent transition-colors"
                 >
                   <User className="w-4 h-4" />
                   <span className="text-sm">마이페이지</span>
@@ -237,7 +252,7 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
                     onLogout();
                     setShowProfileDropdown(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-destructive hover:bg-destructive/10 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="text-sm">로그아웃</span>
@@ -366,7 +381,6 @@ export function ManagerDashboard({ onLogout, onHome }: ManagerDashboardProps) {
               onChangePassword={() => setShowPasswordModal(true)}
             />
           )}
-          {activeMenu === 'settings' && <ManagerSettings />}
         </main>
       </div>
 

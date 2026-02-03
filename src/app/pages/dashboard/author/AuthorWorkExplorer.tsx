@@ -18,6 +18,7 @@ import {
   ArrowUpAZ,
   Edit2,
   Trash2,
+  FileBox,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { ScrollArea } from '../../../components/ui/scroll-area';
@@ -48,46 +49,41 @@ import {
 import { cn } from '../../../components/ui/utils';
 import { useQuery } from '@tanstack/react-query';
 import { authorService } from '../../../services/authorService';
-import { WorkResponseDto, EpisodeDto } from '../../../types/author';
+import { WorkResponseDto, ManuscriptDto } from '../../../types/author';
 
 interface AuthorWorkExplorerProps {
   works: WorkResponseDto[];
+  userId: string;
   selectedWorkId: number | null;
-  selectedEpisodeId: number | null;
+  selectedManuscriptId: number | null;
   onSelectWork: (workId: number) => void;
-  onSelectEpisode: (workId: number, episode: EpisodeDto) => void;
   onOpenMetadata: (work: WorkResponseDto) => void;
   onOpenLorebook: (work: WorkResponseDto) => void;
   onCreateWork: () => void;
-  onCreateEpisode: (workId: number) => void;
-  onReviewRequired?: (workId: number, episode: EpisodeDto) => void;
   onRenameWork?: (work: WorkResponseDto) => void;
   onDeleteWork?: (workId: number) => void;
-  onRenameEpisode?: (workId: number, episode: EpisodeDto) => void;
-  onDeleteEpisode?: (workId: number, episodeId: number) => void;
-  processingStatus?: Record<
-    number,
-    'EXTRACTING' | 'ANALYZING' | 'REVIEW_READY'
-  >;
+  onSelectManuscript?: (manuscript: ManuscriptDto) => void;
+  onUploadManuscript?: (workId: number) => void;
+  onEditManuscript?: (workId: number, manuscript: ManuscriptDto) => void;
+  onDeleteManuscript?: (workId: number, manuscriptId: number) => void;
   className?: string;
 }
 
 export function AuthorWorkExplorer({
   works,
+  userId,
   selectedWorkId,
-  selectedEpisodeId,
-  processingStatus,
+  selectedManuscriptId,
   onSelectWork,
-  onSelectEpisode,
   onOpenMetadata,
   onOpenLorebook,
   onCreateWork,
-  onCreateEpisode,
-  onReviewRequired,
   onRenameWork,
   onDeleteWork,
-  onRenameEpisode,
-  onDeleteEpisode,
+  onSelectManuscript,
+  onUploadManuscript,
+  onEditManuscript,
+  onDeleteManuscript,
   className,
 }: AuthorWorkExplorerProps) {
   return (
@@ -127,19 +123,18 @@ export function AuthorWorkExplorer({
             <WorkItem
               key={work.id}
               work={work}
+              userId={userId}
               isSelected={selectedWorkId === work.id}
-              selectedEpisodeId={selectedEpisodeId}
+              selectedManuscriptId={selectedManuscriptId}
               onSelectWork={onSelectWork}
-              onSelectEpisode={onSelectEpisode}
               onOpenMetadata={() => onOpenMetadata(work)}
               onOpenLorebook={() => onOpenLorebook(work)}
-              onCreateEpisode={() => onCreateEpisode(work.id)}
-              onReviewRequired={onReviewRequired}
               onRenameWork={onRenameWork}
               onDeleteWork={onDeleteWork}
-              onRenameEpisode={onRenameEpisode}
-              onDeleteEpisode={onDeleteEpisode}
-              processingStatus={processingStatus}
+              onSelectManuscript={onSelectManuscript}
+              onUploadManuscript={onUploadManuscript}
+              onEditManuscript={onEditManuscript}
+              onDeleteManuscript={onDeleteManuscript}
             />
           ))}
         </div>
@@ -150,49 +145,47 @@ export function AuthorWorkExplorer({
 
 interface WorkItemProps {
   work: WorkResponseDto;
+  userId: string;
   isSelected: boolean;
-  selectedEpisodeId: number | null;
+  selectedManuscriptId: number | null;
   onSelectWork: (id: number) => void;
-  onSelectEpisode: (workId: number, episode: EpisodeDto) => void;
   onOpenMetadata: () => void;
   onOpenLorebook: () => void;
-  onCreateEpisode: () => void;
-  onReviewRequired?: (workId: number, episode: EpisodeDto) => void;
   onRenameWork?: (work: WorkResponseDto) => void;
   onDeleteWork?: (workId: number) => void;
-  onRenameEpisode?: (workId: number, episode: EpisodeDto) => void;
-  onDeleteEpisode?: (workId: number, episodeId: number) => void;
-  processingStatus?: Record<
-    number,
-    'EXTRACTING' | 'ANALYZING' | 'REVIEW_READY'
-  >;
+  onSelectManuscript?: (manuscript: ManuscriptDto) => void;
+  onUploadManuscript?: (workId: number) => void;
+  onEditManuscript?: (workId: number, manuscript: ManuscriptDto) => void;
+  onDeleteManuscript?: (workId: number, manuscriptId: number) => void;
 }
 
 function WorkItem({
   work,
+  userId,
   isSelected,
-  selectedEpisodeId,
+  selectedManuscriptId,
   onSelectWork,
-  onSelectEpisode,
   onOpenMetadata,
   onOpenLorebook,
-  onCreateEpisode,
-  onReviewRequired,
   onRenameWork,
   onDeleteWork,
-  onRenameEpisode,
-  onDeleteEpisode,
-  processingStatus,
+  onSelectManuscript,
+  onUploadManuscript,
+  onEditManuscript,
+  onDeleteManuscript,
 }: WorkItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Fetch episodes when opened
-  const { data: episodes, isLoading } = useQuery({
-    queryKey: ['author', 'work', work.id, 'episodes'],
-    queryFn: () => authorService.getEpisodes(work.id.toString()),
-    enabled: isOpen,
+  // Fetch manuscripts when opened
+  const { data: manuscriptsPage } = useQuery({
+    queryKey: ['author', 'manuscript', userId, work.title],
+    queryFn: () =>
+      authorService.getManuscripts(userId, work.title, 0, 10, work.id),
+    enabled: isOpen && !!userId,
   });
+
+  const manuscripts = manuscriptsPage?.content || [];
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -204,16 +197,6 @@ function WorkItem({
   const toggleSort = () => {
     setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
   };
-
-  const sortedEpisodes = episodes
-    ? [...episodes].sort((a, b) =>
-        sortOrder === 'asc' ? a.id - b.id : b.id - a.id,
-      )
-    : [];
-
-  const latestEpisodeId = episodes
-    ? Math.max(...episodes.map((e) => e.id), -1)
-    : -1;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-1">
@@ -250,10 +233,16 @@ function WorkItem({
                 'ml-2 text-[10px] px-1.5 py-0.5 rounded-full border shrink-0',
                 work.status === 'COMPLETED'
                   ? 'border-green-500 text-green-600 bg-green-50'
-                  : 'border-blue-500 text-blue-600 bg-blue-50',
+                  : work.status === 'NEW'
+                    ? 'border-yellow-500 text-yellow-600 bg-yellow-50'
+                    : 'border-blue-500 text-blue-600 bg-blue-50',
               )}
             >
-              {work.status === 'COMPLETED' ? '완결' : '연재중'}
+              {work.status === 'COMPLETED'
+                ? '완결'
+                : work.status === 'NEW'
+                  ? '신규'
+                  : '연재중'}
             </span>
           </div>
         </ContextMenuTrigger>
@@ -261,171 +250,86 @@ function WorkItem({
           <ContextMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              onCreateEpisode();
+              onUploadManuscript?.(work.id);
             }}
           >
             <Plus className="w-4 h-4 mr-2" />
             원문 생성
           </ContextMenuItem>
           <ContextMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               onOpenMetadata();
             }}
           >
             <Info className="w-4 h-4 mr-2" />
-            메타데이터 보기
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenLorebook();
-            }}
-          >
-            <BookOpen className="w-4 h-4 mr-2" />
-            설정집 보기
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onRenameWork?.(work);
-            }}
-          >
-            <Edit2 className="w-4 h-4 mr-2" />
-            이름 변경
+            메타데이터 수정
           </ContextMenuItem>
           <ContextMenuItem
             className="text-red-600 focus:text-red-600 focus:bg-red-50"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               onDeleteWork?.(work.id);
             }}
           >
             <Trash2 className="w-4 h-4 mr-2" />
             작품 삭제
           </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSort();
-            }}
-          >
-            {sortOrder === 'asc' ? (
-              <>
-                <ArrowDownAZ className="w-4 h-4 mr-2" />
-                최신순 정렬
-              </>
-            ) : (
-              <>
-                <ArrowUpAZ className="w-4 h-4 mr-2" />
-                1화부터 정렬
-              </>
-            )}
-          </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
 
       <CollapsibleContent className="pl-6 space-y-1">
-        {isLoading ? (
-          <div className="flex items-center py-2 px-2 text-xs text-muted-foreground">
-            <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-            로딩 중...
-          </div>
-        ) : (
-          sortedEpisodes.map((episode, index) => {
-            const isLatest = episode.id === latestEpisodeId;
-            const isCompletedWork = work.status === 'COMPLETED';
-            const status = processingStatus?.[episode.id];
-
-            // Only the latest episode is editable unless marked readonly by backend
-            const isReadOnly = episode.isReadOnly || !isLatest;
-            const episodeWithReadOnly = {
-              ...episode,
-              isReadOnly,
-            };
-
-            return (
-              <ContextMenu key={episode.id}>
+        {/* Manuscripts Section */}
+        {manuscripts && manuscripts.length > 0 ? (
+          <div className="mb-2">
+            {manuscripts.map((manuscript) => (
+              <ContextMenu key={manuscript.id}>
                 <ContextMenuTrigger>
                   <div
                     className={cn(
-                      'flex items-center p-2 rounded-md hover:bg-accent/50 cursor-pointer text-xs transition-colors',
-                      selectedEpisodeId === episode.id &&
-                        'bg-accent text-accent-foreground font-medium',
-                      status === 'ANALYZING' && 'animate-pulse bg-blue-500/10',
-                      status === 'REVIEW_READY' && 'bg-orange-500/10',
+                      'flex items-center p-2 rounded-md hover:bg-accent/50 cursor-pointer text-xs transition-colors pl-4',
+                      selectedManuscriptId === manuscript.id &&
+                        'bg-accent text-accent-foreground',
                     )}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (status === 'REVIEW_READY') {
-                        onReviewRequired?.(work.id, episodeWithReadOnly);
-                      } else if (episode.isReviewPending && onReviewRequired) {
-                        onReviewRequired(work.id, episodeWithReadOnly);
-                      } else {
-                        onSelectEpisode(work.id, episodeWithReadOnly);
-                      }
+                      onSelectManuscript?.(manuscript);
                     }}
                   >
-                    <FileText className="w-3 h-3 mr-2 text-muted-foreground" />
-                    <span className="truncate flex-1">{episode.title}</span>
-                    {isReadOnly && (
-                      <Lock className="w-3 h-3 text-muted-foreground ml-2" />
-                    )}
-
-                    {/* Processing Status Indicators */}
-                    {status === 'ANALYZING' && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Loader2 className="w-3 h-3 text-blue-500 ml-2 animate-spin" />
-                          </TooltipTrigger>
-                          <TooltipContent>AI 분석 중...</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-
-                    {(status === 'REVIEW_READY' || episode.isReviewPending) && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <AlertTriangle className="w-3 h-3 text-orange-500 ml-2" />
-                          </TooltipTrigger>
-                          <TooltipContent>설정집 확인 필요</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    <File className="w-3 h-3 mr-2 text-muted-foreground" />
+                    <span className="truncate flex-1">
+                      {manuscript.subtitle || `원문 ${manuscript.episode}`}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-2">
+                      {manuscript.episode}화
+                    </span>
                   </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-32">
                   <ContextMenuItem
-                    className="text-xs"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRenameEpisode?.(work.id, episode);
+                      onEditManuscript?.(work.id, manuscript);
                     }}
                   >
-                    <Edit2 className="w-3 h-3 mr-2" />
-                    이름 변경
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    원문 수정
                   </ContextMenuItem>
                   <ContextMenuItem
-                    className="text-red-600 focus:text-red-600 focus:bg-red-50 text-xs"
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteEpisode?.(work.id, episode.id);
+                      onDeleteManuscript?.(work.id, manuscript.id);
                     }}
                   >
-                    <Trash2 className="w-3 h-3 mr-2" />
+                    <Trash2 className="w-4 h-4 mr-2" />
                     원문 삭제
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
-            );
-          })
-        )}
-        {episodes?.length === 0 && (
+            ))}
+          </div>
+        ) : (
           <div className="py-2 px-2 text-xs text-muted-foreground italic">
-            에피소드가 없습니다.
+            데이터가 없습니다.
           </div>
         )}
       </CollapsibleContent>

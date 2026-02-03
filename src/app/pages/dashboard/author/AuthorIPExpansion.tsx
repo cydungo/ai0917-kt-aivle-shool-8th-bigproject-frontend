@@ -86,12 +86,39 @@ export function AuthorIPExpansion({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
+      {/* 담당 매니저 정보 카드 */}
+      {myManager && myManager.managerName ? (
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                {myManager.managerName.charAt(0)}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900">
+                  담당 운영자: {myManager.managerName}
+                </h3>
+                <p className="text-sm text-blue-700">{myManager.managerSiteEmail}</p>
+                <p className="text-xs text-blue-500 mt-1">
+                  매칭일: {new Date(myManager.linkedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-blue-600 font-medium">
+                IP 확장을 위한 1:1 지원을 받고 있습니다
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         {/* 제안서 검토 탭 */}
         <TabsContent value="proposals" className="mt-6 space-y-6">
           <div className="flex items-center justify-end gap-2">
             {/* 운영자와 매칭되지 않은 경우에만 작가 ID 생성 버튼 표시 */}
-            {(!myManager || !myManager.ok) && (
+            {(!myManager || !myManager.managerName) && (
               <Button
                 variant="outline"
                 size="sm"
