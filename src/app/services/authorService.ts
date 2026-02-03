@@ -136,7 +136,7 @@ export const authorService = {
     userId: string,
     title: string,
     manuscriptId: number,
-    data: { subtitle?: string; episode?: number },
+    data: { subtitle?: string; epNum?: number },
   ) => {
     const response = await apiClient.patch(
       `/api/v1/author/${userId}/${title}/manuscript/${manuscriptId}`,

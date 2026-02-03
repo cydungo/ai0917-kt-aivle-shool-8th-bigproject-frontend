@@ -32,6 +32,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../../../components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -65,6 +66,9 @@ export function AuthorLorebookPanel({
 }: AuthorLorebookPanelProps) {
   const [activeCategory, setActiveCategory] = useState<Category>('characters');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchMode, setSearchMode] = useState<'keyword' | 'semantic'>(
+    'keyword',
+  );
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null); // If null, it's create mode
   const queryClient = useQueryClient();
@@ -188,9 +192,9 @@ export function AuthorLorebookPanel({
   });
 
   const searchMutation = useMutation({
-    mutationFn: ({ category, query }: { category: Category; query: string }) =>
+    mutationFn: ({ category, query }: { category: string; query: string }) =>
       authorService.searchLorebookSimilarity(userId, work!.title, {
-        category,
+        category: category as Category,
         user_query: query,
         user_id: userId,
         work_id: workId,
@@ -199,6 +203,65 @@ export function AuthorLorebookPanel({
       }),
     onSuccess: (data) => {
       setSearchResults(data);
+    },
+    onError: () => toast.error('검색에 실패했습니다.'),
+  });
+
+  const keywordSearchMutation = useMutation({
+    mutationFn: async ({
+      category,
+      query,
+    }: {
+      category: string;
+      query: string;
+    }) => {
+      let data: any[] = [];
+      if (category === 'all') {
+        data = await authorService.getLorebooks(userId, work!.title, workId);
+      } else {
+        data = await authorService.getLorebooksByCategory(
+          userId,
+          work!.title,
+          category,
+          workId,
+        );
+      }
+
+      const lowerQuery = query.toLowerCase();
+      return data
+        .map((item) => {
+          let parsedSettings = {};
+          try {
+            if (item.setting && typeof item.setting === 'object') {
+              parsedSettings = item.setting;
+            } else if (typeof item.setting === 'string') {
+              parsedSettings = JSON.parse(item.setting);
+            }
+          } catch (e) {
+            console.error('Failed to parse settings', e);
+          }
+          return {
+            ...item,
+            name: item.keyword || '',
+            title: item.keyword || '',
+            description: (parsedSettings as any).description || '',
+            ...parsedSettings,
+          };
+        })
+        .filter((item) => {
+          const nameMatch = item.name?.toLowerCase().includes(lowerQuery);
+          const descMatch = item.description
+            ?.toLowerCase()
+            .includes(lowerQuery);
+          const titleMatch = item.title?.toLowerCase().includes(lowerQuery);
+          return nameMatch || descMatch || titleMatch;
+        });
+    },
+    onSuccess: (data) => {
+      setSearchResults(data);
+      if (data.length === 0) {
+        toast.info('검색 결과가 없습니다.');
+      }
     },
     onError: () => toast.error('검색에 실패했습니다.'),
   });
@@ -228,9 +291,14 @@ export function AuthorLorebookPanel({
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const query = formData.get('query') as string;
-    const category = formData.get('category') as Category;
+    const category = formData.get('category') as string;
     if (!query) return;
-    searchMutation.mutate({ category, query });
+
+    if (searchMode === 'keyword') {
+      keywordSearchMutation.mutate({ category, query });
+    } else {
+      searchMutation.mutate({ category, query });
+    }
   };
 
   const handleCreateClick = () => {
@@ -699,35 +767,64 @@ export function AuthorLorebookPanel({
         </div>
       </div>
 
-      {/* Similarity Search Dialog */}
+      {/* Search Dialog */}
       <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>유사도 검색</DialogTitle>
+            <DialogTitle>설정 검색</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="flex gap-2">
-              <Select name="category" defaultValue={activeCategory}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                name="query"
-                placeholder="검색어를 입력하세요..."
-                required
-              />
-              <Button type="submit">검색</Button>
+
+          <div className="flex flex-col gap-6 py-4">
+            <div className="flex flex-col items-center gap-2">
+              <Tabs
+                value={searchMode}
+                onValueChange={(v) =>
+                  setSearchMode(v as 'keyword' | 'semantic')
+                }
+                className="w-full max-w-md"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="keyword">키워드 검색</TabsTrigger>
+                  <TabsTrigger value="semantic">유사도 검색</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <p className="text-xs text-muted-foreground text-center">
+                {searchMode === 'keyword'
+                  ? '찾고자 하는 대상이 명확할 때 (이름, 지명 등 정확한 단어)'
+                  : '맥락이나 관계를 찾고 싶을 때 (예: "철수와 영희가 싸운 이유")'}
+              </p>
             </div>
-          </form>
-          <div className="space-y-4 mt-4">
+
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="flex gap-2">
+                <Select name="category" defaultValue={activeCategory}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  name="query"
+                  placeholder={
+                    searchMode === 'keyword'
+                      ? '검색어를 입력하세요...'
+                      : '질문을 입력하세요...'
+                  }
+                  required
+                />
+                <Button type="submit">검색</Button>
+              </div>
+            </form>
+          </div>
+
+          <div className="space-y-4">
             {searchResults.map((result) => (
               <Card key={result.id}>
                 <CardHeader>

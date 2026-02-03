@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -108,8 +108,16 @@ export function AuthorWritingEditor({
   onClose,
   isReadOnly = false,
 }: AuthorWritingEditorProps) {
+  const processedInitialContent = useMemo(() => {
+    let text = initialContent;
+    if (text.startsWith('"') && text.endsWith('"')) {
+      text = text.slice(1, -1);
+    }
+    return text.replace(/\\n/g, '\n');
+  }, [initialContent]);
+
   const [title, setTitle] = useState(initialTitle);
-  const [content, setContent] = useState(initialContent);
+  const [content, setContent] = useState(processedInitialContent);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -117,7 +125,7 @@ export function AuthorWritingEditor({
   // Auto-save simulation
   useEffect(() => {
     const timer = setInterval(() => {
-      if (content !== initialContent) {
+      if (content !== processedInitialContent) {
         // Simple check for demo
         handleSave();
       }

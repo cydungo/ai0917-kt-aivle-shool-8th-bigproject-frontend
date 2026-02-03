@@ -1074,7 +1074,15 @@ function CreateIPExpansionDialog({
     enabled: !!selectedWork?.id,
   });
 
-  // Derived Data
+  const categories = [
+    { id: 'characters', label: '인물', icon: Users },
+    { id: 'places', label: '장소', icon: MapPin },
+    { id: 'items', label: '물건', icon: Package },
+    { id: 'groups', label: '집단', icon: Users2 },
+    { id: 'worldviews', label: '세계', icon: Globe },
+    { id: 'plots', label: '사건', icon: BookOpen },
+  ];
+
   const filteredAuthors = useMemo(() => {
     if (!authors) return [];
     const list = authors.content || [];
@@ -1090,25 +1098,17 @@ function CreateIPExpansionDialog({
     );
   }, [works, workSearch]);
 
-  const categoryMap: Record<string, string> = {
-    characters: '인물',
-    places: '장소',
-    items: '물건',
-    groups: '집단',
-    worldviews: '세계',
-    plots: '사건',
-  };
-
   const filteredLorebooks = useMemo(() => {
     if (!lorebooks) return [];
     let filtered = lorebooks.filter((l: any) =>
       l.keyword.toLowerCase().includes(lorebookSearch.toLowerCase()),
     );
     if (lorebookCategoryTab !== 'all') {
-      const targetCategory = categoryMap[lorebookCategoryTab];
-      if (targetCategory) {
-        filtered = filtered.filter((l: any) => l.category === targetCategory);
-      }
+      // API might return categories in English (characters) or Korean (인물).
+      // Assuming English based on AuthorLorebookPanel usage.
+      filtered = filtered.filter(
+        (l: any) => l.category === lorebookCategoryTab,
+      );
     }
     return filtered;
   }, [lorebooks, lorebookSearch, lorebookCategoryTab]);
@@ -1119,7 +1119,13 @@ function CreateIPExpansionDialog({
       const newSelected = [...selectedLorebooks];
       filteredLorebooks.forEach((lorebook: any) => {
         if (!newSelected.some((s) => s.id === lorebook.id)) {
-          newSelected.push(lorebook);
+          newSelected.push({
+            ...lorebook,
+            authorName: selectedAuthor?.name,
+            workTitle: selectedWork?.title,
+            authorId: selectedAuthor?.id,
+            workId: selectedWork?.id,
+          });
         }
       });
       setSelectedLorebooks(newSelected);

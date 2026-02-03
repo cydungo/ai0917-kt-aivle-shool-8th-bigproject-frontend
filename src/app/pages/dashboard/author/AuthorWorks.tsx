@@ -448,7 +448,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
         editingManuscript.manuscript.id,
         {
           subtitle: editManuscriptSubtitle,
-          episode: editManuscriptEpisode,
+          epNum: editManuscriptEpisode,
         },
       );
     },
