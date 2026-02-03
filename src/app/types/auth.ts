@@ -6,6 +6,7 @@ export interface AuthMeResponse {
   type: AuthType;
   // Common fields
   userId?: number;
+  integrationId?: string;
   naverId?: string;
   name?: string;
   email?: string;
@@ -13,6 +14,7 @@ export interface AuthMeResponse {
   // AUTH specific
   role?: UserRole;
   siteEmail?: string;
+  managerIntegrationId?: string;
 
   // PENDING specific
   gender?: string;

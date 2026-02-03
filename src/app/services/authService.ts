@@ -63,7 +63,7 @@ export const authService = {
     return response.data;
   },
 
-  deactivateUser: async (data: { id: number }) => {
+  deactivateUser: async (data: { id: string }) => {
     const response = await apiClient.post('/api/v1/auth/deactivated', data);
     return response.data;
   },

@@ -33,7 +33,7 @@ export function ManagerMyPage({
       )
     ) {
       try {
-        await authService.deactivateUser({ id: userData.userId! });
+        await authService.deactivateUser({ id: String(userData.userId!) });
         alert('계정이 탈퇴 처리되었습니다.\n7일 후 데이터가 영구 삭제됩니다.');
         await authService.logout();
         navigate('/login');

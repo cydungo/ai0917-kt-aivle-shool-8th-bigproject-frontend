@@ -59,7 +59,6 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
   const navigate = useNavigate();
 
   // Notice State
-  const [currentNoticeIndex, setCurrentNoticeIndex] = useState(0);
   const [isNoticeDetailOpen, setIsNoticeDetailOpen] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState<any>(null);
 
@@ -138,19 +137,8 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
   });
 
   const notices = noticesData?.content || [];
-  const currentNotice = notices[currentNoticeIndex];
 
   // Handlers
-  const handleNextNotice = () => {
-    if (notices.length === 0) return;
-    setCurrentNoticeIndex((prev) => (prev + 1) % notices.length);
-  };
-
-  const handlePrevNotice = () => {
-    if (notices.length === 0) return;
-    setCurrentNoticeIndex((prev) => (prev - 1 + notices.length) % notices.length);
-  };
-
   const handleNoticeClick = (notice: any) => {
     setSelectedNotice(notice);
     setIsNoticeDetailOpen(true);
@@ -377,31 +365,33 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
               주요 공지사항
             </CardTitle>
           </CardHeader>
-          <CardContent className="h-[140px] flex flex-col justify-center relative">
-            {currentNotice ? (
-              <div
-                className="space-y-2 px-8 transition-all duration-300 hover:opacity-80 cursor-pointer"
-                onClick={() => handleNoticeClick(currentNotice)}
-              >
-                <Badge
-                  variant={
-                    currentNotice.category === 'URGENT'
-                      ? 'destructive'
-                      : 'default'
-                  }
-                  className="mb-1"
-                >
-                  {currentNotice.category === 'URGENT' ? '긴급' : '공지'}
-                </Badge>
-                <h3 className="text-lg font-bold line-clamp-1">
-                  {currentNotice.title}
-                </h3>
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {currentNotice.content || '공지사항 내용을 확인하세요.'}
-                </p>
-                <span className="text-xs text-muted-foreground block mt-2">
-                  {new Date(currentNotice.createdAt).toLocaleDateString()}
-                </span>
+          <CardContent className="p-0">
+            {notices.length > 0 ? (
+              <div className="divide-y divide-border">
+                {notices.map((notice: any) => (
+                  <div
+                    key={notice.id}
+                    className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => handleNoticeClick(notice)}
+                  >
+                    <Badge
+                      variant={
+                        notice.category === 'URGENT'
+                          ? 'destructive'
+                          : 'secondary'
+                      }
+                      className="shrink-0"
+                    >
+                      {notice.category === 'URGENT' ? '긴급' : '공지'}
+                    </Badge>
+                    <span className="flex-1 text-sm font-medium truncate">
+                      {notice.title}
+                    </span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {new Date(notice.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="text-center text-muted-foreground">

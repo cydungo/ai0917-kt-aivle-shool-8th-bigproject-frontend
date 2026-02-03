@@ -42,12 +42,13 @@ export function AdminDashboard({ onLogout, onHome }: AdminDashboardProps) {
   const [showActivityDropdown, setShowActivityDropdown] = useState(false);
   const [visibleCount, setVisibleCount] = useState(4);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Password Change State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  // Outside click handler for notification dropdown
+  // Outside click handler for dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -55,6 +56,12 @@ export function AdminDashboard({ onLogout, onHome }: AdminDashboardProps) {
         !notificationDropdownRef.current.contains(event.target as Node)
       ) {
         setShowActivityDropdown(false);
+      }
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileDropdown(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -267,7 +274,10 @@ export function AdminDashboard({ onLogout, onHome }: AdminDashboardProps) {
         </nav>
 
         {/* Profile Section */}
-        <div className="border-t border-sidebar-border">
+        <div
+          className="border-t border-sidebar-border"
+          ref={profileDropdownRef}
+        >
           {/* Desktop: Dropdown style */}
           <div className="hidden md:block relative">
             <button

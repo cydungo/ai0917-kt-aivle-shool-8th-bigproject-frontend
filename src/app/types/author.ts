@@ -1,18 +1,5 @@
 import { UserRole } from './common';
 
-export interface ExtractSettingRequest {
-  txt: string;
-  episode?: number;
-  subtitle: string;
-  check: Record<string, never>; // empty object
-  title: string;
-  writer: string;
-}
-
-export interface ExtractSettingResponse {
-  [key: string]: any;
-}
-
 // Dashboard
 export interface AuthorDashboardSummaryDto {
   ongoingCount: number;
@@ -21,41 +8,39 @@ export interface AuthorDashboardSummaryDto {
 }
 
 // Work Status Enum
-export type WorkStatus = 'ONGOING' | 'COMPLETED' | 'HIATUS' | 'DROPPED';
+export type WorkStatus = 'ONGOING' | 'COMPLETED' | 'HIATUS' | 'DROPPED' | 'NEW' | 'DELETED';
 
 // Work DTOs
 export interface WorkResponseDto {
   id: number;
+  universeId?: number;
+  primaryAuthorId: string;
   title: string;
-  writer: string;
   synopsis?: string;
   genre?: string;
-  coverImageUrl?: string;
-  description: string;
   status: WorkStatus;
-  statusDescription: string;
+  statusDescription?: string;
+  coverImageUrl?: string;
   createdAt: string;
-  universeId?: number;
+  // Legacy fields support if needed, otherwise remove
+  writer?: string; 
+  description?: string;
 }
 
 export interface WorkCreateRequestDto {
   title: string;
-  integrationId: string; // Changed from userIntegrationId to match service
-  writer?: string;
-  description: string;
-  status?: WorkStatus;
   synopsis?: string;
   genre?: string;
   coverImageUrl?: string;
+  primaryAuthorId: string;
+  universeId?: number;
 }
 
 export interface WorkUpdateRequestDto {
-  id: number;
-  title: string;
-  description: string;
-  status: WorkStatus;
+  title?: string;
   synopsis?: string;
   genre?: string;
+  coverImageUrl?: string;
 }
 
 // Notice DTO (Author View)
@@ -72,77 +57,12 @@ export interface AuthorNoticeDto {
 // Lorebook DTO
 export interface LorebookDto {
   id: number;
-  title: string;
-  description: string;
-  updatedAt: string;
-  count?: number;
-}
-
-export interface LorebookCharacterDto {
-  id: number;
-  name: string;
-  role: string;
-  description: string;
-  age?: string;
-  traits?: string[];
-}
-
-export interface LorebookWorldviewDto {
-  id: number;
-  title: string;
-  category: string;
-  description: string;
-  tags?: string[];
-}
-
-export interface LorebookPlotDto {
-  id: number;
-  title: string;
-  order: number;
-  description: string;
-  importance?: 'Main' | 'Sub';
-}
-
-export interface LorebookPlaceDto {
-  id: number;
-  name: string;
-  description: string;
-  location?: string;
-}
-
-export interface LorebookItemDto {
-  id: number;
-  name: string;
-  description: string;
-  type?: string;
-}
-
-export interface LorebookGroupDto {
-  id: number;
-  name: string;
-  description: string;
-  members?: string[];
-}
-
-// Episode DTOs
-export interface EpisodeDto {
-  id: number;
+  userId: string;
   workId: number;
-  episodeNumber?: number;
-  title: string;
-  subtitle?: string;
-  order: number;
-  status: WorkStatus;
-  wordCount?: number;
-  isReadOnly?: boolean;
-  isAnalyzed?: boolean;
-  isReviewPending?: boolean;
-  content: string; // Added content for convenience if needed
-  updatedAt: string;
-}
-
-export interface EpisodeDetailDto extends EpisodeDto {
-  content: string;
+  category: string;
+  keyword: string;
+  setting: any; // JsonNode can be object or string depending on parsing
+  epNum?: number[];
 }
 
 // Publish Process
@@ -182,6 +102,52 @@ export interface PublishAnalysisResponseDto {
 export interface LorebookSimilarityRequestDto {
   category: string;
   user_query: string;
+  user_id: string;
+  work_id: number;
+  sim: number;
+  limit: number;
+}
+
+export interface LorebookSaveRequestDto {
+  category: string;
+  keyword: string;
+  subtitle: string;
+  setting: string;
+  episode?: number[];
+}
+
+export interface LorebookUpdateRequestDto {
+  keyword: string;
+  setting: string;
+}
+
+export interface AuthorManagerResponseDto {
+  managerId: string;
+  managerName: string;
+  managerEmail: string;
+  managerIntegrationId: string;
+  linkedAt: string;
+}
+
+export interface ManuscriptDto {
+  id: number;
+  userId: string;
+  workId: number;
+  title: string;
+  episode: number;
+  subtitle: string;
+  txt?: string;
+}
+
+export interface ManuscriptDetailDto extends ManuscriptDto {
+  txt: string;
+}
+
+export interface ManuscriptUploadRequestDto {
+  workId: number;
+  episode: number;
+  subtitle: string;
+  txt: string;
 }
 
 export interface LorebookSimilarityResponseDto {
@@ -216,11 +182,19 @@ export interface SettingBookDiffDto {
 export interface IPProposalDto {
   id: number;
   title: string;
-  sender: string;
-  status: 'PENDING' | 'REVIEWING' | 'ACCEPTED' | 'REJECTED';
+  sender?: string;
+  authorName?: string;
+  status:
+    | 'PENDING'
+    | 'REVIEWING'
+    | 'ACCEPTED'
+    | 'REJECTED'
+    | 'APPROVED'
+    | 'PROPOSED';
   statusDescription: string;
-  content: string;
-  receivedAt: string;
+  content?: string;
+  receivedAt?: string;
+  createdAt?: string;
 }
 
 export interface IPMatchingDto {

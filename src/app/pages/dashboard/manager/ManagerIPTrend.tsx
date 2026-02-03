@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle,
@@ -35,12 +35,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../components/ui/select';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../../components/ui/pagination';
 import { managerService } from '../../../services/managerService';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+// Worker 설정 (public 폴더나 CDN 활용)
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+function PdfThumbnail({ fileUrl }: { fileUrl: string }) {
+  return (
+    <div className="w-full h-40 overflow-hidden bg-slate-100 rounded-t-lg relative flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+        <BarChart3 className="w-10 h-10 text-slate-300" />
+      </div>
+      <Document
+        file={fileUrl}
+        loading={
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-400">
+            로딩 중...
+          </div>
+        }
+        error={null}
+        className="opacity-50"
+      >
+        <Page
+          pageNumber={1}
+          width={200}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+        />
+      </Document>
+    </div>
+  );
+}
 
 export function ManagerIPTrend() {
-  const [selectedYear, setSelectedYear] = useState('2025');
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  const [page, setPage] = useState(0);
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [gridPreviewUrl, setGridPreviewUrl] = useState<string | null>(null);
+
+  // Load dummy PDF for grid previews (demo purpose) - DISABLED to prevent multiple worker instantiations
+  /*
+  useEffect(() => {
+    let active = true;
+    // Load a dummy report to show as preview in the grid
+    managerService
+      .downloadIPTrendReport(100) // Dummy ID
+      .then((blob) => {
+        if (active && blob) {
+          setGridPreviewUrl(window.URL.createObjectURL(blob));
+        }
+      })
+      .catch((err) => console.error('Failed to load grid preview', err));
+
+    return () => {
+      active = false;
+      // Note: In a real app, we might want to revoke this, but since it's reused for all cards,
+      // we keep it until unmount or let browser handle it.
+    };
+  }, []);
+  */
 
   // Fetch IP Trend Dashboard Data (Summary & Stats)
   const { data: trendData, isLoading: isTrendLoading } = useQuery({
@@ -50,9 +117,11 @@ export function ManagerIPTrend() {
 
   // Fetch Reports List
   const { data: reportsData, isLoading: isReportsLoading } = useQuery({
-    queryKey: ['manager', 'iptrend', 'list', selectedYear],
-    queryFn: () => managerService.getIPTrendList(0, 10), // Pagination TODO
+    queryKey: ['manager', 'iptrend', 'list', selectedYear, page],
+    queryFn: () => managerService.getIPTrendList(page, 12),
   });
+
+  const totalPages = reportsData?.totalPages || 1;
 
   // Fetch Preview Data when ID is selected
   const { data: previewData, isLoading: isPreviewLoading } = useQuery({
@@ -63,6 +132,33 @@ export function ManagerIPTrend() {
         : Promise.resolve(null),
     enabled: !!previewId,
   });
+
+  // Fetch Blob for Preview to prevent auto-download
+  useEffect(() => {
+    let active = true;
+    if (previewId) {
+      managerService
+        .downloadIPTrendReport(previewId)
+        .then((blob) => {
+          if (active && blob) {
+            const url = window.URL.createObjectURL(blob);
+            setPdfUrl(url);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load PDF blob', err);
+        });
+    } else {
+      setPdfUrl(null);
+    }
+    return () => {
+      active = false;
+      if (pdfUrl) {
+        window.URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+      }
+    };
+  }, [previewId]);
 
   const stats = [
     {
@@ -113,24 +209,33 @@ export function ManagerIPTrend() {
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header & Summary Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="border-slate-200 shadow-sm">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-500">
-                  {stat.title}
-                </p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {stat.value}
-                </p>
-                <p className="text-xs text-slate-400">{stat.description}</p>
-              </div>
-              <div className={`p-3 rounded-full ${stat.bg}`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {isTrendLoading
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <Card
+                key={i}
+                className="border-slate-200 shadow-sm animate-pulse"
+              >
+                <CardContent className="p-6 h-[100px] bg-slate-50" />
+              </Card>
+            ))
+          : stats.map((stat, index) => (
+              <Card key={index} className="border-slate-200 shadow-sm">
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-slate-500">
+                      {stat.title}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {stat.value}
+                    </p>
+                    <p className="text-xs text-slate-400">{stat.description}</p>
+                  </div>
+                  <div className={`p-3 rounded-full ${stat.bg}`}>
+                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       {/* Filter Toolbar */}
@@ -152,9 +257,14 @@ export function ManagerIPTrend() {
               <SelectValue placeholder="연도 선택" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2025">2025년</SelectItem>
-              <SelectItem value="2024">2024년</SelectItem>
-              <SelectItem value="2023">2023년</SelectItem>
+              {Array.from(
+                { length: currentYear - 2025 + 1 },
+                (_, i) => currentYear - i,
+              ).map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}년
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -168,48 +278,109 @@ export function ManagerIPTrend() {
             className="group cursor-pointer hover:shadow-md transition-all duration-200 border-slate-200 overflow-hidden"
             onClick={() => setPreviewId(report.id)}
           >
-            <div className="aspect-[3/4] bg-slate-100 relative overflow-hidden">
-              {/* PDF Preview Placeholder - Replace with actual thumbnail if available */}
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-50 group-hover:bg-slate-100 transition-colors">
-                <FileText className="w-12 h-12 text-slate-300 group-hover:text-slate-400 transition-colors" />
-              </div>
+            <div className="bg-slate-100 relative overflow-hidden group-hover:shadow-inner transition-all">
+              {/* PDF Preview (First Page Crop) */}
+              {gridPreviewUrl ? (
+                <PdfThumbnail fileUrl={gridPreviewUrl} />
+              ) : (
+                <div className="w-full h-40 flex items-center justify-center bg-slate-50 group-hover:bg-slate-100 transition-colors">
+                  <BarChart3 className="w-10 h-10 text-slate-300 group-hover:text-slate-400 transition-colors" />
+                </div>
+              )}
 
               {/* Overlay Actions */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 z-10">
                 <Button variant="secondary" size="sm" className="shadow-sm">
                   미리보기
                 </Button>
               </div>
 
               {/* Status Badge */}
-              {/* <Badge
-                className={`absolute top-3 right-3 ${
-                  report.color || 'bg-blue-500'
-                }`}
-              >
-                월간 리포트
-              </Badge> */}
+              <div className="absolute top-3 right-3 z-20">
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded-md text-xs font-medium shadow-sm',
+                    report.status === 'COMPLETED'
+                      ? 'bg-green-100 text-green-700'
+                      : report.status === 'FAILED'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700',
+                  )}
+                >
+                  {report.status}
+                </span>
+              </div>
             </div>
 
             <CardContent className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h3 className="font-semibold text-slate-900 line-clamp-1">
-                    {report.title}
+                  <h3
+                    className="font-semibold text-slate-900 line-clamp-1"
+                    title={report.fileName}
+                  >
+                    {report.fileName?.replace(/\.pdf$/i, '') || '제목 없음'}
                   </h3>
                   <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {report.date}
+                    <Clock className="w-3 h-3" />
+                    {new Date(report.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-slate-600 line-clamp-2 min-h-[40px]">
-                {report.summary}
-              </p>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Pagination */}
+      {reportsData?.content && reportsData.content.length > 0 && (
+        <div className="mt-8">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.max(0, p - 1));
+                  }}
+                  className={
+                    page === 0
+                      ? 'pointer-events-none opacity-50'
+                      : 'cursor-pointer'
+                  }
+                />
+              </PaginationItem>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink
+                    isActive={page === i}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage(i);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.min(totalPages - 1, p + 1));
+                  }}
+                  className={
+                    page === totalPages - 1
+                      ? 'pointer-events-none opacity-50'
+                      : 'cursor-pointer'
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* Preview Modal (Full Screen Support) */}
       <Dialog
@@ -225,20 +396,34 @@ export function ManagerIPTrend() {
           className={cn(
             'flex flex-col p-0 gap-0 transition-all duration-300',
             isFullScreen
-              ? 'w-screen h-screen max-w-none rounded-none border-0'
-              : 'max-w-4xl h-[85vh] rounded-xl',
+              ? '!w-screen !h-screen !max-w-none rounded-none border-0'
+              : '!max-w-[90vw] !w-[70vw] h-[90vh] rounded-xl',
           )}
         >
           {/* Modal Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur-sm z-10">
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-white z-[100] shrink-0 relative min-h-[60px]">
             <div className="flex items-center gap-3">
               <DialogTitle className="text-xl font-bold">
-                {previewData?.title || '리포트 미리보기'}
+                {previewData?.fileName || '리포트 미리보기'}
               </DialogTitle>
               {previewData && (
-                <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                  {previewData.analysisDate}
-                </span>
+                <>
+                  <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                    {previewData.analysisDate}
+                  </span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded-md text-xs font-medium',
+                      previewData.status === 'COMPLETED'
+                        ? 'bg-green-100 text-green-700'
+                        : previewData.status === 'FAILED'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700',
+                    )}
+                  >
+                    {previewData.status}
+                  </span>
+                </>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -279,13 +464,13 @@ export function ManagerIPTrend() {
 
           {/* PDF Viewer Area */}
           <div className="flex-1 bg-slate-100 overflow-hidden relative">
-            {isPreviewLoading ? (
+            {isPreviewLoading || (previewId && !pdfUrl) ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
-            ) : previewData?.pdfUrl ? (
+            ) : pdfUrl ? (
               <iframe
-                src={`${previewData.pdfUrl}#toolbar=0&navpanes=0`}
+                src={`${pdfUrl}#toolbar=0&navpanes=0`}
                 className="w-full h-full border-0"
                 title="PDF Preview"
               />

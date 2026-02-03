@@ -46,6 +46,7 @@ import { toast } from 'sonner';
 
 interface AuthorLorebookPanelProps {
   workId: number;
+  userId: string;
   className?: string;
 }
 
@@ -59,6 +60,7 @@ type Category =
 
 export function AuthorLorebookPanel({
   workId,
+  userId,
   className,
 }: AuthorLorebookPanelProps) {
   const [activeCategory, setActiveCategory] = useState<Category>('characters');
@@ -73,82 +75,101 @@ export function AuthorLorebookPanel({
     queryFn: () => authorService.getWorkDetail(workId.toString()),
   });
 
-  // Fetch Episode count for "Current n Episode"
-  const { data: episodes } = useQuery({
-    queryKey: ['author', 'work', workId, 'episodes'],
-    queryFn: () => authorService.getEpisodes(workId.toString()),
+  // Fetch Manuscript count (Replaces Episode count)
+  const { data: manuscriptsPage } = useQuery({
+    queryKey: ['author', 'manuscripts', workId],
+    queryFn: () =>
+      authorService.getManuscripts(userId, work!.title, 0, 1000, workId), // Fetch mostly all to count
+    enabled: !!work?.title && !!userId,
+  });
+  const manuscriptCount = manuscriptsPage?.totalElements || 0;
+
+  // Fetch Data based on category (Unified)
+  const { data: lorebooks } = useQuery({
+    queryKey: ['author', 'lorebook', userId, work?.title, activeCategory],
+    queryFn: () =>
+      authorService.getLorebooksByCategory(
+        userId,
+        work!.title,
+        activeCategory,
+        workId,
+      ),
+    enabled: !!work?.title && !!userId,
   });
 
-  // Fetch Data based on category
-  const { data: characters } = useQuery({
-    queryKey: ['author', 'work', workId, 'characters'],
-    queryFn: () => authorService.getLorebookCharacters(workId.toString()),
-    enabled: activeCategory === 'characters',
-  });
-
-  const { data: places } = useQuery({
-    queryKey: ['author', 'work', workId, 'places'],
-    queryFn: () => authorService.getLorebookPlaces(workId.toString()),
-    enabled: activeCategory === 'places',
-  });
-
-  const { data: items } = useQuery({
-    queryKey: ['author', 'work', workId, 'items'],
-    queryFn: () => authorService.getLorebookItems(workId.toString()),
-    enabled: activeCategory === 'items',
-  });
-
-  const { data: groups } = useQuery({
-    queryKey: ['author', 'work', workId, 'groups'],
-    queryFn: () => authorService.getLorebookGroups(workId.toString()),
-    enabled: activeCategory === 'groups',
-  });
-
-  const { data: worldviews } = useQuery({
-    queryKey: ['author', 'work', workId, 'worldviews'],
-    queryFn: () => authorService.getLorebookWorldviews(workId.toString()),
-    enabled: activeCategory === 'worldviews',
-  });
-
-  const { data: plots } = useQuery({
-    queryKey: ['author', 'work', workId, 'plots'],
-    queryFn: () => authorService.getLorebookPlots(workId.toString()),
-    enabled: activeCategory === 'plots',
-  });
+  const displayItems =
+    lorebooks?.map((item) => {
+      let parsedSettings = {};
+      try {
+        // item.setting is JsonNode (any), which can be an object or a JSON string depending on serialization
+        if (item.setting && typeof item.setting === 'object') {
+          parsedSettings = item.setting;
+        } else if (typeof item.setting === 'string') {
+          parsedSettings = JSON.parse(item.setting);
+        }
+      } catch (e) {
+        console.error('Failed to parse settings', e);
+      }
+      return {
+        ...item,
+        name: item.keyword || '',
+        title: item.keyword || '',
+        description: (parsedSettings as any).description || '',
+        ...parsedSettings,
+      };
+    }) || [];
 
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: any) =>
-      authorService.createLorebookEntry(
-        workId.toString(),
-        activeCategory,
-        data,
-      ),
+    mutationFn: (data: any) => {
+      const { name, title, description, ...rest } = data;
+      const lorebookTitle = name || title;
+      const settingsObj = { description, ...rest };
+      const settings = JSON.stringify(settingsObj);
+
+      return authorService.saveLorebookManual(userId, work!.title, workId, {
+        keyword: lorebookTitle,
+        subtitle: '',
+        setting: settings,
+        category: activeCategory,
+        episode: [],
+      });
+    },
     onSuccess: () => {
       toast.success('생성되었습니다.');
       setIsEditOpen(false);
       queryClient.invalidateQueries({
-        queryKey: ['author', 'work', workId, activeCategory],
+        queryKey: ['author', 'lorebook', userId, work?.title, activeCategory],
       });
     },
     onError: () => toast.error('생성에 실패했습니다.'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      authorService.updateLorebookEntry(
-        workId.toString(),
+    mutationFn: ({ id, data }: { id: number; data: any }) => {
+      const { name, title, description, ...rest } = data;
+      const lorebookTitle = name || title;
+      const settingsObj = { description, ...rest };
+      const settings = JSON.stringify(settingsObj);
+
+      return authorService.updateLorebook(
+        userId,
+        work!.title,
         activeCategory,
         id,
-        data,
-      ),
+        {
+          keyword: lorebookTitle,
+          setting: settings,
+        },
+      );
+    },
     onSuccess: () => {
       toast.success('수정되었습니다.');
       setIsEditOpen(false);
       queryClient.invalidateQueries({
-        queryKey: ['author', 'work', workId, activeCategory],
+        queryKey: ['author', 'lorebook', userId, work?.title, activeCategory],
       });
     },
     onError: () => toast.error('수정에 실패했습니다.'),
@@ -156,11 +177,11 @@ export function AuthorLorebookPanel({
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
-      authorService.deleteLorebookEntry(workId.toString(), activeCategory, id),
+      authorService.deleteLorebook(userId, work!.title, activeCategory, id),
     onSuccess: () => {
       toast.success('삭제되었습니다.');
       queryClient.invalidateQueries({
-        queryKey: ['author', 'work', workId, activeCategory],
+        queryKey: ['author', 'lorebook', userId, work?.title, activeCategory],
       });
     },
     onError: () => toast.error('삭제에 실패했습니다.'),
@@ -168,7 +189,14 @@ export function AuthorLorebookPanel({
 
   const searchMutation = useMutation({
     mutationFn: ({ category, query }: { category: Category; query: string }) =>
-      authorService.searchLorebook(workId.toString(), category, query),
+      authorService.searchLorebookSimilarity(userId, work!.title, {
+        category,
+        user_query: query,
+        user_id: userId,
+        work_id: workId,
+        sim: 0.7, // Default threshold
+        limit: 5, // Default topK
+      }),
     onSuccess: (data) => {
       setSearchResults(data);
     },
@@ -176,7 +204,7 @@ export function AuthorLorebookPanel({
   });
 
   const exportMutation = useMutation({
-    mutationFn: () => authorService.exportLorebook(workId.toString()),
+    mutationFn: () => authorService.exportLorebook(workId.toString()), // This also might need update
     onSuccess: (data) => {
       const url = window.URL.createObjectURL(new Blob([data]));
       const link = document.createElement('a');
@@ -227,7 +255,6 @@ export function AuthorLorebookPanel({
     const data = Object.fromEntries(formData as any);
 
     // Process tags/arrays if needed
-    // For simplicity, splitting comma-separated strings for array fields
     if (activeCategory === 'characters' && data.traits) {
       data.traits = (data.traits as string)
         .split(',')
@@ -266,105 +293,90 @@ export function AuthorLorebookPanel({
       onDelete: handleDeleteClick,
     };
 
-    switch (activeCategory) {
-      case 'characters':
-        content = characters
-          ?.slice()
-          .sort((a, b) => b.id - a.id)
-          .map((item) => (
-            <LorebookCard
-              key={item.id}
-              item={item}
-              title={item.name}
-              description={item.description}
-              tags={[item.role, item.age].filter(Boolean) as string[]}
-              {...commonProps}
-            />
-          ));
-        break;
-      case 'places':
-        content = places
-          ?.slice()
-          .sort((a, b) => b.id - a.id)
-          .map((item) => (
-            <LorebookCard
-              key={item.id}
-              item={item}
-              title={item.name}
-              description={item.description}
-              tags={[item.location].filter(Boolean) as string[]}
-              {...commonProps}
-            />
-          ));
-        break;
-      case 'items':
-        content = items
-          ?.slice()
-          .sort((a, b) => b.id - a.id)
-          .map((item) => (
-            <LorebookCard
-              key={item.id}
-              item={item}
-              title={item.name}
-              description={item.description}
-              tags={[item.type].filter(Boolean) as string[]}
-              {...commonProps}
-            />
-          ));
-        break;
-      case 'groups':
-        content = groups
-          ?.slice()
-          .sort((a, b) => b.id - a.id)
-          .map((item) => (
-            <LorebookCard
-              key={item.id}
-              item={item}
-              title={item.name}
-              description={item.description}
-              {...commonProps}
-            />
-          ));
-        break;
-      case 'worldviews':
-        content = worldviews
-          ?.slice()
-          .sort((a, b) => b.id - a.id)
-          .map((item) => (
-            <LorebookCard
-              key={item.id}
-              item={item}
-              title={item.title}
-              description={item.description}
-              tags={[item.category]}
-              {...commonProps}
-            />
-          ));
-        break;
-      case 'plots':
-        content = plots
-          ?.slice()
-          .sort((a, b) => b.id - a.id)
-          .map((item) => (
-            <LorebookCard
-              key={item.id}
-              item={item}
-              title={item.title}
-              description={item.description}
-              tags={[item.importance].filter(Boolean) as string[]}
-              {...commonProps}
-            />
-          ));
-        break;
-    }
+    const items = displayItems.slice().sort((a, b) => b.id - a.id) as any[];
 
-    if (!content || (Array.isArray(content) && content.length === 0)) {
+    if (!items || items.length === 0) {
       return (
         <div className="text-center text-muted-foreground py-8">
           데이터가 없습니다.
         </div>
       );
     }
+
+    switch (activeCategory) {
+      case 'characters':
+        content = items.map((item) => (
+          <LorebookCard
+            key={item.id}
+            item={item}
+            title={item.name}
+            description={item.description}
+            tags={[item.role, item.age].filter(Boolean) as string[]}
+            {...commonProps}
+          />
+        ));
+        break;
+      case 'places':
+        content = items.map((item) => (
+          <LorebookCard
+            key={item.id}
+            item={item}
+            title={item.name}
+            description={item.description}
+            tags={[item.location].filter(Boolean) as string[]}
+            {...commonProps}
+          />
+        ));
+        break;
+      case 'items':
+        content = items.map((item) => (
+          <LorebookCard
+            key={item.id}
+            item={item}
+            title={item.name}
+            description={item.description}
+            tags={[item.type].filter(Boolean) as string[]}
+            {...commonProps}
+          />
+        ));
+        break;
+      case 'groups':
+        content = items.map((item) => (
+          <LorebookCard
+            key={item.id}
+            item={item}
+            title={item.name}
+            description={item.description}
+            {...commonProps}
+          />
+        ));
+        break;
+      case 'worldviews':
+        content = items.map((item) => (
+          <LorebookCard
+            key={item.id}
+            item={item}
+            title={item.title} // Worldview uses title
+            description={item.description}
+            tags={[item.category]}
+            {...commonProps}
+          />
+        ));
+        break;
+      case 'plots':
+        content = items.map((item) => (
+          <LorebookCard
+            key={item.id}
+            item={item}
+            title={item.title} // Plot uses title
+            description={item.description}
+            tags={[item.importance].filter(Boolean) as string[]}
+            {...commonProps}
+          />
+        ));
+        break;
+    }
+
     return content;
   };
 
@@ -641,7 +653,7 @@ export function AuthorLorebookPanel({
                 (
                 {work?.status === 'COMPLETED'
                   ? '완결'
-                  : `현재 ${episodes?.length || 0}화`}
+                  : `현재 ${manuscriptCount}화`}
                 )
               </span>
             </h2>
@@ -693,99 +705,51 @@ export function AuthorLorebookPanel({
           <DialogHeader>
             <DialogTitle>유사도 검색</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSearch} className="space-y-4 py-4">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="col-span-1 space-y-2">
-                <Label htmlFor="search-category">카테고리</Label>
-                <Select name="category" defaultValue="characters">
-                  <SelectTrigger id="search-category">
-                    <SelectValue placeholder="카테고리" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-3 space-y-2">
-                <Label htmlFor="search-query">검색 내용</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="search-query"
-                    name="query"
-                    placeholder="검색할 내용을 입력하세요..."
-                    required
-                  />
-                  <Button type="submit" disabled={searchMutation.isPending}>
-                    {searchMutation.isPending ? '검색 중...' : '검색'}
-                  </Button>
-                </div>
-              </div>
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="flex gap-2">
+              <Select name="category" defaultValue={activeCategory}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                name="query"
+                placeholder="검색어를 입력하세요..."
+                required
+              />
+              <Button type="submit">검색</Button>
             </div>
           </form>
-
-          {searchResults.length > 0 && (
-            <div className="space-y-3 mt-4 border-t pt-4">
-              <h4 className="text-sm font-semibold text-muted-foreground">
-                검색 결과 ({searchResults.length})
-              </h4>
-              <div className="space-y-2">
-                {searchResults.map((item) => (
-                  <Card key={item.id} className="bg-muted/50">
-                    <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        {item.name || item.title}
-                        {item.similarity && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] px-1 h-5 font-normal"
-                          >
-                            {Math.round(item.similarity * 100)}%
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => handleEditClick(item)}
-                        >
-                          <Edit className="w-3 h-3 text-muted-foreground" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => handleDeleteClick(item.id)}
-                        >
-                          <Trash2 className="w-3 h-3 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-3">
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {item.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="space-y-4 mt-4">
+            {searchResults.map((result) => (
+              <Card key={result.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">{result.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    {result.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Create/Edit Dialog */}
+      {/* Edit/Create Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {categories.find((c) => c.id === activeCategory)?.label}{' '}
-              {editingItem?.id ? '수정' : '생성'}
+              {editingItem?.id ? '설정 수정' : '새 설정 추가'}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave}>
@@ -813,7 +777,7 @@ function LorebookCard({
   item,
   title,
   description,
-  tags,
+  tags = [],
   onEdit,
   onDelete,
 }: {
@@ -825,40 +789,36 @@ function LorebookCard({
   onDelete: (id: number) => void;
 }) {
   return (
-    <Card>
-      <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={() => onEdit(item)}
-          >
-            <Edit className="w-3 h-3 text-muted-foreground" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={() => onDelete(item.id)}
-          >
-            <Trash2 className="w-3 h-3 text-muted-foreground" />
-          </Button>
+    <Card className="relative group">
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <h5 className="font-semibold text-sm line-clamp-1">{title}</h5>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => onEdit(item)}
+            >
+              <Edit className="w-3 h-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-destructive"
+              onClick={() => onDelete(item.id)}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="p-3">
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+        <p className="text-xs text-muted-foreground line-clamp-2">
           {description}
         </p>
-        {tags && tags.length > 0 && (
+        {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {tags.map((tag, i) => (
-              <Badge
-                key={i}
-                variant="secondary"
-                className="text-[10px] px-1 py-0 h-5"
-              >
+              <Badge key={i} variant="secondary" className="text-[10px] px-1">
                 {tag}
               </Badge>
             ))}

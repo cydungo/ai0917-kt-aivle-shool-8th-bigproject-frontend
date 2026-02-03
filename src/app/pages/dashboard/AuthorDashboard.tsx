@@ -27,7 +27,13 @@ import {
 import { maskName } from '../../utils/format';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import React, { useState, useCallback, useMemo } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useEffect,
+} from 'react';
 import { ThemeToggle } from '../../components/ui/theme-toggle';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
@@ -57,6 +63,23 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
   const [showNotificationDropdown, setShowNotificationDropdown] =
     useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Password Change State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -70,8 +93,13 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
   const userName =
     userData && 'name' in userData ? (userData.name as string) : '김민지';
   const userInitial = userName.charAt(0);
+  // Use integrationId if available (for API calls requiring it), fallback to userId
   const integrationId =
-    userData && 'userId' in userData ? String(userData.userId) : '';
+    userData && 'integrationId' in userData && userData.integrationId
+      ? userData.integrationId
+      : userData && 'userId' in userData
+        ? String(userData.userId)
+        : '';
 
   const handleMenuClick = useCallback((menu: string) => {
     setActiveMenu(menu);
@@ -174,7 +202,7 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
             <span className="text-sm font-medium">작품</span>
           </button>
 
-          {/* IP 제안서 */}
+          {/* IP 확장장 */}
           <button
             onClick={() => handleMenuClick('ip-expansion')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
@@ -189,7 +217,7 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
             }
           >
             <Database className="w-5 h-5" />
-            <span className="text-sm font-medium">IP 제안서</span>
+            <span className="text-sm font-medium">IP 확장</span>
           </button>
 
           <button
@@ -211,7 +239,10 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
         </nav>
 
         {/* Profile Section */}
-        <div className="border-t border-sidebar-border">
+        <div
+          className="border-t border-sidebar-border"
+          ref={profileDropdownRef}
+        >
           {/* Desktop: Dropdown style */}
           <div className="hidden md:block relative">
             <button
