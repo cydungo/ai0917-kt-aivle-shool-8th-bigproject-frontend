@@ -1,0 +1,156 @@
+import {
+  FileText,
+  Maximize2,
+  Film,
+  Video,
+  Gamepad,
+  Sparkles,
+  Image as ImageIcon,
+} from 'lucide-react';
+import { Button } from './ui/button';
+import { cn } from './ui/utils';
+
+export const PdfPreview = ({
+  className,
+  isFullScreen = false,
+  onFullScreen,
+}: {
+  className?: string;
+  isFullScreen?: boolean;
+  onFullScreen?: () => void;
+}) => {
+  return (
+    <div
+      className={cn(
+        'bg-slate-50 rounded-2xl overflow-hidden relative border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center group',
+        isFullScreen ? 'w-full h-full p-10' : 'p-6 h-full min-h-[300px]',
+        className,
+      )}
+    >
+      <div className="absolute inset-0 bg-slate-100/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="w-20 h-20 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+          <FileText className="w-10 h-10" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900 mb-2">
+          IP 확장 기획 제안서.pdf
+        </h3>
+        <p className="text-sm text-slate-500 mb-8 max-w-[240px]">
+          AI가 생성한 기획 제안서의 전체 내용을 PDF 형식으로 미리볼 수 있습니다.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" className="gap-2 bg-white hover:bg-slate-50">
+            <FileText className="w-4 h-4" />
+            PDF 다운로드
+          </Button>
+          {!isFullScreen && onFullScreen && (
+            <Button variant="ghost" className="gap-2" onClick={onFullScreen}>
+              <Maximize2 className="w-4 h-4" />
+              전체화면
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const VisualPreview = ({
+  className,
+  isFullScreen = false,
+  project,
+  onFullScreen,
+}: {
+  className?: string;
+  isFullScreen?: boolean;
+  project: any;
+  onFullScreen?: () => void;
+}) => {
+  const format = project?.format || 'webtoon';
+
+  return (
+    <div
+      className={cn(
+        'bg-slate-50 rounded-2xl overflow-hidden relative group border border-slate-200 shadow-sm',
+        isFullScreen ? 'w-full h-full' : 'aspect-video',
+        className,
+      )}
+    >
+      {/* Abstract Gradient Background based on Format */}
+      <div
+        className={cn(
+          'absolute inset-0 transition-transform duration-700 group-hover:scale-105 bg-gradient-to-br',
+          format === 'webtoon' && 'from-green-50 to-emerald-100',
+          format === 'drama' && 'from-purple-50 to-indigo-100',
+          format === 'movie' && 'from-red-50 to-orange-100',
+          format === 'game' && 'from-blue-50 to-sky-100',
+          !['webtoon', 'drama', 'movie', 'game'].includes(format) &&
+            'from-slate-50 to-gray-100',
+        )}
+      />
+
+      {/* Subtle Pattern Overlay */}
+      <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
+
+      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+        <div
+          className={cn(
+            'w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-sm border transition-transform duration-300 group-hover:scale-110',
+            'bg-white border-white/50 text-slate-700',
+          )}
+        >
+          {format === 'webtoon' && <ImageIcon className="w-10 h-10" />}
+          {format === 'drama' && <Video className="w-10 h-10" />}
+          {format === 'movie' && <Film className="w-10 h-10" />}
+          {format === 'game' && <Gamepad className="w-10 h-10" />}
+          {!['webtoon', 'drama', 'movie', 'game'].includes(format) && (
+            <Sparkles className="w-10 h-10" />
+          )}
+        </div>
+
+        <p className="text-xl font-bold text-slate-900 tracking-tight mb-2">
+          {format === 'webtoon' && '웹툰 스타일 컷 미리보기'}
+          {format === 'drama' && '드라마 시네마틱 룩 미리보기'}
+          {format === 'movie' && '영화 포스터 컨셉 미리보기'}
+          {format === 'game' && '게임 인게임 화면 미리보기'}
+          {!['webtoon', 'drama', 'movie', 'game'].includes(format) &&
+            `${format} 비주얼 컨셉`}
+        </p>
+        <p className="text-sm text-slate-500 font-medium">
+          {format === 'webtoon' && 'AI가 생성한 주요 장면 스케치'}
+          {format === 'drama' && '주요 로케이션 및 무드 보드'}
+          {format === 'movie' && '키 비주얼 및 타이틀 로고'}
+          {format === 'game' && 'UI/UX 및 캐릭터 모델링 컨셉'}
+          {!['webtoon', 'drama', 'movie', 'game'].includes(format) &&
+            'AI 기반 비주얼 컨셉 제안'}
+        </p>
+      </div>
+
+      {/* Overlay Info */}
+      {!isFullScreen && onFullScreen && (
+        <div className="absolute bottom-0 left-0 right-0 bg-white/60 backdrop-blur-md border-t border-slate-200/50 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-between">
+          <div>
+            <h4 className="font-bold text-sm mb-0.5 text-slate-900">
+              Visual Concept Generated by AI
+            </h4>
+            <p className="text-xs text-slate-500">
+              {project?.mediaDetails?.style
+                ? `${project.mediaDetails.style} Style`
+                : 'Style Analysis Pending'}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="hover:bg-slate-200/50 h-8 text-slate-700"
+            onClick={onFullScreen}
+          >
+            <Maximize2 className="w-4 h-4 mr-2" />
+            크게 보기
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
