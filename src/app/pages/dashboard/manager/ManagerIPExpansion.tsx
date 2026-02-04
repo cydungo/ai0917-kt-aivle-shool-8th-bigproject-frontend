@@ -46,6 +46,9 @@ import {
   DollarSign,
   BarChart,
   ChevronDown,
+  Megaphone,
+  GitBranch,
+  User,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
@@ -947,21 +950,350 @@ function ProjectDetailModal({
                 </h3>
 
                 {/* Summary Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div className="text-xs text-slate-500 mb-1">
-                      Source Work
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {[
+                    {
+                      label: 'Source Work',
+                      value: project.workTitle,
+                      icon: BookOpen,
+                      color: 'text-slate-600',
+                      bg: 'bg-slate-50',
+                    },
+                    {
+                      label: 'Author',
+                      value: project.authorName,
+                      icon: Users,
+                      color: 'text-slate-600',
+                      bg: 'bg-slate-50',
+                    },
+                    {
+                      label: 'Format',
+                      value: project.format,
+                      icon: Film,
+                      color: 'text-slate-600',
+                      bg: 'bg-slate-50',
+                    },
+                    {
+                      label: '장르 설정',
+                      value: project.strategy?.genres
+                        ? project.strategy.genres.join(', ')
+                        : project.strategy?.genre || '미지정',
+                      icon: Sparkles,
+                      color: 'text-amber-600',
+                      bg: 'bg-amber-50',
+                    },
+                    {
+                      label: '타겟 연령/성별',
+                      value: `${
+                        project.business?.targetAge?.join(', ') || '전연령'
+                      } / ${
+                        project.business?.targetGender === 'male'
+                          ? '남성'
+                          : project.business?.targetGender === 'female'
+                            ? '여성'
+                            : '통합'
+                      }`,
+                      icon: Users,
+                      color: 'text-blue-600',
+                      bg: 'bg-blue-50',
+                    },
+                    {
+                      label: '예산 규모',
+                      value: project.business?.budgetRange || '미정',
+                      icon: DollarSign,
+                      color: 'text-green-600',
+                      bg: 'bg-green-50',
+                    },
+                    // Format Specific Details
+                    ...(project.format === 'webtoon'
+                      ? [
+                          {
+                            label: '작화 스타일',
+                            value:
+                              [
+                                {
+                                  id: 'realistic',
+                                  label: '실사체',
+                                },
+                                {
+                                  id: 'casual',
+                                  label: '캐주얼/SD',
+                                },
+                                {
+                                  id: 'martial_arts',
+                                  label: '무협/극화체',
+                                },
+                                {
+                                  id: 'us_comics',
+                                  label: '미국 코믹스',
+                                },
+                              ].find(
+                                (i) => i.id === project.mediaDetails?.style,
+                              )?.label || '미지정',
+                            icon: ImageIcon,
+                            color: 'text-pink-600',
+                            bg: 'bg-pink-50',
+                          },
+                          {
+                            label: '연출 호흡',
+                            value:
+                              [
+                                {
+                                  id: 'fast',
+                                  label: '빠른 전개',
+                                },
+                                {
+                                  id: 'emotional',
+                                  label: '감정선 중심',
+                                },
+                                {
+                                  id: 'suspense',
+                                  label: '긴장감 조성',
+                                },
+                              ].find(
+                                (i) => i.id === project.mediaDetails?.pacing,
+                              )?.label || '미지정',
+                            icon: Clock,
+                            color: 'text-indigo-600',
+                            bg: 'bg-indigo-50',
+                          },
+                          {
+                            label: '엔딩 포인트',
+                            value:
+                              [
+                                {
+                                  id: 'cliffhanger',
+                                  label: '절단신공',
+                                },
+                                {
+                                  id: 'resolution',
+                                  label: '에피소드 완결',
+                                },
+                                {
+                                  id: 'preview',
+                                  label: '다음 화 예고',
+                                },
+                              ].find(
+                                (i) =>
+                                  i.id === project.mediaDetails?.endingPoint,
+                              )?.label || '미지정',
+                            icon: Target,
+                            color: 'text-rose-600',
+                            bg: 'bg-rose-50',
+                          },
+                        ]
+                      : []),
+                    ...(project.format === 'drama'
+                      ? [
+                          {
+                            label: '편성 전략',
+                            value:
+                              project.mediaDetails?.seasonType === 'limited'
+                                ? '미니시리즈 (16부작)'
+                                : project.mediaDetails?.seasonType ===
+                                    'seasonal'
+                                  ? '시즌제 드라마'
+                                  : '일일/주말 드라마',
+                            icon: Calendar,
+                            color: 'text-pink-600',
+                            bg: 'bg-pink-50',
+                          },
+                          {
+                            label: '회차당 분량',
+                            value: `${project.mediaDetails?.episodeDuration || 60}분`,
+                            icon: Clock,
+                            color: 'text-indigo-600',
+                            bg: 'bg-indigo-50',
+                          },
+                        ]
+                      : []),
+                    ...(project.format === 'game'
+                      ? [
+                          {
+                            label: '게임 장르',
+                            value:
+                              [
+                                { id: 'rpg', label: 'RPG' },
+                                {
+                                  id: 'simulation',
+                                  label: '시뮬레이션',
+                                },
+                                { id: 'action', label: '액션/어드벤처' },
+                                {
+                                  id: 'puzzle',
+                                  label: '퍼즐/캐주얼',
+                                },
+                                { id: 'strategy', label: '전략/TCG' },
+                                { id: 'sports', label: '스포츠/레이싱' },
+                                { id: 'fps', label: '슈팅 (FPS/TPS)' },
+                                {
+                                  id: 'combat',
+                                  label: '전투/경쟁',
+                                },
+                                {
+                                  id: 'collection',
+                                  label: '수집형',
+                                },
+                                { id: 'story', label: '비주얼 노벨' },
+                              ].find(
+                                (i) => i.id === project.mediaDetails?.gameGenre,
+                              )?.label || '미지정',
+                            icon: Gamepad2,
+                            color: 'text-pink-600',
+                            bg: 'bg-pink-50',
+                          },
+                          {
+                            label: '플랫폼',
+                            value:
+                              [
+                                { id: 'mobile', label: '모바일' },
+                                { id: 'pc', label: 'PC' },
+                                { id: 'console', label: '콘솔' },
+                                {
+                                  id: 'multi',
+                                  label: '멀티플랫폼',
+                                },
+                              ].find(
+                                (i) => i.id === project.mediaDetails?.platform,
+                              )?.label || '미지정',
+                            icon: Monitor,
+                            color: 'text-indigo-600',
+                            bg: 'bg-indigo-50',
+                          },
+                        ]
+                      : []),
+                    ...(project.format === 'spinoff'
+                      ? [
+                          {
+                            label: '스핀오프 유형',
+                            value:
+                              [
+                                { id: 'prequel', label: '프리퀄' },
+                                { id: 'sequel', label: '시퀄' },
+                                { id: 'side', label: '외전' },
+                                { id: 'if', label: 'IF 스토리' },
+                              ].find(
+                                (i) =>
+                                  i.id === project.mediaDetails?.spinoffType,
+                              )?.label || '미지정',
+                            icon: GitBranch,
+                            color: 'text-pink-600',
+                            bg: 'bg-pink-50',
+                          },
+                          {
+                            label: '주인공 캐릭터',
+                            value:
+                              project.mediaDetails?.targetCharacter || '미지정',
+                            icon: User,
+                            color: 'text-indigo-600',
+                            bg: 'bg-indigo-50',
+                          },
+                        ]
+                      : []),
+                    ...(project.format === 'commercial'
+                      ? [
+                          {
+                            label: '비주얼 포맷',
+                            value:
+                              [
+                                { id: '2d', label: '2D 애니메이션' },
+                                { id: '3d', label: '3D 그래픽' },
+                                { id: 'live', label: '실사 촬영' },
+                                {
+                                  id: 'motion',
+                                  label: '모션 그래픽',
+                                },
+                              ].find(
+                                (i) =>
+                                  i.id === project.mediaDetails?.visualFormat,
+                              )?.label || '미지정',
+                            icon: ImageIcon,
+                            color: 'text-pink-600',
+                            bg: 'bg-pink-50',
+                          },
+                        ]
+                      : []),
+                    {
+                      label: '제작 톤앤매너',
+                      value: project.mediaDetails?.tone || '미지정',
+                      icon: Palette,
+                      color: 'text-purple-600',
+                      bg: 'bg-purple-50',
+                    },
+                    {
+                      label: '핵심 재미요소',
+                      value: project.mediaDetails?.coreLoop || '미지정',
+                      icon: Zap,
+                      color: 'text-yellow-600',
+                      bg: 'bg-yellow-50',
+                    },
+                    {
+                      label: '비즈니스 모델',
+                      value: project.mediaDetails?.bmStrategy || '미지정',
+                      icon: BarChart,
+                      color: 'text-cyan-600',
+                      bg: 'bg-cyan-50',
+                    },
+                    {
+                      label: '세계관 설정',
+                      value: project.mediaDetails?.worldSetting || '미지정',
+                      icon: Globe,
+                      color: 'text-emerald-600',
+                      bg: 'bg-emerald-50',
+                    },
+                    {
+                      label: '캐릭터 각색',
+                      value:
+                        project.mediaDetails?.characterAdaptation || '미지정',
+                      icon: Users,
+                      color: 'text-pink-600',
+                      bg: 'bg-pink-50',
+                    },
+                    {
+                      label: '플랫폼 전략',
+                      value: project.mediaDetails?.platformStrategy || '미지정',
+                      icon: Smartphone,
+                      color: 'text-blue-600',
+                      bg: 'bg-blue-50',
+                    },
+                    {
+                      label: '마케팅 포인트',
+                      value: project.mediaDetails?.marketingPoint || '미지정',
+                      icon: Megaphone,
+                      color: 'text-orange-600',
+                      bg: 'bg-orange-50',
+                    },
+                    {
+                      label: '추가 프롬프트',
+                      value: project.mediaPrompt || '없음',
+                      icon: MessageSquare,
+                      color: 'text-slate-600',
+                      bg: 'bg-slate-50',
+                    },
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-start gap-3"
+                    >
+                      <div
+                        className={cn(
+                          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                          item.bg,
+                          item.color,
+                        )}
+                      >
+                        <item.icon className="w-4 h-4" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-slate-500 mb-1">
+                          {item.label}
+                        </p>
+                        <p className="text-sm font-bold text-slate-800 truncate">
+                          {item.value}
+                        </p>
+                      </div>
                     </div>
-                    <div className="font-bold">{project.workTitle}</div>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div className="text-xs text-slate-500 mb-1">Author</div>
-                    <div className="font-bold">{project.authorName}</div>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div className="text-xs text-slate-500 mb-1">Format</div>
-                    <div className="font-bold capitalize">{project.format}</div>
-                  </div>
+                  ))}
                 </div>
 
                 {/* Lorebooks with Expand Icon */}
@@ -1178,7 +1510,7 @@ function CreateIPExpansionDialog({
 
   // Expansion Type & Genre State
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
-  const [genreStrategy, setGenreStrategy] = useState<string>('original');
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [targetGenre, setTargetGenre] = useState('');
   const [universeSetting, setUniverseSetting] = useState<'shared' | 'parallel'>(
     'shared',
@@ -1200,6 +1532,8 @@ function CreateIPExpansionDialog({
   const [authorSearch, setAuthorSearch] = useState('');
   const [workSearch, setWorkSearch] = useState('');
   const [lorebookSearch, setLorebookSearch] = useState('');
+
+  const [showAllGenres, setShowAllGenres] = useState(false);
 
   // Data Queries
   const { data: authors } = useQuery({
@@ -1329,7 +1663,10 @@ function CreateIPExpansionDialog({
 
         setSelectedFormat(initialData.format);
         if (initialData.strategy) {
-          setGenreStrategy(initialData.strategy.genre);
+          setSelectedGenres(
+            initialData.strategy.genres ||
+              (initialData.strategy.genre ? [initialData.strategy.genre] : []),
+          );
           setTargetGenre(initialData.strategy.targetGenre || '');
           setUniverseSetting(initialData.strategy.universe);
         }
@@ -1353,7 +1690,7 @@ function CreateIPExpansionDialog({
         setStep5Confirmed(false);
         setStep6Confirmed(false);
         setSelectedFormat(null);
-        setGenreStrategy('original');
+        setSelectedGenres([]);
         setTargetGenre('');
         setUniverseSetting('shared');
         setBusiness({
@@ -1394,7 +1731,7 @@ function CreateIPExpansionDialog({
         return;
       }
       if (!step3Confirmed) {
-        toast.error('확장 포맷 및 전략 내용을 확인해주세요.');
+        toast.error('확장 포맷 내용을 확인해주세요.');
         return;
       }
     }
@@ -1417,6 +1754,11 @@ function CreateIPExpansionDialog({
 
     // Step 5 Validation
     if (currentStep === 5) {
+      if (selectedGenres.length === 0) {
+        toast.error('최소 하나 이상의 장르를 선택해주세요.');
+        return;
+      }
+
       if (
         selectedFormat === 'webtoon' &&
         (!mediaDetails.style || !mediaDetails.pacing)
@@ -1491,7 +1833,7 @@ function CreateIPExpansionDialog({
       lorebooks: selectedLorebooks,
       format: selectedFormat,
       strategy: {
-        genre: genreStrategy,
+        genres: selectedGenres,
         targetGenre,
         universe: universeSetting,
       },
@@ -2091,168 +2433,54 @@ function CreateIPExpansionDialog({
               </div>
             )}
 
-            {/* Step 3: Expansion Type & Genre */}
+            {/* Step 3: Expansion Format */}
             {currentStep === 3 && (
-              <div className="w-full max-w-[1100px] mx-auto py-8 h-full">
+              <div className="w-full max-w-[1000px] mx-auto py-8 h-full">
                 <div className="text-center mb-10">
                   <h2 className="text-2xl font-bold mb-2 tracking-tight text-slate-900">
-                    확장 포맷 및 전략
+                    확장 포맷 선택
                   </h2>
                   <p className="text-slate-500">
-                    IP 확장의 방향성과 핵심 전략을 수립합니다.
+                    IP 확장의 방향성을 결정하는 포맷을 선택합니다.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                  {/* Format Selection (Left Column) */}
-                  <div className="lg:col-span-7 space-y-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
-                        <Film className="w-5 h-5 text-slate-500" /> 확장 포맷
-                        <span className="text-red-500 ml-1">*</span>
-                      </h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {formats.map((format) => (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    {formats.map((format) => (
+                      <div
+                        key={format.id}
+                        onClick={() => setSelectedFormat(format.id)}
+                        className={cn(
+                          'cursor-pointer rounded-2xl border-2 p-6 transition-all hover:-translate-y-1 duration-300 relative overflow-hidden group',
+                          selectedFormat === format.id
+                            ? 'border-slate-900 bg-slate-50 shadow-lg scale-[1.02]'
+                            : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-md',
+                        )}
+                      >
                         <div
-                          key={format.id}
-                          onClick={() => setSelectedFormat(format.id)}
                           className={cn(
-                            'cursor-pointer rounded-xl border-2 p-5 transition-all hover:-translate-y-1 duration-300 relative overflow-hidden group',
+                            'mb-4 w-12 h-12 rounded-xl flex items-center justify-center transition-colors',
                             selectedFormat === format.id
-                              ? 'border-slate-900 bg-slate-50 shadow-md'
-                              : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-sm',
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200',
                           )}
                         >
-                          <div
-                            className={cn(
-                              'mb-4 w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
-                              selectedFormat === format.id
-                                ? 'bg-slate-900 text-white'
-                                : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200',
-                            )}
-                          >
-                            <format.icon className="w-5 h-5" />
-                          </div>
-                          <div className="font-bold text-slate-900 mb-1">
-                            {format.title}
-                          </div>
-                          <div className="text-xs text-slate-500 leading-tight opacity-80">
-                            {format.desc}
-                          </div>
-                          {selectedFormat === format.id && (
-                            <div className="absolute top-3 right-3 text-slate-900 bg-white rounded-full p-0.5 shadow-sm">
-                              <Check className="w-3 h-3" />
-                            </div>
-                          )}
+                          <format.icon className="w-6 h-6" />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Strategy Selection (Right Column) */}
-                  <div className="lg:col-span-5 space-y-8">
-                    {/* Genre Setting */}
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
-                        <Wand2 className="w-5 h-5 text-slate-500" /> 장르 설정
-                        <span className="text-red-500 ml-1">*</span>
-                      </h3>
-                      <Card className="border-slate-200 shadow-sm overflow-hidden bg-white">
-                        <div className="p-4">
-                          <div className="grid grid-cols-4 gap-2">
-                            {[
-                              { id: 'romance', label: '로맨스' },
-                              { id: 'fantasy', label: '판타지' },
-                              { id: 'martial_arts', label: '무협' },
-                              { id: 'modern', label: '현대물' },
-                              { id: 'thriller', label: '스릴러/공포' },
-                              { id: 'sf', label: 'SF' },
-                              { id: 'sports', label: '스포츠' },
-                              { id: 'comedy', label: '일상/개그' },
-                              { id: 'mystery', label: '추리' },
-                              { id: 'history', label: '역사' },
-                              { id: 'drama', label: '드라마' },
-                            ].map((genre) => (
-                              <div
-                                key={genre.id}
-                                onClick={() => setGenreStrategy(genre.id)}
-                                className={cn(
-                                  'flex items-center justify-center p-3 rounded-lg border text-sm font-medium cursor-pointer transition-all text-center',
-                                  genreStrategy === genre.id
-                                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-slate-900 ring-offset-1'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300',
-                                )}
-                              >
-                                {genre.label}
-                              </div>
-                            ))}
-                          </div>
+                        <div className="font-bold text-slate-900 text-lg mb-2">
+                          {format.title}
                         </div>
-                      </Card>
-                    </div>
-
-                    {/* Universe Setting */}
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
-                        <Target className="w-5 h-5 text-slate-500" /> 세계관
-                        설정<span className="text-red-500 ml-1">*</span>
-                      </h3>
-                      <div className="space-y-3">
-                        {[
-                          {
-                            id: 'shared',
-                            label: '공유 세계관 (Shared)',
-                            desc: '원작 설정을 공유하며 확장',
-                          },
-                          {
-                            id: 'parallel',
-                            label: '평행 세계 (Parallel)',
-                            desc: '독자적인 노선으로 재해석',
-                          },
-                        ].map((option) => (
-                          <div
-                            key={option.id}
-                            onClick={() => setUniverseSetting(option.id as any)}
-                            className={cn(
-                              'flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer',
-                              universeSetting === option.id
-                                ? 'bg-slate-900 border-slate-900 text-white shadow-md'
-                                : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50',
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                'w-4 h-4 rounded-full border flex items-center justify-center shrink-0',
-                                universeSetting === option.id
-                                  ? 'border-white'
-                                  : 'border-slate-300',
-                              )}
-                            >
-                              {universeSetting === option.id && (
-                                <div className="w-2 h-2 rounded-full bg-white" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-bold text-sm">
-                                {option.label}
-                              </div>
-                              <div
-                                className={cn(
-                                  'text-xs mt-0.5',
-                                  universeSetting === option.id
-                                    ? 'text-slate-300'
-                                    : 'text-slate-500',
-                                )}
-                              >
-                                {option.desc}
-                              </div>
-                            </div>
+                        <div className="text-sm text-slate-500 leading-relaxed opacity-90">
+                          {format.desc}
+                        </div>
+                        {selectedFormat === format.id && (
+                          <div className="absolute top-4 right-4 text-slate-900 bg-white rounded-full p-1 shadow-sm">
+                            <Check className="w-4 h-4" />
                           </div>
-                        ))}
+                        )}
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
@@ -2268,7 +2496,7 @@ function CreateIPExpansionDialog({
                       className="data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900"
                     />
                     <span className="text-sm font-medium select-none text-slate-700">
-                      위 전략으로 확장을 진행합니다.
+                      위 포맷으로 확장을 진행합니다.
                     </span>
                   </label>
                 </div>
@@ -2468,25 +2696,172 @@ function CreateIPExpansionDialog({
               </div>
             )}
 
-            {/* Step 5: Media Details */}
+            {/* Step 5: Media Details & Genre */}
             {currentStep === 5 && (
               <div className="w-full max-w-[1000px] mx-auto py-6 h-full flex flex-col">
                 <div className="text-center mb-8 shrink-0">
                   <h2 className="text-2xl font-bold mb-2 tracking-tight text-slate-900">
-                    매체 상세 설정
+                    매체 및 장르 상세 설정
                   </h2>
                   <p className="text-slate-500">
-                    선택한{' '}
                     <span className="font-bold text-slate-900">
                       {formats.find((f) => f.id === selectedFormat)?.title}
                     </span>{' '}
-                    포맷에 최적화된 제작 가이드라인을 설정합니다.
+                    포맷에 최적화된 장르와 가이드라인을 설정합니다.
                   </p>
                 </div>
 
                 <Card className="flex-1 flex flex-col border-slate-200 shadow-sm bg-white">
                   <ScrollArea className="flex-1">
                     <div className="p-8 space-y-10">
+                      {/* Genre & Universe Section */}
+                      <div className="space-y-6">
+                        {/* Conditional Genre Selection */}
+                        {!['commercial'].includes(selectedFormat || '') && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <Label className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <Wand2 className="w-5 h-5 text-slate-500" />
+                                장르 선택 (다중 선택 가능)
+                                <span className="text-red-500 ml-1">*</span>
+                              </Label>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-slate-500 font-medium">
+                                  {selectedGenres.length}개 선택됨
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setShowAllGenres(!showAllGenres)
+                                  }
+                                  className="h-7 text-xs text-slate-500 hover:text-slate-900"
+                                >
+                                  {showAllGenres ? (
+                                    <>
+                                      접기{' '}
+                                      <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      더 보기{' '}
+                                      <ChevronDown className="w-3 h-3 ml-1" />
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                              {[
+                                { id: 'romance', label: '로맨스' },
+                                { id: 'fantasy', label: '판타지' },
+                                { id: 'martial_arts', label: '무협' },
+                                { id: 'modern', label: '현대물' },
+                                { id: 'thriller', label: '스릴러/공포' },
+                                { id: 'sf', label: 'SF' },
+                                { id: 'sports', label: '스포츠' },
+                                { id: 'comedy', label: '일상/개그' },
+                                { id: 'mystery', label: '추리' },
+                                { id: 'history', label: '역사' },
+                                { id: 'drama', label: '드라마' },
+                                { id: 'action', label: '액션' },
+                              ]
+                                .slice(0, showAllGenres ? undefined : 6)
+                                .map((genre) => {
+                                  const isSelected = selectedGenres.includes(
+                                    genre.id,
+                                  );
+                                  return (
+                                    <div
+                                      key={genre.id}
+                                      onClick={() => {
+                                        setSelectedGenres((prev) =>
+                                          prev.includes(genre.id)
+                                            ? prev.filter((g) => g !== genre.id)
+                                            : [...prev, genre.id],
+                                        );
+                                      }}
+                                      className={cn(
+                                        'flex items-center justify-center p-3 rounded-xl border text-sm font-medium cursor-pointer transition-all text-center select-none',
+                                        isSelected
+                                          ? 'bg-slate-900 text-white border-slate-900 shadow-md transform scale-[1.02]'
+                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300',
+                                      )}
+                                    >
+                                      {genre.label}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </>
+                        )}
+
+                        {/* Universe Setting */}
+                        <div className="pt-6 border-t border-slate-100">
+                          <Label className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4">
+                            <Globe className="w-4 h-4 text-slate-500" />
+                            세계관 설정
+                          </Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[
+                              {
+                                id: 'shared',
+                                label: '공유 세계관 (Shared)',
+                                desc: '원작 설정을 공유하며 확장',
+                              },
+                              {
+                                id: 'parallel',
+                                label: '평행 세계 (Parallel)',
+                                desc: '독자적인 노선으로 재해석',
+                              },
+                            ].map((option) => (
+                              <div
+                                key={option.id}
+                                onClick={() =>
+                                  setUniverseSetting(option.id as any)
+                                }
+                                className={cn(
+                                  'flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer',
+                                  universeSetting === option.id
+                                    ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50',
+                                )}
+                              >
+                                <div
+                                  className={cn(
+                                    'w-4 h-4 rounded-full border flex items-center justify-center shrink-0',
+                                    universeSetting === option.id
+                                      ? 'border-white'
+                                      : 'border-slate-300',
+                                  )}
+                                >
+                                  {universeSetting === option.id && (
+                                    <div className="w-2 h-2 rounded-full bg-white" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-sm">
+                                    {option.label}
+                                  </div>
+                                  <div
+                                    className={cn(
+                                      'text-xs mt-0.5',
+                                      universeSetting === option.id
+                                        ? 'text-slate-300'
+                                        : 'text-slate-500',
+                                    )}
+                                  >
+                                    {option.desc}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-slate-100" />
+
                       {/* Dynamic Content based on selectedFormat */}
                       {selectedFormat === 'webtoon' && (
                         <div className="space-y-8">
@@ -3354,9 +3729,27 @@ function CreateIPExpansionDialog({
                             {
                               label: '장르 설정',
                               value:
-                                genreStrategy === 'original'
-                                  ? '원작 장르 유지 (Original)'
-                                  : '장르 변주 (Variation)',
+                                selectedGenres.length > 0
+                                  ? selectedGenres
+                                      .map((g) => {
+                                        const found = [
+                                          { id: 'romance', label: '로맨스' },
+                                          { id: 'fantasy', label: '판타지' },
+                                          { id: 'martial_arts', label: '무협' },
+                                          { id: 'modern', label: '현대물' },
+                                          { id: 'thriller', label: '스릴러' },
+                                          { id: 'sf', label: 'SF' },
+                                          { id: 'sports', label: '스포츠' },
+                                          { id: 'comedy', label: '코믹' },
+                                          { id: 'mystery', label: '추리' },
+                                          { id: 'history', label: '역사' },
+                                          { id: 'drama', label: '드라마' },
+                                          { id: 'action', label: '액션' },
+                                        ].find((i) => i.id === g);
+                                        return found ? found.label : g;
+                                      })
+                                      .join(', ')
+                                  : '미지정',
                               icon: Sparkles,
                               color: 'text-amber-600',
                               bg: 'bg-amber-50',
@@ -3389,6 +3782,219 @@ function CreateIPExpansionDialog({
                               color: 'text-green-600',
                               bg: 'bg-green-50',
                             },
+                            // Format Specific Details
+                            ...(selectedFormat === 'webtoon'
+                              ? [
+                                  {
+                                    label: '작화 스타일',
+                                    value:
+                                      [
+                                        {
+                                          id: 'realistic',
+                                          label: '실사체',
+                                        },
+                                        {
+                                          id: 'casual',
+                                          label: '캐주얼/SD',
+                                        },
+                                        {
+                                          id: 'martial_arts',
+                                          label: '무협/극화체',
+                                        },
+                                        {
+                                          id: 'us_comics',
+                                          label: '미국 코믹스',
+                                        },
+                                      ].find((i) => i.id === mediaDetails.style)
+                                        ?.label || '미지정',
+                                    icon: ImageIcon,
+                                    color: 'text-pink-600',
+                                    bg: 'bg-pink-50',
+                                  },
+                                  {
+                                    label: '연출 호흡',
+                                    value:
+                                      [
+                                        {
+                                          id: 'fast',
+                                          label: '빠른 전개',
+                                        },
+                                        {
+                                          id: 'emotional',
+                                          label: '감정선 중심',
+                                        },
+                                        {
+                                          id: 'suspense',
+                                          label: '긴장감 조성',
+                                        },
+                                      ].find(
+                                        (i) => i.id === mediaDetails.pacing,
+                                      )?.label || '미지정',
+                                    icon: Clock,
+                                    color: 'text-indigo-600',
+                                    bg: 'bg-indigo-50',
+                                  },
+                                  {
+                                    label: '엔딩 포인트',
+                                    value:
+                                      [
+                                        {
+                                          id: 'cliffhanger',
+                                          label: '절단신공',
+                                        },
+                                        {
+                                          id: 'resolution',
+                                          label: '에피소드 완결',
+                                        },
+                                        {
+                                          id: 'preview',
+                                          label: '다음 화 예고',
+                                        },
+                                      ].find(
+                                        (i) =>
+                                          i.id === mediaDetails.endingPoint,
+                                      )?.label || '미지정',
+                                    icon: Target,
+                                    color: 'text-rose-600',
+                                    bg: 'bg-rose-50',
+                                  },
+                                ]
+                              : []),
+                            ...(selectedFormat === 'drama'
+                              ? [
+                                  {
+                                    label: '편성 전략',
+                                    value:
+                                      mediaDetails.seasonType === 'limited'
+                                        ? '미니시리즈 (16부작)'
+                                        : mediaDetails.seasonType === 'seasonal'
+                                          ? '시즌제 드라마'
+                                          : '일일/주말 드라마',
+                                    icon: Calendar,
+                                    color: 'text-pink-600',
+                                    bg: 'bg-pink-50',
+                                  },
+                                  {
+                                    label: '회차당 분량',
+                                    value: `${mediaDetails.episodeDuration || 60}분`,
+                                    icon: Clock,
+                                    color: 'text-indigo-600',
+                                    bg: 'bg-indigo-50',
+                                  },
+                                ]
+                              : []),
+                            ...(selectedFormat === 'game'
+                              ? [
+                                  {
+                                    label: '게임 장르',
+                                    value:
+                                      [
+                                        { id: 'rpg', label: 'RPG' },
+                                        {
+                                          id: 'simulation',
+                                          label: '시뮬레이션',
+                                        },
+                                        {
+                                          id: 'action',
+                                          label: '액션/어드벤처',
+                                        },
+                                        {
+                                          id: 'puzzle',
+                                          label: '퍼즐/캐주얼',
+                                        },
+                                        { id: 'strategy', label: '전략/TCG' },
+                                        {
+                                          id: 'sports',
+                                          label: '스포츠/레이싱',
+                                        },
+                                        { id: 'fps', label: '슈팅 (FPS/TPS)' },
+                                        {
+                                          id: 'combat',
+                                          label: '전투/경쟁',
+                                        },
+                                        {
+                                          id: 'collection',
+                                          label: '수집형',
+                                        },
+                                        { id: 'story', label: '비주얼 노벨' },
+                                      ].find(
+                                        (i) => i.id === mediaDetails.gameGenre,
+                                      )?.label || '미지정',
+                                    icon: Gamepad2,
+                                    color: 'text-pink-600',
+                                    bg: 'bg-pink-50',
+                                  },
+                                  {
+                                    label: '플랫폼',
+                                    value:
+                                      [
+                                        { id: 'mobile', label: '모바일' },
+                                        { id: 'pc', label: 'PC' },
+                                        { id: 'console', label: '콘솔' },
+                                        {
+                                          id: 'multi',
+                                          label: '멀티플랫폼',
+                                        },
+                                      ].find(
+                                        (i) => i.id === mediaDetails.platform,
+                                      )?.label || '미지정',
+                                    icon: Monitor,
+                                    color: 'text-indigo-600',
+                                    bg: 'bg-indigo-50',
+                                  },
+                                ]
+                              : []),
+                            ...(selectedFormat === 'spinoff'
+                              ? [
+                                  {
+                                    label: '스핀오프 유형',
+                                    value:
+                                      [
+                                        { id: 'prequel', label: '프리퀄' },
+                                        { id: 'sequel', label: '시퀄' },
+                                        { id: 'side', label: '외전' },
+                                        { id: 'if', label: 'IF 스토리' },
+                                      ].find(
+                                        (i) =>
+                                          i.id === mediaDetails.spinoffType,
+                                      )?.label || '미지정',
+                                    icon: GitBranch,
+                                    color: 'text-pink-600',
+                                    bg: 'bg-pink-50',
+                                  },
+                                  {
+                                    label: '주인공 캐릭터',
+                                    value:
+                                      mediaDetails.targetCharacter || '미지정',
+                                    icon: User,
+                                    color: 'text-indigo-600',
+                                    bg: 'bg-indigo-50',
+                                  },
+                                ]
+                              : []),
+                            ...(selectedFormat === 'commercial'
+                              ? [
+                                  {
+                                    label: '비주얼 포맷',
+                                    value:
+                                      [
+                                        { id: '2d', label: '2D 애니메이션' },
+                                        { id: '3d', label: '3D 그래픽' },
+                                        { id: 'live', label: '실사 촬영' },
+                                        {
+                                          id: 'motion',
+                                          label: '모션 그래픽',
+                                        },
+                                      ].find(
+                                        (i) =>
+                                          i.id === mediaDetails.visualFormat,
+                                      )?.label || '미지정',
+                                    icon: ImageIcon,
+                                    color: 'text-pink-600',
+                                    bg: 'bg-pink-50',
+                                  },
+                                ]
+                              : []),
                             {
                               label: '제작 톤앤매너',
                               value: mediaDetails.tone || '미지정',
@@ -3409,6 +4015,42 @@ function CreateIPExpansionDialog({
                               icon: BarChart,
                               color: 'text-cyan-600',
                               bg: 'bg-cyan-50',
+                            },
+                            {
+                              label: '세계관 설정',
+                              value: mediaDetails.worldSetting || '미지정',
+                              icon: Globe,
+                              color: 'text-emerald-600',
+                              bg: 'bg-emerald-50',
+                            },
+                            {
+                              label: '캐릭터 각색',
+                              value:
+                                mediaDetails.characterAdaptation || '미지정',
+                              icon: Users,
+                              color: 'text-pink-600',
+                              bg: 'bg-pink-50',
+                            },
+                            {
+                              label: '플랫폼 전략',
+                              value: mediaDetails.platformStrategy || '미지정',
+                              icon: Smartphone,
+                              color: 'text-blue-600',
+                              bg: 'bg-blue-50',
+                            },
+                            {
+                              label: '마케팅 포인트',
+                              value: mediaDetails.marketingPoint || '미지정',
+                              icon: Megaphone,
+                              color: 'text-orange-600',
+                              bg: 'bg-orange-50',
+                            },
+                            {
+                              label: '추가 프롬프트',
+                              value: mediaPrompt || '없음',
+                              icon: MessageSquare,
+                              color: 'text-slate-600',
+                              bg: 'bg-slate-50',
                             },
                           ].map((item, i) => (
                             <div
@@ -3444,65 +4086,6 @@ function CreateIPExpansionDialog({
                               </div>
                             </div>
                           ))}
-                        </div>
-
-                        {/* Additional Details Accordion */}
-                        <div className="mt-4">
-                          <details className="group bg-white rounded-xl border border-slate-200 shadow-sm">
-                            <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
-                              <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                <List className="w-4 h-4 text-slate-400" />
-                                상세 설정 더보기
-                              </span>
-                              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
-                            </summary>
-                            <div className="px-4 pb-4 pt-0 border-t border-slate-100 mt-2">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
-                                <div className="space-y-1">
-                                  <span className="text-xs text-slate-500">
-                                    세계관 설정
-                                  </span>
-                                  <p className="text-sm text-slate-800">
-                                    {mediaDetails.worldSetting || '-'}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="text-xs text-slate-500">
-                                    캐릭터 각색
-                                  </span>
-                                  <p className="text-sm text-slate-800">
-                                    {mediaDetails.characterAdaptation || '-'}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="text-xs text-slate-500">
-                                    플랫폼 전략
-                                  </span>
-                                  <p className="text-sm text-slate-800">
-                                    {mediaDetails.platformStrategy || '-'}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <span className="text-xs text-slate-500">
-                                    마케팅 포인트
-                                  </span>
-                                  <p className="text-sm text-slate-800">
-                                    {mediaDetails.marketingPoint || '-'}
-                                  </p>
-                                </div>
-                              </div>
-                              {mediaPrompt && (
-                                <div className="mt-4 pt-4 border-t border-slate-100">
-                                  <span className="text-xs text-slate-500 block mb-1">
-                                    추가 프롬프트
-                                  </span>
-                                  <p className="text-sm text-slate-800 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    {mediaPrompt}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </details>
                         </div>
                       </section>
                       {/* Duplicate Configuration Summary Removed */}
