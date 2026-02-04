@@ -71,3 +71,24 @@ export interface ManagerAuthorDetailDto {
     createdAt: string;
   }[];
 }
+
+export interface ManagerDashboardSummaryDto {
+  pendingProposals: number;
+  managedAuthors: number;
+  todayDau: number;
+  yesterdayDau: number;
+  dauChangeRate: number;
+}
+
+export interface ManagerDashboardNoticeDto {
+  id: number;
+  title: string;
+  content: string;
+  writer: string;
+  createdAt: string;
+}
+
+export interface ManagerDashboardPageResponseDto {
+  summary: ManagerDashboardSummaryDto;
+  notices: ManagerDashboardNoticeDto[];
+}

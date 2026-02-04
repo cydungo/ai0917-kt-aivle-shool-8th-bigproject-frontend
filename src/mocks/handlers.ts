@@ -121,7 +121,7 @@ const MOCK_PROPOSALS = generateList(10, (i) => ({
 // Stateful Mock Data
 // ----------------------------------------------------------------------
 
-let MOCK_WORKS = generateList(5, (i) => ({
+const MOCK_WORKS = generateList(5, (i) => ({
   id: i,
   title: TITLES[i % TITLES.length],
   description: '이 작품은...',
@@ -388,21 +388,31 @@ export const handlers = [
   // 4.1 Dashboard
   http.get(`${BACKEND_URL}/api/v1/manager/dashboard/summary`, () =>
     HttpResponse.json({
-      pendingProposals: 15,
-      activeContests: 3,
-      managedAuthors: 45,
-      monthlyPerformance: 98.5,
+      pendingProposals: 0,
+      managedAuthors: 42,
+      todayDau: 2543,
+      yesterdayDau: 2120,
+      dauChangeRate: Math.round(((2543 - 2120) / 2120) * 1000) / 10,
     }),
   ),
-  http.get(`${BACKEND_URL}/api/v1/manager/dashboard/notice`, () =>
-    HttpResponse.json(
-      generateList(5, (i) => ({
-        id: i,
-        title: `[운영] ${i}월 운영 가이드라인`,
-        createdAt: '2026-01-25',
-      })),
-    ),
-  ),
+  http.get(`${BACKEND_URL}/api/v1/manager/dashboard`, () => {
+    const summary = {
+      pendingProposals: 0,
+      managedAuthors: 42,
+      todayDau: 2543,
+      yesterdayDau: 2120,
+      dauChangeRate: Math.round(((2543 - 2120) / 2120) * 1000) / 10,
+    };
+    const notices = generateList(5, (i) => ({
+      id: i + 1,
+      title: `운영 공지 ${i + 1}`,
+      content:
+        '운영자 대시보드 개선 및 시스템 점검 안내. 세부 내용은 공지 상세에서 확인하세요.',
+      writer: '관리자',
+      createdAt: new Date(Date.now() - i * 86400000).toISOString(),
+    }));
+    return HttpResponse.json({ summary, notices });
+  }),
 
   // 4.2 IP Expansion
   http.get(`${BACKEND_URL}/api/v1/manager/ipext`, () =>
