@@ -306,14 +306,15 @@ export function AuthorManuscripts() {
                 onChange={(e) => setSubtitle(e.target.value)}
               />
             </div>
-            <div>
+            {/* episode input removed as requested */}
+            {/* <div>
               <div className="text-xs text-muted-foreground">episode(회차)</div>
               <Input
                 value={episode}
                 onChange={(e) => setEpisode(e.target.value)}
                 placeholder="숫자"
               />
-            </div>
+            </div> */}
             <div>
               <div className="text-xs text-muted-foreground">원문 파일</div>
               <Input
@@ -425,7 +426,7 @@ export function AuthorManuscripts() {
                   onChange={(e) => setEditSubtitle(e.target.value)}
                 />
               </div>
-              <div>
+              {/* <div>
                 <div className="text-xs text-muted-foreground">
                   episode(회차)
                 </div>
@@ -433,7 +434,7 @@ export function AuthorManuscripts() {
                   value={editEpisode}
                   onChange={(e) => setEditEpisode(e.target.value)}
                 />
-              </div>
+              </div> */}
               <div>
                 <div className="text-xs text-muted-foreground">원문 파일</div>
                 <Input

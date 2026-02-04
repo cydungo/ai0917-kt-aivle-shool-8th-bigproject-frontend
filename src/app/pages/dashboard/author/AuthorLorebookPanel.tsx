@@ -128,14 +128,14 @@ export function AuthorLorebookPanel({
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: any) => {
-      const { name, title, description, ...rest } = data;
+      const { name, title, description, subtitle, ...rest } = data;
       const lorebookTitle = name || title;
       const settingsObj = { description, ...rest };
       const settings = JSON.stringify(settingsObj);
 
       return authorService.saveLorebookManual(userId, work!.title, workId, {
         keyword: lorebookTitle,
-        subtitle: '',
+        subtitle: subtitle || '',
         setting: settings,
         category: activeCategory,
         episode: [],
@@ -153,7 +153,7 @@ export function AuthorLorebookPanel({
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => {
-      const { name, title, description, ...rest } = data;
+      const { name, title, description, subtitle, ...rest } = data;
       const lorebookTitle = name || title;
       const settingsObj = { description, ...rest };
       const settings = JSON.stringify(settingsObj);
@@ -165,6 +165,7 @@ export function AuthorLorebookPanel({
         id,
         {
           keyword: lorebookTitle,
+          subtitle: subtitle || '',
           setting: settings,
         },
       );
@@ -336,6 +337,11 @@ export function AuthorLorebookPanel({
         .split(',')
         .map((s) => s.trim()) as any;
     }
+    if (activeCategory === 'plots' && data.participants) {
+      data.participants = (data.participants as string)
+        .split(',')
+        .map((s) => s.trim()) as any;
+    }
 
     if (editingItem.id) {
       updateMutation.mutate({ id: editingItem.id, data });
@@ -344,15 +350,14 @@ export function AuthorLorebookPanel({
     }
   };
 
-  const categories: { id: Category; label: string; icon: React.ElementType }[] =
-    [
-      { id: 'characters', label: '인물', icon: Users },
-      { id: 'places', label: '장소', icon: MapPin },
-      { id: 'items', label: '물건', icon: Package },
-      { id: 'groups', label: '집단', icon: Users2 },
-      { id: 'worldviews', label: '세계', icon: Globe },
-      { id: 'plots', label: '사건', icon: BookOpen },
-    ];
+  const categories: { id: Category; label: string }[] = [
+    { id: 'characters', label: '인물' },
+    { id: 'places', label: '장소' },
+    { id: 'items', label: '물건' },
+    { id: 'groups', label: '단체' },
+    { id: 'worldviews', label: '세계' },
+    { id: 'plots', label: '사건' },
+  ];
 
   const renderContent = () => {
     let content = null;
@@ -453,14 +458,49 @@ export function AuthorLorebookPanel({
       case 'characters':
         return (
           <>
-            <div className="space-y-2">
-              <Label htmlFor="name">이름</Label>
-              <Input
-                id="name"
-                name="name"
-                defaultValue={editingItem?.name}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">이름</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={editingItem?.name}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subtitle">부제/별칭</Label>
+                <Input
+                  id="subtitle"
+                  name="subtitle"
+                  defaultValue={editingItem?.subtitle}
+                  placeholder="별명이나 이명 등"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="age">나이</Label>
+                <Input id="age" name="age" defaultValue={editingItem?.age} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="gender">성별</Label>
+                <Input
+                  id="gender"
+                  name="gender"
+                  defaultValue={editingItem?.gender}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="occupation">직업</Label>
+                <Input
+                  id="occupation"
+                  name="occupation"
+                  defaultValue={editingItem?.occupation}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">역할</Label>
@@ -472,16 +512,31 @@ export function AuthorLorebookPanel({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="age">나이</Label>
-              <Input id="age" name="age" defaultValue={editingItem?.age} />
+              <Label htmlFor="appearance">외모 묘사</Label>
+              <Textarea
+                id="appearance"
+                name="appearance"
+                defaultValue={editingItem?.appearance}
+                className="min-h-[60px]"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">설명</Label>
+              <Label htmlFor="personality">성격</Label>
+              <Textarea
+                id="personality"
+                name="personality"
+                defaultValue={editingItem?.personality}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">상세 설명</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={editingItem?.description}
                 required
+                className="min-h-[100px]"
               />
             </div>
             <div className="space-y-2">
@@ -497,30 +552,84 @@ export function AuthorLorebookPanel({
       case 'places':
         return (
           <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">이름</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={editingItem?.name}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subtitle">부제/별칭</Label>
+                <Input
+                  id="subtitle"
+                  name="subtitle"
+                  defaultValue={editingItem?.subtitle}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="location">위치</Label>
+                <Input
+                  id="location"
+                  name="location"
+                  defaultValue={editingItem?.location}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scale">규모</Label>
+                <Input
+                  id="scale"
+                  name="scale"
+                  defaultValue={editingItem?.scale}
+                />
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="name">이름</Label>
+              <Label htmlFor="atmosphere">분위기</Label>
               <Input
-                id="name"
-                name="name"
-                defaultValue={editingItem?.name}
-                required
+                id="atmosphere"
+                name="atmosphere"
+                defaultValue={editingItem?.atmosphere}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location">위치</Label>
+              <Label htmlFor="function">기능/용도</Label>
               <Input
-                id="location"
-                name="location"
-                defaultValue={editingItem?.location}
+                id="function"
+                name="function"
+                defaultValue={editingItem?.function}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">설명</Label>
+              <Label htmlFor="owner">소유자/관리자</Label>
+              <Input
+                id="owner"
+                name="owner"
+                defaultValue={editingItem?.owner}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="history">역사/배경</Label>
+              <Textarea
+                id="history"
+                name="history"
+                defaultValue={editingItem?.history}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">상세 설명</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={editingItem?.description}
                 required
+                className="min-h-[100px]"
               />
             </div>
           </>
@@ -528,26 +637,86 @@ export function AuthorLorebookPanel({
       case 'items':
         return (
           <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">이름</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={editingItem?.name}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subtitle">부제/별칭</Label>
+                <Input
+                  id="subtitle"
+                  name="subtitle"
+                  defaultValue={editingItem?.subtitle}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">종류</Label>
+                <Input id="type" name="type" defaultValue={editingItem?.type} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rank">등급/가치</Label>
+                <Input id="rank" name="rank" defaultValue={editingItem?.rank} />
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="name">이름</Label>
+              <Label htmlFor="effect">효과/능력</Label>
               <Input
-                id="name"
-                name="name"
-                defaultValue={editingItem?.name}
-                required
+                id="effect"
+                name="effect"
+                defaultValue={editingItem?.effect}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="origin">기원/출처</Label>
+                <Input
+                  id="origin"
+                  name="origin"
+                  defaultValue={editingItem?.origin}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="material">재질</Label>
+                <Input
+                  id="material"
+                  name="material"
+                  defaultValue={editingItem?.material}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="owner">소유자</Label>
+              <Input
+                id="owner"
+                name="owner"
+                defaultValue={editingItem?.owner}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">종류</Label>
-              <Input id="type" name="type" defaultValue={editingItem?.type} />
+              <Label htmlFor="history">내력/전설</Label>
+              <Textarea
+                id="history"
+                name="history"
+                defaultValue={editingItem?.history}
+                className="min-h-[60px]"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">설명</Label>
+              <Label htmlFor="description">상세 설명</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={editingItem?.description}
                 required
+                className="min-h-[100px]"
               />
             </div>
           </>
@@ -565,16 +734,73 @@ export function AuthorLorebookPanel({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">설명</Label>
+              <Label htmlFor="subtitle">부제/별칭</Label>
+              <Input
+                id="subtitle"
+                name="subtitle"
+                defaultValue={editingItem?.subtitle}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">유형</Label>
+                <Input id="type" name="type" defaultValue={editingItem?.type} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scale">규모</Label>
+                <Input
+                  id="scale"
+                  name="scale"
+                  defaultValue={editingItem?.scale}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="symbol">상징/문장</Label>
+              <Input
+                id="symbol"
+                name="symbol"
+                defaultValue={editingItem?.symbol}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="purpose">목적/이념</Label>
+              <Input
+                id="purpose"
+                name="purpose"
+                defaultValue={editingItem?.purpose}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="activity">주요 활동</Label>
+              <Textarea
+                id="activity"
+                name="activity"
+                defaultValue={editingItem?.activity}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="history">역사</Label>
+              <Textarea
+                id="history"
+                name="history"
+                defaultValue={editingItem?.history}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">상세 설명</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={editingItem?.description}
                 required
+                className="min-h-[100px]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="members">구성원 (쉼표로 구분)</Label>
+              <Label htmlFor="members">주요 구성원 (쉼표로 구분)</Label>
               <Input
                 id="members"
                 name="members"
@@ -587,12 +813,20 @@ export function AuthorLorebookPanel({
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="title">제목</Label>
+              <Label htmlFor="title">세계관 명칭</Label>
               <Input
                 id="title"
                 name="title"
                 defaultValue={editingItem?.title}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subtitle">부제/별칭</Label>
+              <Input
+                id="subtitle"
+                name="subtitle"
+                defaultValue={editingItem?.subtitle}
               />
             </div>
             <div className="space-y-2">
@@ -605,12 +839,68 @@ export function AuthorLorebookPanel({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">설명</Label>
+              <Label htmlFor="geography">지리/환경</Label>
+              <Textarea
+                id="geography"
+                name="geography"
+                defaultValue={editingItem?.geography}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="culture">문화/사회</Label>
+              <Textarea
+                id="culture"
+                name="culture"
+                defaultValue={editingItem?.culture}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="history">역사</Label>
+              <Textarea
+                id="history"
+                name="history"
+                defaultValue={editingItem?.history}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="law">법률/규칙</Label>
+                <Input id="law" name="law" defaultValue={editingItem?.law} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="magic">마법/기술</Label>
+                <Input
+                  id="magic"
+                  name="magic"
+                  defaultValue={editingItem?.magic}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="technology">기술 수준</Label>
+                <Input
+                  id="technology"
+                  name="technology"
+                  defaultValue={editingItem?.technology}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="race">종족 구성</Label>
+                <Input id="race" name="race" defaultValue={editingItem?.race} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">상세 설명</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={editingItem?.description}
                 required
+                className="min-h-[100px]"
               />
             </div>
             <div className="space-y-2">
@@ -627,7 +917,7 @@ export function AuthorLorebookPanel({
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="title">제목</Label>
+              <Label htmlFor="title">사건명</Label>
               <Input
                 id="title"
                 name="title"
@@ -636,37 +926,84 @@ export function AuthorLorebookPanel({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="order">순서</Label>
+              <Label htmlFor="subtitle">부제/별칭</Label>
               <Input
-                id="order"
-                name="order"
-                type="number"
-                defaultValue={editingItem?.order}
-                required
+                id="subtitle"
+                name="subtitle"
+                defaultValue={editingItem?.subtitle}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">발생 시점</Label>
+                <Input
+                  id="date"
+                  name="date"
+                  defaultValue={editingItem?.date}
+                  placeholder="예: 2025년 1월 1일, 제1장 3화 등"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">발생 장소</Label>
+                <Input
+                  id="location"
+                  name="location"
+                  defaultValue={editingItem?.location}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cause">원인/배경</Label>
+              <Textarea
+                id="cause"
+                name="cause"
+                defaultValue={editingItem?.cause}
+                className="min-h-[60px]"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="importance">중요도</Label>
-              <Select
-                name="importance"
-                defaultValue={editingItem?.importance || 'Sub'}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="중요도 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Main">Main</SelectItem>
-                  <SelectItem value="Sub">Sub</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="flow">전개 과정</Label>
+              <Textarea
+                id="flow"
+                name="flow"
+                defaultValue={editingItem?.flow}
+                className="min-h-[60px]"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">설명</Label>
+              <Label htmlFor="result">결과</Label>
+              <Textarea
+                id="result"
+                name="result"
+                defaultValue={editingItem?.result}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="influence">영향/여파</Label>
+              <Textarea
+                id="influence"
+                name="influence"
+                defaultValue={editingItem?.influence}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="participants">관련 인물 (쉼표로 구분)</Label>
+              <Input
+                id="participants"
+                name="participants"
+                defaultValue={editingItem?.participants?.join(', ')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">상세 설명</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={editingItem?.description}
                 required
+                className="min-h-[100px]"
               />
             </div>
           </>
@@ -734,15 +1071,14 @@ export function AuthorLorebookPanel({
                 key={cat.id}
                 variant={activeCategory === cat.id ? 'default' : 'outline'}
                 className={cn(
-                  'h-16 flex flex-col items-center justify-center gap-1',
+                  'h-12 flex items-center justify-center gap-1',
                   activeCategory === cat.id
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-background hover:bg-accent',
                 )}
                 onClick={() => setActiveCategory(cat.id)}
               >
-                <cat.icon className="w-4 h-4" />
-                <span className="text-xs">{cat.label}</span>
+                <span className="text-xs font-medium">{cat.label}</span>
               </Button>
             ))}
           </div>

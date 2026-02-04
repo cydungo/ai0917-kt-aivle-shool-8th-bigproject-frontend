@@ -8,7 +8,13 @@ export interface AuthorDashboardSummaryDto {
 }
 
 // Work Status Enum
-export type WorkStatus = 'ONGOING' | 'COMPLETED' | 'HIATUS' | 'DROPPED' | 'NEW' | 'DELETED';
+export type WorkStatus =
+  | 'ONGOING'
+  | 'COMPLETED'
+  | 'HIATUS'
+  | 'DROPPED'
+  | 'NEW'
+  | 'DELETED';
 
 // Work DTOs
 export interface WorkResponseDto {
@@ -23,7 +29,7 @@ export interface WorkResponseDto {
   coverImageUrl?: string;
   createdAt: string;
   // Legacy fields support if needed, otherwise remove
-  writer?: string; 
+  writer?: string;
   description?: string;
 }
 
@@ -119,6 +125,13 @@ export interface LorebookSaveRequestDto {
 export interface LorebookUpdateRequestDto {
   keyword: string;
   setting: string;
+  subtitle?: string;
+}
+
+export interface LorebookConflictSolveRequestDto {
+  universeId?: number;
+  setting: any;
+  episodes: number;
 }
 
 export interface AuthorManagerResponseDto {

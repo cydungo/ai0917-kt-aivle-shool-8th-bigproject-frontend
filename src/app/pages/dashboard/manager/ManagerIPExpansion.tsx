@@ -42,6 +42,10 @@ import {
   Package,
   Users2,
   Globe,
+  Settings,
+  DollarSign,
+  BarChart,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
@@ -265,12 +269,16 @@ export function ManagerIPExpansion() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [editingProject, setEditingProject] = useState<any>(null);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 8;
   const queryClient = useQueryClient();
 
-  const { data: proposals, isLoading } = useQuery({
-    queryKey: ['manager', 'ip-expansion', 'proposals'],
-    queryFn: managerService.getIPProposals,
+  const { data: proposalsData, isLoading } = useQuery({
+    queryKey: ['manager', 'ip-expansion', 'proposals', page],
+    queryFn: () => managerService.getIPProposals(page, PAGE_SIZE),
   });
+
+  const proposals = proposalsData?.content || [];
 
   const createMutation = useMutation({
     mutationFn: managerService.createIPExpansionProject,
@@ -417,6 +425,37 @@ export function ManagerIPExpansion() {
           )}
         </div>
       </div>
+
+      {/* Pagination Controls */}
+      {proposalsData && proposalsData.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="text-slate-600"
+          >
+            이전
+          </Button>
+          <div className="text-sm font-medium text-slate-600 px-4">
+            <span className="text-slate-900">{page + 1}</span>
+            <span className="mx-1 text-slate-400">/</span>
+            {proposalsData.totalPages}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setPage((p) => Math.min(proposalsData.totalPages - 1, p + 1))
+            }
+            disabled={page >= proposalsData.totalPages - 1}
+            className="text-slate-600"
+          >
+            다음
+          </Button>
+        </div>
+      )}
 
       <CreateIPExpansionDialog
         isOpen={isCreateDialogOpen}
@@ -688,22 +727,11 @@ function ProjectDetailModal({
                       비주얼 & PDF 프리뷰
                     </h3>
                   </div>
-                  <Tabs defaultValue="visual" className="flex-1 flex flex-col">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
-                      <TabsTrigger value="visual">Visual Concept</TabsTrigger>
-                      <TabsTrigger value="pdf">PDF Report</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="visual" className="flex-1 mt-0">
-                      <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 min-h-[300px] h-full">
-                        <VisualPreview className="w-full h-full object-cover" />
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="pdf" className="flex-1 mt-0">
-                      <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 min-h-[300px] h-full">
-                        <PdfPreview className="w-full h-full" />
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 min-h-[300px] h-full">
+                      <PdfPreview className="w-full h-full" />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="w-full lg:w-[400px] flex flex-col space-y-4 shrink-0">
@@ -1432,25 +1460,25 @@ function CreateIPExpansionDialog({
               <div className="h-full p-6 max-w-[1800px] mx-auto flex flex-col">
                 {/* Step 1: Selection */}
                 <div className="flex-1 min-h-0 flex flex-col gap-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full min-h-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 h-full min-h-0">
                     {/* 1. Authors */}
-                    <Card className="flex flex-col h-[500px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
-                      <CardHeader className="py-4 px-4 border-b bg-white shrink-0">
-                        <h3 className="font-bold flex items-center gap-2 text-slate-800">
-                          <Users className="w-4 h-4 text-slate-500" /> 작가 선택
+                    <Card className="flex flex-col min-h-[600px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
+                      <CardHeader className="py-5 px-6 border-b bg-white shrink-0">
+                        <h3 className="font-bold flex items-center gap-2 text-slate-800 text-lg">
+                          <Users className="w-5 h-5 text-slate-500" /> 작가 선택
                         </h3>
-                        <div className="relative mt-2">
-                          <Search className="w-4 h-4 absolute left-2 top-2.5 text-slate-400" />
+                        <div className="relative mt-3">
+                          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                           <Input
                             placeholder="작가 검색..."
-                            className="pl-8 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
+                            className="pl-9 h-10 text-base bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
                             value={authorSearch}
                             onChange={(e) => setAuthorSearch(e.target.value)}
                           />
                         </div>
                       </CardHeader>
                       <ScrollArea className="flex-1 bg-white overflow-y-auto">
-                        <div className="p-2 space-y-1">
+                        <div className="p-4 space-y-2">
                           {filteredAuthors.map((author: any) => (
                             <div
                               key={author.id}
@@ -1459,17 +1487,17 @@ function CreateIPExpansionDialog({
                                 setSelectedWork(null);
                               }}
                               className={cn(
-                                'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm border border-transparent',
+                                'flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-colors text-base border border-transparent',
                                 selectedAuthor?.id === author.id
-                                  ? 'bg-slate-900 text-white shadow-sm'
-                                  : 'hover:bg-slate-50 text-slate-700 hover:border-slate-100',
+                                  ? 'bg-slate-900 text-white shadow-md transform scale-[1.02]'
+                                  : 'hover:bg-slate-50 text-slate-700 hover:border-slate-200',
                               )}
                             >
-                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600 shrink-0">
                                 {author.name[0]}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate">
+                                <div className="font-bold truncate">
                                   <HighlightText
                                     text={author.name}
                                     highlight={authorSearch}
@@ -1477,7 +1505,7 @@ function CreateIPExpansionDialog({
                                 </div>
                                 <div
                                   className={cn(
-                                    'text-xs truncate',
+                                    'text-sm truncate mt-0.5',
                                     selectedAuthor?.id === author.id
                                       ? 'text-slate-300'
                                       : 'text-slate-500',
@@ -1486,7 +1514,7 @@ function CreateIPExpansionDialog({
                                   작품 {author.workCount || 0}개
                                 </div>
                               </div>
-                              <ChevronRight className="w-4 h-4 opacity-50" />
+                              <ChevronRight className="w-5 h-5 opacity-50" />
                             </div>
                           ))}
                         </div>
@@ -1494,17 +1522,17 @@ function CreateIPExpansionDialog({
                     </Card>
 
                     {/* 2. Works */}
-                    <Card className="flex flex-col h-[500px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
-                      <CardHeader className="py-4 px-4 border-b bg-white shrink-0">
-                        <h3 className="font-bold flex items-center gap-2 text-slate-800">
-                          <BookOpen className="w-4 h-4 text-slate-500" /> 작품
+                    <Card className="flex flex-col min-h-[600px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
+                      <CardHeader className="py-5 px-6 border-b bg-white shrink-0">
+                        <h3 className="font-bold flex items-center gap-2 text-slate-800 text-lg">
+                          <BookOpen className="w-5 h-5 text-slate-500" /> 작품
                           선택
                         </h3>
-                        <div className="relative mt-2">
-                          <Search className="w-4 h-4 absolute left-2 top-2.5 text-slate-400" />
+                        <div className="relative mt-3">
+                          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                           <Input
                             placeholder="작품 검색..."
-                            className="pl-8 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
+                            className="pl-9 h-10 text-base bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
                             value={workSearch}
                             onChange={(e) => setWorkSearch(e.target.value)}
                             disabled={!selectedAuthor}
@@ -1513,40 +1541,42 @@ function CreateIPExpansionDialog({
                       </CardHeader>
                       <ScrollArea className="flex-1 bg-white overflow-y-auto">
                         {!selectedAuthor ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4 text-center min-h-[200px]">
-                            <Users className="w-8 h-8 mb-2 opacity-50" />
-                            <p className="text-sm">작가를 먼저 선택해주세요</p>
+                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                            <Users className="w-10 h-10 mb-3 opacity-30" />
+                            <p className="text-base font-medium">
+                              작가를 먼저 선택해주세요
+                            </p>
                           </div>
                         ) : filteredWorks.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4 text-center min-h-[200px]">
-                            <p className="text-sm">등록된 작품이 없습니다</p>
+                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                            <p className="text-base">등록된 작품이 없습니다</p>
                           </div>
                         ) : (
-                          <div className="p-2 space-y-1">
+                          <div className="p-4 space-y-2">
                             {filteredWorks.map((work: any) => (
                               <div
                                 key={work.id}
                                 onClick={() => setSelectedWork(work)}
                                 className={cn(
-                                  'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm border border-transparent',
+                                  'flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-colors text-base border border-transparent',
                                   selectedWork?.id === work.id
-                                    ? 'bg-slate-900 text-white shadow-sm'
-                                    : 'hover:bg-slate-50 text-slate-700 hover:border-slate-100',
+                                    ? 'bg-slate-900 text-white shadow-md transform scale-[1.02]'
+                                    : 'hover:bg-slate-50 text-slate-700 hover:border-slate-200',
                                 )}
                               >
                                 {work.coverImageUrl ? (
                                   <img
                                     src={work.coverImageUrl}
                                     alt={work.title}
-                                    className="w-10 h-14 object-cover rounded shadow-sm bg-slate-200"
+                                    className="w-12 h-16 object-cover rounded-lg shadow-sm bg-slate-200"
                                   />
                                 ) : (
-                                  <div className="w-10 h-14 rounded bg-slate-200 flex items-center justify-center text-xs text-slate-400">
+                                  <div className="w-12 h-16 rounded-lg bg-slate-200 flex items-center justify-center text-xs text-slate-400 font-medium">
                                     No Img
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium line-clamp-2">
+                                  <div className="font-bold line-clamp-2 leading-tight">
                                     <HighlightText
                                       text={work.title}
                                       highlight={workSearch}
@@ -1554,7 +1584,7 @@ function CreateIPExpansionDialog({
                                   </div>
                                   <div
                                     className={cn(
-                                      'text-xs',
+                                      'text-sm mt-1',
                                       selectedWork?.id === work.id
                                         ? 'text-slate-300'
                                         : 'text-slate-500',
@@ -1563,7 +1593,7 @@ function CreateIPExpansionDialog({
                                     {work.genre || '장르 미정'}
                                   </div>
                                 </div>
-                                <ChevronRight className="w-4 h-4 opacity-50" />
+                                <ChevronRight className="w-5 h-5 opacity-50" />
                               </div>
                             ))}
                           </div>
@@ -1572,12 +1602,11 @@ function CreateIPExpansionDialog({
                     </Card>
 
                     {/* 3. Lorebooks */}
-                    <Card className="flex flex-col h-[500px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
-                      <CardHeader className="py-4 px-4 border-b bg-white shrink-0 space-y-3">
+                    <Card className="flex flex-col min-h-[600px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
+                      <CardHeader className="py-5 px-6 border-b bg-white shrink-0 space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-bold flex items-center gap-2 text-slate-800">
-                            <Wand2 className="w-4 h-4 text-slate-500" /> 설정집
-                            선택
+                          <h3 className="font-bold flex items-center gap-2 text-slate-800 text-lg">
+                            설정집 선택
                           </h3>
                           {selectedWork && filteredLorebooks.length > 0 && (
                             <div className="flex items-center gap-2">
@@ -1597,7 +1626,7 @@ function CreateIPExpansionDialog({
                               />
                               <label
                                 htmlFor="select-all-lorebooks"
-                                className="text-xs text-slate-500 cursor-pointer select-none"
+                                className="text-sm text-slate-500 cursor-pointer select-none font-medium"
                               >
                                 전체 선택
                               </label>
@@ -1605,10 +1634,10 @@ function CreateIPExpansionDialog({
                           )}
                         </div>
                         <div className="relative">
-                          <Search className="w-4 h-4 absolute left-2 top-2.5 text-slate-400" />
+                          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                           <Input
                             placeholder="키워드 검색..."
-                            className="pl-8 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
+                            className="pl-9 h-10 text-base bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
                             value={lorebookSearch}
                             onChange={(e) => setLorebookSearch(e.target.value)}
                             disabled={!selectedWork}
@@ -1620,30 +1649,21 @@ function CreateIPExpansionDialog({
                             onValueChange={setLorebookCategoryTab}
                             className="w-full"
                           >
-                            <TabsList className="w-full grid grid-cols-7 h-auto p-1 bg-slate-100">
+                            <TabsList className="w-full grid grid-cols-7 h-auto p-1 bg-slate-100/80">
                               {[
-                                { id: 'all', label: '전체', icon: List },
-                                {
-                                  id: 'characters',
-                                  label: '인물',
-                                  icon: Users,
-                                },
-                                { id: 'places', label: '장소', icon: MapPin },
-                                { id: 'items', label: '물건', icon: Package },
-                                { id: 'groups', label: '집단', icon: Users2 },
-                                {
-                                  id: 'worldviews',
-                                  label: '세계',
-                                  icon: Globe,
-                                },
-                                { id: 'plots', label: '사건', icon: BookOpen },
+                                { id: 'all', label: '전체' },
+                                { id: 'characters', label: '인물' },
+                                { id: 'places', label: '장소' },
+                                { id: 'items', label: '물건' },
+                                { id: 'groups', label: '단체' },
+                                { id: 'worldviews', label: '세계' },
+                                { id: 'plots', label: '사건' },
                               ].map((tab) => (
                                 <TabsTrigger
                                   key={tab.id}
                                   value={tab.id}
-                                  className="text-[10px] px-0.5 py-1 h-6 data-[state=active]:bg-white flex items-center justify-center gap-1"
+                                  className="text-xs font-bold px-1 py-2 h-9 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm flex items-center justify-center transition-all text-slate-500"
                                 >
-                                  {tab.icon && <tab.icon className="w-3 h-3" />}
                                   {tab.label}
                                 </TabsTrigger>
                               ))}
@@ -1653,20 +1673,22 @@ function CreateIPExpansionDialog({
                       </CardHeader>
                       <ScrollArea className="flex-1 bg-white scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent overflow-y-auto">
                         {!selectedWork ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4 text-center min-h-[200px]">
-                            <BookOpen className="w-8 h-8 mb-2 opacity-50" />
-                            <p className="text-sm">작품을 먼저 선택해주세요</p>
+                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                            <BookOpen className="w-10 h-10 mb-3 opacity-30" />
+                            <p className="text-base font-medium">
+                              작품을 먼저 선택해주세요
+                            </p>
                           </div>
                         ) : filteredLorebooks.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4 text-center min-h-[200px]">
-                            <p className="text-sm">
+                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                            <p className="text-base">
                               {lorebookCategoryTab === 'all'
                                 ? '등록된 설정집이 없습니다'
                                 : '해당 카테고리의 설정집이 없습니다'}
                             </p>
                           </div>
                         ) : (
-                          <div className="p-2 space-y-2">
+                          <div className="p-4 space-y-3">
                             {filteredLorebooks.map((lorebook: any) => {
                               const isSelected = selectedLorebooks.some(
                                 (item) => item.id === lorebook.id,
@@ -1676,10 +1698,10 @@ function CreateIPExpansionDialog({
                                   key={lorebook.id}
                                   onClick={() => toggleLorebook(lorebook)}
                                   className={cn(
-                                    'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all border text-sm',
+                                    'flex items-start gap-4 p-4 rounded-xl cursor-pointer transition-all border text-base group',
                                     isSelected
-                                      ? 'bg-slate-50 border-slate-400 ring-1 ring-slate-400'
-                                      : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50',
+                                      ? 'bg-slate-50 border-slate-400 ring-1 ring-slate-400 shadow-sm'
+                                      : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm',
                                   )}
                                 >
                                   <Checkbox
@@ -1687,19 +1709,19 @@ function CreateIPExpansionDialog({
                                     className="mt-1 data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900"
                                   />
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium flex items-center gap-2">
+                                    <div className="font-bold flex items-center gap-2 text-slate-800">
                                       <HighlightText
                                         text={lorebook.keyword}
                                         highlight={lorebookSearch}
                                       />
                                       <Badge
                                         variant="secondary"
-                                        className="text-[10px] h-5 px-1 bg-slate-100 text-slate-600"
+                                        className="text-[10px] h-5 px-1.5 bg-slate-100 text-slate-600 border-slate-200"
                                       >
                                         {lorebook.category}
                                       </Badge>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                                    <p className="text-sm text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
                                       {typeof lorebook.setting === 'string'
                                         ? lorebook.setting
                                         : JSON.stringify(lorebook.setting)}
@@ -1714,32 +1736,34 @@ function CreateIPExpansionDialog({
                     </Card>
 
                     {/* 4. Selected List */}
-                    <Card className="flex flex-col overflow-hidden h-[500px] lg:h-full border-slate-200 shadow-sm bg-slate-50/50">
-                      <CardHeader className="py-4 px-4 border-b bg-slate-100/50 shrink-0">
-                        <h3 className="font-bold flex items-center gap-2 text-slate-700">
-                          <Check className="w-4 h-4" /> 선택된 설정집 (
-                          {selectedLorebooks.length})
+                    <Card className="flex flex-col overflow-hidden min-h-[600px] lg:h-full border-slate-200 shadow-sm bg-slate-50/50">
+                      <CardHeader className="py-5 px-6 border-b bg-slate-100/50 shrink-0">
+                        <h3 className="font-bold flex items-center gap-2 text-slate-800 text-lg">
+                          <Check className="w-5 h-5 text-slate-500" /> 선택된
+                          설정집 ({selectedLorebooks.length})
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-sm text-slate-500 mt-1">
                           다양한 작품의 설정집을 조합할 수 있습니다.
                         </p>
                       </CardHeader>
                       <ScrollArea className="flex-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent overflow-y-auto">
                         {selectedLorebooks.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4 text-center min-h-[200px]">
-                            <p className="text-sm">선택된 설정집이 없습니다.</p>
+                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                            <p className="text-base font-medium">
+                              선택된 설정집이 없습니다.
+                            </p>
                           </div>
                         ) : (
-                          <div className="p-2 space-y-2">
+                          <div className="p-4 space-y-3">
                             {selectedLorebooks.map((item, idx) => (
                               <div
                                 key={idx}
-                                className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm relative group hover:border-slate-300 transition-colors"
+                                className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative group hover:border-slate-300 transition-colors"
                               >
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="absolute top-1 right-1 h-6 w-6 text-slate-300 hover:text-red-500 hover:bg-transparent"
+                                  className="absolute top-2 right-2 h-7 w-7 text-slate-300 hover:text-red-500 hover:bg-red-50"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedLorebooks((prev) =>
@@ -1747,15 +1771,17 @@ function CreateIPExpansionDialog({
                                     );
                                   }}
                                 >
-                                  <X className="w-3 h-3" />
+                                  <X className="w-4 h-4" />
                                 </Button>
-                                <div className="font-bold text-sm mb-1 text-slate-800">
+                                <div className="font-bold text-base mb-1.5 text-slate-800 pr-8">
                                   {item.keyword}
                                 </div>
-                                <div className="text-xs text-slate-500 flex flex-col gap-0.5">
-                                  <span>작가: {item.authorName}</span>
-                                  <span>작품: {item.workTitle}</span>
-                                  <span className="inline-block bg-slate-100 rounded px-1.5 py-0.5 w-fit mt-1">
+                                <div className="text-sm text-slate-500 flex flex-col gap-1">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                    {item.authorName} / {item.workTitle}
+                                  </span>
+                                  <span className="inline-block bg-slate-100 border border-slate-200 rounded px-2 py-0.5 w-fit text-xs font-medium text-slate-600 mt-1">
                                     {item.category}
                                   </span>
                                 </div>
@@ -1939,6 +1965,7 @@ function CreateIPExpansionDialog({
                     <div className="space-y-4">
                       <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
                         <Wand2 className="w-5 h-5 text-slate-500" /> 장르 전략
+                        <span className="text-red-500 ml-1">*</span>
                       </h3>
                       <Card className="border-slate-200 shadow-sm overflow-hidden">
                         <div className="p-1 bg-slate-50/50">
@@ -1955,7 +1982,7 @@ function CreateIPExpansionDialog({
                               />
                               <Label
                                 htmlFor="g-original"
-                                className="flex flex-col items-center justify-center py-4 px-2 rounded-lg cursor-pointer transition-all border border-slate-200 bg-white hover:bg-white peer-data-[state=checked]:bg-slate-900 peer-data-[state=checked]:border-slate-900 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-offset-1 peer-data-[state=checked]:ring-slate-900 peer-data-[state=checked]:text-white text-slate-500 shadow-sm"
+                                className="flex flex-col items-center justify-center py-4 px-2 rounded-lg cursor-pointer transition-all border border-slate-200 bg-white peer-data-[state=checked]:bg-slate-900 peer-data-[state=checked]:border-slate-900 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-offset-1 peer-data-[state=checked]:ring-slate-900 peer-data-[state=checked]:text-white text-slate-500 shadow-sm"
                               >
                                 <span className="font-bold text-sm">
                                   원작 유지
@@ -2006,7 +2033,7 @@ function CreateIPExpansionDialog({
                     <div className="space-y-4">
                       <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
                         <Target className="w-5 h-5 text-slate-500" /> 세계관
-                        설정
+                        설정<span className="text-red-500 ml-1">*</span>
                       </h3>
                       <div className="space-y-3">
                         {[
@@ -2107,6 +2134,7 @@ function CreateIPExpansionDialog({
                       <div className="space-y-3">
                         <Label className="text-base font-bold text-slate-800">
                           타겟 연령대
+                          <span className="text-red-500 ml-1">*</span>
                         </Label>
                         <div className="flex flex-wrap gap-2">
                           {['10대', '20대', '30대', '40대 이상'].map((age) => (
@@ -2138,7 +2166,7 @@ function CreateIPExpansionDialog({
 
                       <div className="space-y-3">
                         <Label className="text-base font-bold text-slate-800">
-                          타겟 성별
+                          타겟 성별<span className="text-red-500 ml-1">*</span>
                         </Label>
                         <div className="grid grid-cols-3 gap-2">
                           {[
@@ -2173,7 +2201,7 @@ function CreateIPExpansionDialog({
                     {/* Budget */}
                     <div className="space-y-3">
                       <Label className="text-base font-bold text-slate-800">
-                        예산 규모
+                        예산 규모<span className="text-red-500 ml-1">*</span>
                       </Label>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {[
@@ -2244,6 +2272,7 @@ function CreateIPExpansionDialog({
                     <div className="space-y-3">
                       <Label className="text-base font-bold text-slate-800">
                         톤앤매너 키워드
+                        <span className="text-red-500 ml-1">*</span>
                       </Label>
                       <Input
                         placeholder="예: 어두운, 희망적인, 코믹한, 진지한..."
@@ -2308,6 +2337,7 @@ function CreateIPExpansionDialog({
                             <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                               <ImageIcon className="w-4 h-4 text-slate-500" />
                               그림체 스타일
+                              <span className="text-red-500 ml-1">*</span>
                             </Label>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                               {[
@@ -2377,6 +2407,7 @@ function CreateIPExpansionDialog({
                             <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                               <Clock className="w-4 h-4 text-slate-500" />
                               연출 호흡
+                              <span className="text-red-500 ml-1">*</span>
                             </Label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               {[
@@ -2432,6 +2463,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 회차별 엔딩 포인트
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Select
                                 value={mediaDetails.endingPoint}
@@ -2461,6 +2493,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 채색 톤
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Input
                                 placeholder="예: 파스텔톤, 누아르 흑백, 비비드..."
@@ -2484,6 +2517,7 @@ function CreateIPExpansionDialog({
                             <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                               <Clock className="w-4 h-4 text-slate-500" />
                               러닝타임 & 구조
+                              <span className="text-red-500 ml-1">*</span>
                             </Label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               {[
@@ -2538,6 +2572,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 시각적 컬러 테마
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Input
                                 placeholder="예: 차가운 블루톤, 따뜻한 앰버..."
@@ -2554,6 +2589,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 3막 구조 강조 구간
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Select
                                 value={mediaDetails.focusAct}
@@ -2590,6 +2626,7 @@ function CreateIPExpansionDialog({
                             <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-slate-500" />
                               편성 전략
+                              <span className="text-red-500 ml-1">*</span>
                             </Label>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div
@@ -2651,6 +2688,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 회차당 분량
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Select
                                 value={mediaDetails.episodeDuration}
@@ -2680,6 +2718,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 강조하고 싶은 서브 요소
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Input
                                 placeholder="예: 서브 남주의 서사, 악역의 과거..."
@@ -2704,6 +2743,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 게임 장르
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Input
                                 placeholder="예: 수집형 RPG, 액션 로그라이크..."
@@ -2720,6 +2760,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 핵심 재미요소 (Core Loop)
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Select
                                 value={mediaDetails.coreLoop}
@@ -2756,6 +2797,7 @@ function CreateIPExpansionDialog({
                             <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                               <Gamepad2 className="w-4 h-4 text-slate-500" />
                               플랫폼 및 BM 전략
+                              <span className="text-red-500 ml-1">*</span>
                             </Label>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div
@@ -2821,6 +2863,7 @@ function CreateIPExpansionDialog({
                             <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                               <Zap className="w-4 h-4 text-slate-500" />
                               스핀오프 방향성
+                              <span className="text-red-500 ml-1">*</span>
                             </Label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               {[
@@ -2877,6 +2920,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 주인공 캐릭터 (Target Character)
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Input
                                 placeholder="예: 조연 B, 악역 C..."
@@ -2893,6 +2937,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 연재 호흡
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Select
                                 value={mediaDetails.publishPace}
@@ -2929,6 +2974,7 @@ function CreateIPExpansionDialog({
                             <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
                               <ImageIcon className="w-4 h-4 text-slate-500" />
                               비주얼 포맷
+                              <span className="text-red-500 ml-1">*</span>
                             </Label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               {[
@@ -2985,6 +3031,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 활용 목적
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Input
                                 placeholder="예: 팝업스토어 포스터, SNS 광고..."
@@ -3001,6 +3048,7 @@ function CreateIPExpansionDialog({
                             <div className="space-y-3">
                               <Label className="text-sm font-bold text-slate-700">
                                 타겟 상품군
+                                <span className="text-red-500 ml-1">*</span>
                               </Label>
                               <Input
                                 placeholder="예: 의류, 문구, 식품..."
@@ -3078,8 +3126,8 @@ function CreateIPExpansionDialog({
                       {/* 1. Visual Preview Section */}
                       <section className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                         <h3 className="font-bold text-lg flex items-center gap-2 mb-6 text-slate-800">
-                          <Sparkles className="w-5 h-5 text-indigo-500" />
-                          생성될 결과물 미리보기
+                          <FileText className="w-5 h-5 text-indigo-500" />
+                          IP 확장 제안서 표지 및 개요
                         </h3>
                         <div className="flex flex-col md:flex-row gap-8 items-center">
                           {/* Visual Placeholder */}
@@ -3136,7 +3184,7 @@ function CreateIPExpansionDialog({
                             {/* Overlay Badge */}
                             <div className="absolute bottom-4 left-0 right-0 flex justify-center">
                               <Badge className="bg-black/80 hover:bg-black/90 text-white border-0 backdrop-blur-sm">
-                                AI Generation Ready
+                                Proposal Generation Ready
                               </Badge>
                             </div>
                           </div>
@@ -3147,6 +3195,7 @@ function CreateIPExpansionDialog({
                               <div className="space-y-2">
                                 <Label className="text-sm font-bold text-slate-500">
                                   프로젝트 제목
+                                  <span className="text-red-500 ml-1">*</span>
                                 </Label>
                                 <Input
                                   value={projectTitle}
@@ -3272,6 +3321,157 @@ function CreateIPExpansionDialog({
                       </section>
 
                       {/* 2. Configuration Summary Grid */}
+                      <section>
+                        <h3 className="font-bold text-lg flex items-center gap-2 mb-4 px-1 text-slate-800">
+                          <Settings className="w-5 h-5 text-slate-500" />
+                          설정 요약 (Configuration Summary)
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {[
+                            {
+                              label: '장르 전략',
+                              value:
+                                genreStrategy === 'original'
+                                  ? '원작 장르 유지 (Original)'
+                                  : '장르 변주 (Variation)',
+                              icon: Sparkles,
+                              color: 'text-amber-600',
+                              bg: 'bg-amber-50',
+                            },
+                            {
+                              label: '타겟 연령/성별',
+                              value: `${
+                                business.targetAge.join(', ') || '전연령'
+                              } / ${
+                                business.targetGender === 'male'
+                                  ? '남성'
+                                  : business.targetGender === 'female'
+                                    ? '여성'
+                                    : '통합'
+                              }`,
+                              icon: Users,
+                              color: 'text-blue-600',
+                              bg: 'bg-blue-50',
+                            },
+                            {
+                              label: '예산 규모',
+                              value: business.budgetRange
+                                ? business.budgetRange === 'low'
+                                  ? '저예산 (Low)'
+                                  : business.budgetRange === 'high'
+                                    ? '블록버스터 (High)'
+                                    : '중형 예산 (Medium)'
+                                : '미정',
+                              icon: DollarSign,
+                              color: 'text-green-600',
+                              bg: 'bg-green-50',
+                            },
+                            {
+                              label: '제작 톤앤매너',
+                              value: mediaDetails.tone || '미지정',
+                              icon: Palette,
+                              color: 'text-purple-600',
+                              bg: 'bg-purple-50',
+                            },
+                            {
+                              label: '핵심 재미요소',
+                              value: mediaDetails.coreLoop || '미지정',
+                              icon: Zap,
+                              color: 'text-yellow-600',
+                              bg: 'bg-yellow-50',
+                            },
+                            {
+                              label: '비즈니스 모델',
+                              value: mediaDetails.bmStrategy || '미지정',
+                              icon: BarChart,
+                              color: 'text-cyan-600',
+                              bg: 'bg-cyan-50',
+                            },
+                          ].map((item, i) => (
+                            <div
+                              key={i}
+                              className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-start gap-3"
+                            >
+                              <div
+                                className={cn(
+                                  'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                                  item.bg,
+                                  item.color,
+                                )}
+                              >
+                                <item.icon className="w-4 h-4" />
+                              </div>
+                              <div className="overflow-hidden">
+                                <p className="text-xs font-bold text-slate-500 mb-1">
+                                  {item.label}
+                                </p>
+                                <p className="text-sm font-bold text-slate-800 truncate">
+                                  {item.value}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Additional Details Accordion */}
+                        <div className="mt-4">
+                          <details className="group bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                              <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <List className="w-4 h-4 text-slate-400" />
+                                상세 설정 더보기
+                              </span>
+                              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
+                            </summary>
+                            <div className="px-4 pb-4 pt-0 border-t border-slate-100 mt-2">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
+                                <div className="space-y-1">
+                                  <span className="text-xs text-slate-500">
+                                    세계관 설정
+                                  </span>
+                                  <p className="text-sm text-slate-800">
+                                    {mediaDetails.worldSetting || '-'}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-xs text-slate-500">
+                                    캐릭터 각색
+                                  </span>
+                                  <p className="text-sm text-slate-800">
+                                    {mediaDetails.characterAdaptation || '-'}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-xs text-slate-500">
+                                    플랫폼 전략
+                                  </span>
+                                  <p className="text-sm text-slate-800">
+                                    {mediaDetails.platformStrategy || '-'}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-xs text-slate-500">
+                                    마케팅 포인트
+                                  </span>
+                                  <p className="text-sm text-slate-800">
+                                    {mediaDetails.marketingPoint || '-'}
+                                  </p>
+                                </div>
+                              </div>
+                              {mediaPrompt && (
+                                <div className="mt-4 pt-4 border-t border-slate-100">
+                                  <span className="text-xs text-slate-500 block mb-1">
+                                    추가 프롬프트
+                                  </span>
+                                  <p className="text-sm text-slate-800 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                    {mediaPrompt}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                        </div>
+                      </section>
                       <section>
                         <h3 className="font-bold text-lg flex items-center gap-2 mb-4 px-1 text-slate-800">
                           <Settings2 className="w-5 h-5 text-slate-500" />
@@ -3405,9 +3605,6 @@ function CreateIPExpansionDialog({
               이전
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose}>
-                취소
-              </Button>
               {currentStep < 6 ? (
                 <Button onClick={handleNext}>
                   다음
