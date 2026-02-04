@@ -34,10 +34,29 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       // Vercel 배포 및 대규모 프로젝트를 위한 빌드 최적화
-      chunkSizeWarningLimit: 1600,
+      chunkSizeWarningLimit: 2000, // 경고 임계값 상향
       outDir: 'dist',
       // 프로덕션 환경에서 디버깅이 필요한 경우 true로 변경 가능
       sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // 벤더 라이브러리 분리
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-ui': [
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-slot',
+              'lucide-react',
+              'class-variance-authority',
+              'clsx',
+              'tailwind-merge',
+            ],
+            'vendor-charts': ['recharts'],
+            'vendor-utils': ['date-fns'],
+            'vendor-query': ['@tanstack/react-query'],
+          },
+        },
+      },
     },
   };
 });
