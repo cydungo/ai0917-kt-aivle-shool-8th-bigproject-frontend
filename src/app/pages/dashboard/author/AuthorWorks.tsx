@@ -2125,7 +2125,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
           <DialogHeader>
             <DialogTitle>원문 수정</DialogTitle>
             <DialogDescription>
-              원문의 회차와 이름(부제)을 수정합니다.
+              원문의 이름(부제)을 수정합니다.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">

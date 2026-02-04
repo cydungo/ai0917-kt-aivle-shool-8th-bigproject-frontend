@@ -21,6 +21,7 @@ import {
   ManuscriptUploadRequestDto,
   LorebookSaveRequestDto,
   LorebookUpdateRequestDto,
+  LorebookConflictSolveRequestDto,
 } from '../types/author';
 import { PageResponse } from '../types/common';
 import { AuthMeResponse } from '../types/auth';
@@ -89,6 +90,20 @@ export const authorService = {
   publishConfirm: async (workId: string) => {
     const response = await apiClient.post(
       `/api/v1/author/works/${workId}/publish/confirm`,
+    );
+    return response.data;
+  },
+
+  saveAfterConflict: async (
+    userId: string,
+    title: string,
+    workId: number,
+    data: LorebookConflictSolveRequestDto,
+  ) => {
+    const response = await apiClient.post<string>(
+      `/api/v1/ai/author/${userId}/${title}/lorebook/conflict_solve`,
+      data,
+      { params: { workId } },
     );
     return response.data;
   },
