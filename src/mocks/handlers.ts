@@ -154,38 +154,41 @@ const MOCK_MANUSCRIPTS = new Map<number, any[]>();
 
 // Initialize lorebooks for existing works
 MOCK_WORKS.forEach((work) => {
-  const lorebooks = [
-    {
-      id: 1,
+  const lorebookCount = 5 + Math.floor(Math.random() * 8); // 5 to 12 lorebooks
+  const lorebooks = generateList(lorebookCount, (i) => {
+    const category = getRandomItem([
+      'characters',
+      'places',
+      'items',
+      'groups',
+      'worldviews',
+      'plots',
+    ]);
+    const names = {
+      characters: ['주인공', '조력자', '빌런', '스승', '라이벌', '가족'],
+      places: ['수도', '던전', '아카데미', '마탑', '황궁', '빈민가'],
+      items: ['성검', '마도서', '아티팩트', '물약', '지도', '열쇠'],
+      groups: ['길드', '기사단', '암살단', '상단', '용병단', '학회'],
+      worldviews: ['마나', '오러', '신성력', '정령', '차원', '시스템'],
+      plots: ['각성', '회귀', '전쟁', '입학', '복수', '구원'],
+    };
+    const keyword = getRandomItem((names as any)[category]);
+
+    return {
+      id: work.id * 100 + i,
       workId: work.id,
-      name: '주인공',
-      category: 'characters',
-      description: '메인 주인공입니다.',
-      age: '20세',
-      gender: '남성',
-      occupation: '학생',
-      appearance: '검은 머리, 평범한 인상',
-      personality: '내향적이지만 정의로움',
-      role: '주인공',
-      ability: '회귀',
-      image: null,
+      name: keyword,
+      category: category,
+      description: `${category} 카테고리의 ${keyword}에 대한 상세 설정입니다.`,
+      keyword: keyword, // Ensure keyword field exists
+      setting: JSON.stringify({
+        description: `${keyword}에 대한 세부 내용입니다.`,
+        tags: ['중요', '핵심'],
+      }),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      workId: work.id,
-      name: '서울',
-      category: 'places',
-      description: '배경이 되는 도시',
-      location: '대한민국',
-      atmosphere: '현대적, 삭막함',
-      function: '주요 활동 무대',
-      image: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
+    };
+  });
   MOCK_LOREBOOKS.set(work.id, lorebooks);
 
   MOCK_MANUSCRIPTS.set(
@@ -751,18 +754,93 @@ export const handlers = [
     `${BACKEND_URL}/api/v1/manager/works/:workId/lorebooks`,
     ({ params }) => {
       const workId = Number(params.workId);
+      const categories = ['인물', '세계', '장소', '사건', '물건', '단체'];
+
+      const specificData = [
+        {
+          keyword: '주인공',
+          category: '인물',
+          setting:
+            '회귀 전의 기억을 모두 가지고 있는 상태. 냉철하고 계산적이다.',
+        },
+        {
+          keyword: '제국 아카데미',
+          category: '장소',
+          setting: '대륙 최고의 교육 기관. 귀족과 평민이 함께 다닌다.',
+        },
+        {
+          keyword: '마나 호흡법',
+          category: '세계',
+          setting: '자연의 마나를 몸으로 받아들이는 기초 수련법.',
+        },
+        {
+          keyword: '황실 기사단',
+          category: '단체',
+          setting: '황제에게 절대적인 충성을 맹세한 최정예 기사 집단.',
+        },
+        {
+          keyword: '엑스칼리버',
+          category: '물건',
+          setting: '바위에 꽂힌 전설의 검. 진정한 왕만이 뽑을 수 있다.',
+        },
+        {
+          keyword: '마왕 토벌전',
+          category: '사건',
+          setting: '10년 전 있었던 대륙 최대의 전쟁. 많은 영웅이 희생되었다.',
+        },
+        {
+          keyword: '서브 남주',
+          category: '인물',
+          setting: '황태자. 주인공을 라이벌로 생각한다.',
+        },
+        {
+          keyword: '북부 대공',
+          category: '인물',
+          setting: '차가운 성격의 대공. 여주인공에게만 따뜻하다.',
+        },
+        {
+          keyword: '마법 탑',
+          category: '장소',
+          setting: '마법사들의 연구 기관. 외부와 단절되어 있다.',
+        },
+        {
+          keyword: '고대 유적',
+          category: '장소',
+          setting: '잊혀진 고대 문명의 흔적. 강력한 아티팩트가 잠들어 있다.',
+        },
+        {
+          keyword: '드래곤 하트',
+          category: '물건',
+          setting: '드래곤의 심장. 무한한 마나를 품고 있다.',
+        },
+        {
+          keyword: '암살자 길드',
+          category: '단체',
+          setting: '의뢰를 받으면 누구든 제거하는 어둠의 조직.',
+        },
+        {
+          keyword: '회귀의 날',
+          category: '사건',
+          setting: '주인공이 과거로 돌아온 바로 그 날.',
+        },
+        {
+          keyword: '정령계',
+          category: '세계',
+          setting: '정령들이 사는 차원. 계약을 통해 힘을 빌릴 수 있다.',
+        },
+        {
+          keyword: '성녀',
+          category: '인물',
+          setting: '신성력을 가진 교단의 상징. 치유 능력이 뛰어나다.',
+        },
+      ];
+
       return HttpResponse.json(
-        generateList(15, (i) => ({
+        specificData.map((data, i) => ({
           id: workId * 100 + i,
-          keyword: `${TITLES[(workId + i) % TITLES.length]} 설정`,
-          category: getRandomItem([
-            '인물',
-            '세계',
-            '장소',
-            '사건',
-            '물건',
-            '집단',
-          ]),
+          keyword: data.keyword,
+          category: data.category,
+          setting: data.setting,
           updatedAt: new Date().toISOString(),
         })),
       );
@@ -855,19 +933,46 @@ export const handlers = [
           },
           lorebooks: [
             {
-              id: 1,
+              id: i * 10 + 1,
               keyword: '주인공 설정',
               authorName: NAMES[authorIndex],
               workTitle: TITLES[workIndex],
               category: '인물',
+              setting: '주인공의 성격 및 외모 상세 설정',
             },
             {
-              id: 2,
+              id: i * 10 + 2,
               keyword: '세계관 설정',
               authorName: NAMES[authorIndex],
               workTitle: TITLES[workIndex],
               category: '세계',
+              setting: '작품의 배경이 되는 세계관 상세 설정',
             },
+            // Add cross-work/author reference randomly
+            ...(i % 3 === 0
+              ? [
+                  {
+                    id: i * 10 + 3,
+                    keyword: '크로스오버 캐릭터',
+                    authorName: NAMES[(authorIndex + 1) % NAMES.length],
+                    workTitle: TITLES[(workIndex + 1) % TITLES.length],
+                    category: '인물',
+                    setting: '다른 작품에서 찬조 출연하는 캐릭터 설정',
+                  },
+                ]
+              : []),
+            ...(i % 4 === 0
+              ? [
+                  {
+                    id: i * 10 + 4,
+                    keyword: '참조 장소',
+                    authorName: NAMES[(authorIndex + 2) % NAMES.length],
+                    workTitle: TITLES[(workIndex + 2) % TITLES.length],
+                    category: '장소',
+                    setting: '타 작품의 배경 장소 참조',
+                  },
+                ]
+              : []),
           ],
         };
       });
