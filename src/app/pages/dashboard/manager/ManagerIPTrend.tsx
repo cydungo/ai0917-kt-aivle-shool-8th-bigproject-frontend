@@ -73,6 +73,9 @@ function PdfThumbnail({ fileUrl }: { fileUrl: string }) {
 export function ManagerIPTrend() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 8; // Grid 4x2 layout
+
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -108,8 +111,8 @@ export function ManagerIPTrend() {
 
   // Fetch Reports List
   const { data: reportsData, isLoading: isReportsLoading } = useQuery({
-    queryKey: ['manager', 'iptrend', 'list', selectedYear],
-    queryFn: () => managerService.getIPTrendList(0, 10), // Pagination TODO
+    queryKey: ['manager', 'iptrend', 'list', selectedYear, page],
+    queryFn: () => managerService.getIPTrendList(page, PAGE_SIZE),
   });
 
   // Fetch Preview Data when ID is selected
@@ -272,9 +275,7 @@ export function ManagerIPTrend() {
               {gridPreviewUrl ? (
                 <PdfThumbnail fileUrl={gridPreviewUrl} />
               ) : (
-                <div className="w-full h-40 flex items-center justify-center bg-slate-50 group-hover:bg-slate-100 transition-colors">
-                  <BarChart3 className="w-10 h-10 text-slate-300 group-hover:text-slate-400 transition-colors" />
-                </div>
+                <div className="w-full h-40 flex items-center justify-center bg-slate-50 group-hover:bg-slate-100 transition-colors"></div>
               )}
 
               {/* Overlay Actions */}
@@ -320,6 +321,37 @@ export function ManagerIPTrend() {
           </Card>
         ))}
       </div>
+
+      {/* Pagination */}
+      {reportsData && reportsData.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8 pb-8">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="text-slate-600"
+          >
+            이전
+          </Button>
+          <div className="text-sm font-medium text-slate-600 px-4">
+            <span className="text-slate-900">{page + 1}</span>
+            <span className="mx-1 text-slate-400">/</span>
+            {reportsData.totalPages}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setPage((p) => Math.min(reportsData.totalPages - 1, p + 1))
+            }
+            disabled={page >= reportsData.totalPages - 1}
+            className="text-slate-600"
+          >
+            다음
+          </Button>
+        </div>
+      )}
 
       {/* Preview Modal (Full Screen Support) */}
       <Dialog

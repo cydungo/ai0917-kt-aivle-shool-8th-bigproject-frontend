@@ -105,9 +105,10 @@ export const managerService = {
   },
 
   // IP Expansion
-  getIPProposals: async () => {
-    const response = await apiClient.get<IPProposalDto[]>(
+  getIPProposals: async (page = 0, size = 10) => {
+    const response = await apiClient.get<PageResponse<IPProposalDto>>(
       '/api/v1/manager/ip-expansion/proposals',
+      { params: { page, size } },
     );
     return response.data;
   },
