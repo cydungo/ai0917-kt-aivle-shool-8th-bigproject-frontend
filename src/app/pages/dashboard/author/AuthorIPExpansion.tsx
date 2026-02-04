@@ -98,7 +98,9 @@ export function AuthorIPExpansion({
                 <h3 className="text-lg font-semibold text-blue-900">
                   담당 운영자: {myManager.managerName}
                 </h3>
-                <p className="text-sm text-blue-700">{myManager.managerSiteEmail}</p>
+                <p className="text-sm text-blue-700">
+                  {myManager.managerSiteEmail}
+                </p>
                 <p className="text-xs text-blue-500 mt-1">
                   매칭일: {new Date(myManager.linkedAt).toLocaleDateString()}
                 </p>
