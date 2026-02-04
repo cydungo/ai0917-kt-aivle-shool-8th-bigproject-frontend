@@ -352,7 +352,10 @@ function WorkItem({
                     />
                   ) : (
                     <span className="truncate flex-1 text-left">
-                      {manuscript.subtitle || `원문 ${manuscript.episode}`}
+                      {manuscript.subtitle || '무제'}
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({manuscript.episode}화)
+                      </span>
                     </span>
                   )}
                 </div>

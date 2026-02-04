@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../components/ui/utils';
 import { toast } from 'sonner';
+import { Mermaid } from '../../../components/Mermaid';
 
 // API Method Types
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -478,11 +479,33 @@ export default function AILabPage() {
 
           <CardContent className="flex-1 p-0 relative bg-slate-50 dark:bg-slate-900 overflow-auto">
             {response ? (
-              <pre className="p-4 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200">
-                {typeof response === 'object'
-                  ? JSON.stringify(response, null, 2)
-                  : response}
-              </pre>
+              typeof response === 'string' &&
+              (response.trim().startsWith('graph') ||
+                response.trim().startsWith('sequenceDiagram') ||
+                response.trim().startsWith('classDiagram')) ? (
+                <div className="p-4 h-full overflow-auto bg-white">
+                  <div className="mb-4 text-xs font-bold text-indigo-600 flex items-center gap-2 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100">
+                    <Code2 className="w-4 h-4" /> Mermaid Diagram Detected
+                  </div>
+                  <div className="flex justify-center py-4 bg-white rounded-lg border border-slate-100 shadow-sm mb-6">
+                    <Mermaid chart={response} />
+                  </div>
+                  <div className="pt-4 border-t border-slate-100">
+                    <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
+                      <Code2 className="w-3 h-3" /> Original Code
+                    </p>
+                    <pre className="text-xs font-mono bg-slate-50 p-4 rounded-lg text-slate-600 whitespace-pre-wrap break-all border border-slate-200">
+                      {response}
+                    </pre>
+                  </div>
+                </div>
+              ) : (
+                <pre className="p-4 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200">
+                  {typeof response === 'object'
+                    ? JSON.stringify(response, null, 2)
+                    : response}
+                </pre>
+              )
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 opacity-50">
                 <HelpCircle className="h-10 w-10" />

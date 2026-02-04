@@ -69,10 +69,11 @@ export const authorService = {
     page: number = 0,
     size: number = 10,
     workId?: number,
+    sort?: string,
   ) => {
     const response = await apiClient.get<PageResponse<ManuscriptDto>>(
       `/api/v1/author/${userId}/${title}/manuscript/list`,
-      { params: { workId } },
+      { params: { workId, page, size, sort } },
     );
     return response.data;
   },
@@ -151,7 +152,7 @@ export const authorService = {
     userId: string,
     title: string,
     manuscriptId: number,
-    data: { subtitle?: string; epNum?: number },
+    data: { subtitle?: string },
   ) => {
     const response = await apiClient.patch(
       `/api/v1/author/${userId}/${title}/manuscript/${manuscriptId}`,

@@ -166,6 +166,16 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
   const [newWorkGenre, setNewWorkGenre] = useState('');
   const [newWorkCover, setNewWorkCover] = useState(''); // Optional
 
+  // Reset create work form when opened
+  useEffect(() => {
+    if (isCreateWorkOpen) {
+      setNewWorkTitle('');
+      setNewWorkSynopsis('');
+      setNewWorkGenre('');
+      setNewWorkCover('');
+    }
+  }, [isCreateWorkOpen]);
+
   const [isKeywordSelectionOpen, setIsKeywordSelectionOpen] = useState(false);
 
   // New States
@@ -463,7 +473,6 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
         editingManuscript.manuscript.id,
         {
           subtitle: editManuscriptSubtitle,
-          epNum: editManuscriptEpisode,
         },
       );
     },
@@ -2072,18 +2081,6 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>회차 번호</Label>
-              <Input
-                type="number"
-                min={1}
-                value={newManuscriptEpisode}
-                onChange={(e) =>
-                  setNewManuscriptEpisode(parseInt(e.target.value) || 1)
-                }
-                placeholder="1"
-              />
-            </div>
-            <div className="space-y-2">
               <Label>부제 (제목)</Label>
               <Input
                 value={newManuscriptSubtitle}
@@ -2129,18 +2126,6 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label>회차</Label>
-              <Input
-                type="number"
-                value={editManuscriptEpisode}
-                onChange={(e) =>
-                  setEditManuscriptEpisode(Number(e.target.value))
-                }
-                placeholder="회차 번호"
-                min={1}
-              />
-            </div>
             <div className="space-y-2">
               <Label>원문 이름(부제)</Label>
               <Input

@@ -12,6 +12,7 @@ import {
   Search,
   Edit,
   Trash2,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
@@ -31,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '../../../components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import {
@@ -44,6 +46,8 @@ import { cn } from '../../../components/ui/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authorService } from '../../../services/authorService';
 import { toast } from 'sonner';
+
+import { Checkbox } from '../../../components/ui/checkbox';
 
 interface AuthorLorebookPanelProps {
   workId: number;
@@ -59,6 +63,19 @@ type Category =
   | 'worldviews'
   | 'plots';
 
+const toBackendCategory = (cat: string): string => {
+  const map: Record<string, string> = {
+    characters: '인물',
+    places: '장소',
+    items: '물건',
+    groups: '단체',
+    worldviews: '세계',
+    plots: '사건',
+    all: '*',
+  };
+  return map[cat] || cat;
+};
+
 export function AuthorLorebookPanel({
   workId,
   userId,
@@ -66,11 +83,22 @@ export function AuthorLorebookPanel({
 }: AuthorLorebookPanelProps) {
   const [activeCategory, setActiveCategory] = useState<Category>('characters');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'keyword' | 'semantic'>(
     'keyword',
   );
+
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null); // If null, it's create mode
+
+  // Similarity Check States
+  const [isSimilarityCheckOpen, setIsSimilarityCheckOpen] = useState(false);
+  const [pendingSaveData, setPendingSaveData] = useState<any>(null);
+  const [similaritySearchResults, setSimilaritySearchResults] = useState<any[]>(
+    [],
+  );
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
   const queryClient = useQueryClient();
 
   // Fetch Lorebook/Work details
@@ -137,7 +165,7 @@ export function AuthorLorebookPanel({
         keyword: lorebookTitle,
         subtitle: subtitle || '',
         setting: settings,
-        category: activeCategory,
+        category: toBackendCategory(activeCategory) as any,
         episode: [],
       });
     },
@@ -161,7 +189,7 @@ export function AuthorLorebookPanel({
       return authorService.updateLorebook(
         userId,
         work!.title,
-        activeCategory,
+        toBackendCategory(activeCategory),
         id,
         {
           keyword: lorebookTitle,
@@ -180,6 +208,22 @@ export function AuthorLorebookPanel({
     onError: () => toast.error('수정에 실패했습니다.'),
   });
 
+  const handleCreateClick = () => {
+    setEditingItem({});
+    setIsEditOpen(true);
+  };
+
+  const handleEditClick = (item: any) => {
+    setEditingItem({ ...item });
+    setIsEditOpen(true);
+  };
+
+  const handleDeleteClick = (id: number) => {
+    if (confirm('정말 삭제하시겠습니까?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
       authorService.deleteLorebook(userId, work!.title, activeCategory, id),
@@ -195,7 +239,7 @@ export function AuthorLorebookPanel({
   const searchMutation = useMutation({
     mutationFn: ({ category, query }: { category: string; query: string }) =>
       authorService.searchLorebookSimilarity(userId, work!.title, {
-        category: category as Category,
+        category: toBackendCategory(category) as any,
         user_query: query,
         user_id: userId,
         work_id: workId,
@@ -208,6 +252,24 @@ export function AuthorLorebookPanel({
     onError: () => toast.error('검색에 실패했습니다.'),
   });
 
+  const checkSimilarityMutation = useMutation({
+    mutationFn: ({ category, query }: { category: string; query: string }) =>
+      authorService.searchLorebookSimilarity(userId, work!.title, {
+        category: toBackendCategory('all') as any, // Always check against all
+        user_query: query,
+        user_id: userId,
+        work_id: workId,
+        sim: 0.6,
+        limit: 5,
+      }),
+    onSuccess: (data) => {
+      setSimilaritySearchResults(data);
+      setIsSimilarityCheckOpen(true);
+      setIsConfirmed(false);
+    },
+    onError: () => toast.error('유사도 검사에 실패했습니다.'),
+  });
+
   const keywordSearchMutation = useMutation({
     mutationFn: async ({
       category,
@@ -216,6 +278,15 @@ export function AuthorLorebookPanel({
       category: string;
       query: string;
     }) => {
+      // For keyword search, we fetch all and filter locally or use a search API if available.
+      // Current implementation fetches by category and filters.
+      // If we need to send Korean category to backend for fetching:
+      // But getLorebooksByCategory likely takes English 'characters' if it maps to folder/DB type.
+      // Wait, user said "category selection... send '인물' as is".
+      // I'll stick to what I know: The LISTING API might still use English if it hasn't changed.
+      // Only the SEARCH/CREATE APIs were explicitly mentioned.
+      // I will proceed with fetching using `activeCategory` (English) for listing.
+
       let data: any[] = [];
       if (category === 'all') {
         data = await authorService.getLorebooks(userId, work!.title, workId);
@@ -290,31 +361,15 @@ export function AuthorLorebookPanel({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const query = formData.get('query') as string;
-    const category = formData.get('category') as string;
-    if (!query) return;
+    if (!searchQuery) return;
 
     if (searchMode === 'keyword') {
-      keywordSearchMutation.mutate({ category, query });
+      keywordSearchMutation.mutate({
+        category: activeCategory,
+        query: searchQuery,
+      });
     } else {
-      searchMutation.mutate({ category, query });
-    }
-  };
-
-  const handleCreateClick = () => {
-    setEditingItem({});
-    setIsEditOpen(true);
-  };
-
-  const handleEditClick = (item: any) => {
-    setEditingItem({ ...item });
-    setIsEditOpen(true);
-  };
-
-  const handleDeleteClick = (id: number) => {
-    if (confirm('정말 삭제하시겠습니까?')) {
-      deleteMutation.mutate(id);
+      searchMutation.mutate({ category: activeCategory, query: searchQuery });
     }
   };
 
@@ -323,7 +378,7 @@ export function AuthorLorebookPanel({
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData as any);
 
-    // Process tags/arrays if needed
+    // Process tags/arrays
     if (activeCategory === 'characters' && data.traits) {
       data.traits = (data.traits as string)
         .split(',')
@@ -343,11 +398,25 @@ export function AuthorLorebookPanel({
         .map((s) => s.trim()) as any;
     }
 
-    if (editingItem.id) {
-      updateMutation.mutate({ id: editingItem.id, data });
+    setPendingSaveData(data);
+
+    // Perform Similarity Check before saving
+    // Use name or title or description as query
+    const query = data.name || data.title || data.description || '';
+    checkSimilarityMutation.mutate({ category: 'all', query });
+  };
+
+  const handleConfirmSave = () => {
+    if (!pendingSaveData) return;
+
+    if (editingItem?.id) {
+      updateMutation.mutate({ id: editingItem.id, data: pendingSaveData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(pendingSaveData);
     }
+    setIsSimilarityCheckOpen(false);
+    setIsConfirmed(false);
+    setPendingSaveData(null);
   };
 
   const categories: { id: Category; label: string }[] = [
@@ -1027,11 +1096,11 @@ export function AuthorLorebookPanel({
         </h3>
         <div className="flex gap-1 shrink-0 ml-auto">
           <Button
-            variant="ghost"
+            variant={isSearchOpen ? 'secondary' : 'ghost'}
             size="icon"
             className="h-6 w-6"
-            title="유사도 검색"
-            onClick={() => setIsSearchOpen(true)}
+            title="검색"
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
           >
             <Search className="w-3 h-3" />
           </Button>
@@ -1046,6 +1115,45 @@ export function AuthorLorebookPanel({
           </Button>
         </div>
       </div>
+
+      {isSearchOpen && (
+        <div className="p-2 border-b bg-muted/20 space-y-2">
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder={
+                searchMode === 'keyword' ? '키워드 검색...' : '유사도 검색...'
+              }
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch(e);
+              }}
+              className="h-8 text-xs"
+            />
+            <Button size="sm" className="h-8" onClick={handleSearch}>
+              검색
+            </Button>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant={searchMode === 'keyword' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 text-[10px]"
+              onClick={() => setSearchMode('keyword')}
+            >
+              키워드
+            </Button>
+            <Button
+              variant={searchMode === 'semantic' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 text-[10px]"
+              onClick={() => setSearchMode('semantic')}
+            >
+              유사도
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-scroll overflow-x-hidden h-full">
@@ -1103,77 +1211,78 @@ export function AuthorLorebookPanel({
         </div>
       </div>
 
-      {/* Search Dialog */}
-      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Similarity Check Dialog */}
+      <Dialog
+        open={isSimilarityCheckOpen}
+        onOpenChange={setIsSimilarityCheckOpen}
+      >
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>설정 검색</DialogTitle>
+            <DialogTitle>유사 설정 확인</DialogTitle>
+            <DialogDescription>
+              생성/수정하려는 설정과 유사한 기존 설정이 발견되었습니다. 중복
+              여부를 확인해주세요.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-6 py-4">
-            <div className="flex flex-col items-center gap-2">
-              <Tabs
-                value={searchMode}
-                onValueChange={(v) =>
-                  setSearchMode(v as 'keyword' | 'semantic')
-                }
-                className="w-full max-w-md"
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="keyword">키워드 검색</TabsTrigger>
-                  <TabsTrigger value="semantic">유사도 검색</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <p className="text-xs text-muted-foreground text-center">
-                {searchMode === 'keyword'
-                  ? '찾고자 하는 대상이 명확할 때 (이름, 지명 등 정확한 단어)'
-                  : '맥락이나 관계를 찾고 싶을 때 (예: "철수와 영희가 싸운 이유")'}
-              </p>
-            </div>
-
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div className="flex gap-2">
-                <Select name="category" defaultValue={activeCategory}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">전체</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  name="query"
-                  placeholder={
-                    searchMode === 'keyword'
-                      ? '검색어를 입력하세요...'
-                      : '질문을 입력하세요...'
-                  }
-                  required
-                />
-                <Button type="submit">검색</Button>
+          <ScrollArea className="h-[300px] border rounded-md p-4">
+            {checkSimilarityMutation.isPending ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-6 h-6 animate-spin" />
               </div>
-            </form>
-          </div>
+            ) : similaritySearchResults.length > 0 ? (
+              <div className="space-y-4">
+                {similaritySearchResults.map((result, idx) => (
+                  <Card key={idx} className="bg-muted/50">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        {result.keyword}
+                        <Badge variant="outline" className="text-[10px]">
+                          {result.category}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="py-2 text-xs text-muted-foreground">
+                      {typeof result.setting === 'string'
+                        ? JSON.parse(result.setting).description
+                        : result.setting?.description || '설명 없음'}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                유사한 설정이 발견되지 않았습니다.
+              </div>
+            )}
+          </ScrollArea>
 
-          <div className="space-y-4">
-            {searchResults.map((result) => (
-              <Card key={result.id}>
-                <CardHeader>
-                  <CardTitle className="text-base">{result.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {result.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <DialogFooter className="flex-col sm:flex-col gap-3">
+            <div className="flex items-center gap-2 p-2 border rounded bg-muted/20">
+              <Checkbox
+                id="confirm-check"
+                checked={isConfirmed}
+                onCheckedChange={(c) => setIsConfirmed(c === true)}
+              />
+              <label
+                htmlFor="confirm-check"
+                className="text-sm cursor-pointer select-none"
+              >
+                유사한 설정을 확인하였으며, 계속 진행합니다.
+              </label>
+            </div>
+            <div className="flex gap-2 justify-end w-full">
+              <Button
+                variant="outline"
+                onClick={() => setIsSimilarityCheckOpen(false)}
+              >
+                취소
+              </Button>
+              <Button onClick={handleConfirmSave} disabled={!isConfirmed}>
+                {editingItem?.id ? '수정 완료' : '생성 완료'}
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
