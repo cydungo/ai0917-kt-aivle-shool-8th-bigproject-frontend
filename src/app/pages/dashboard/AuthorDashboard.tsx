@@ -47,7 +47,6 @@ import { AuthorNotice } from './author/AuthorNotice';
 import { AuthorMyPage } from './author/AuthorMyPage';
 import { AuthorIPExpansion } from './author/AuthorIPExpansion';
 import { AuthorAccount } from './author/AuthorAccount';
-import { AuthorAILab } from './author/AuthorAILab';
 
 import { Logo } from '../../components/common/Logo';
 
@@ -220,23 +219,6 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
           >
             <Database className="w-5 h-5" />
             <span className="text-sm font-medium">IP 확장</span>
-          </button>
-
-          <button
-            onClick={() => handleMenuClick('ailab')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-              activeMenu === 'ailab'
-                ? 'text-white dark:text-black'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent'
-            }`}
-            style={
-              activeMenu === 'ailab'
-                ? { backgroundColor: 'var(--role-primary)' }
-                : {}
-            }
-          >
-            <FlaskConical className="w-5 h-5" />
-            <span className="text-sm font-medium">AI 연구소</span>
           </button>
 
           <button
@@ -475,7 +457,6 @@ export function AuthorDashboard({ onLogout, onHome }: AuthorDashboardProps) {
               <AuthorWorks integrationId={integrationId} />
             )}
             {activeMenu === 'ip-expansion' && <AuthorIPExpansion />}
-            {activeMenu === 'ailab' && <AuthorAILab />}
             {activeMenu === 'notice' && (
               <AuthorNotice integrationId={integrationId} />
             )}
