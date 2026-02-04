@@ -189,7 +189,7 @@ export function AuthorLorebookPanel({
       return authorService.updateLorebook(
         userId,
         work!.title,
-        toBackendCategory(activeCategory),
+        activeCategory,
         id,
         {
           keyword: lorebookTitle,
@@ -423,7 +423,7 @@ export function AuthorLorebookPanel({
     { id: 'characters', label: '인물' },
     { id: 'places', label: '장소' },
     { id: 'items', label: '물건' },
-    { id: 'groups', label: '단체' },
+    { id: 'groups', label: '집단' },
     { id: 'worldviews', label: '세계' },
     { id: 'plots', label: '사건' },
   ];
