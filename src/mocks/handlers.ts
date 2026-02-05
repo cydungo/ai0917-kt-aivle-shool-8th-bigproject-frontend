@@ -1223,6 +1223,7 @@ export const handlers = [
     const pwd = String(params.pwd);
     // Mock logic: accept any 6-digit code or legacy AUTH- code
     if ((pwd.length === 6 && /^\d+$/.test(pwd)) || pwd.startsWith('AUTH-')) {
+      localStorage.setItem('msw-author-linked', 'true');
       return HttpResponse.json({
         authorId: 123,
         name: '김작가',

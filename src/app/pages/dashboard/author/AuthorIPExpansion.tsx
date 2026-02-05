@@ -91,15 +91,8 @@ export function AuthorIPExpansion({
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100">
           <CardContent className="p-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                  {myManager.managerName.charAt(0)}
-                </div>
-                <span
-                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-white ${myManager.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}
-                  aria-label={myManager.isOnline ? '접속중' : '오프라인'}
-                  title={myManager.isOnline ? '접속중' : '오프라인'}
-                />
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                {myManager.managerName.charAt(0)}
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-blue-900">
