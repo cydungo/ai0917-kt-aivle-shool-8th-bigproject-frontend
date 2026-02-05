@@ -55,23 +55,18 @@ interface AuthorLorebookPanelProps {
   className?: string;
 }
 
-type Category =
-  | 'characters'
-  | 'places'
-  | 'items'
-  | 'groups'
-  | 'worldviews'
-  | 'plots';
+type Category = 'all' | '인물' | '장소' | '물건' | '단체' | '세계' | '사건';
 
 const toBackendCategory = (cat: string): string => {
   const map: Record<string, string> = {
-    characters: '인물',
-    places: '장소',
-    items: '물건',
-    groups: '단체',
-    worldviews: '세계',
-    plots: '사건',
     all: '*',
+    인물: '인물',
+    장소: '장소',
+    물건: '물건',
+    단체: '단체',
+    세계: '세계',
+    사건: '사건',
+    전체: '*',
   };
   return map[cat] || cat;
 };
@@ -81,12 +76,10 @@ export function AuthorLorebookPanel({
   userId,
   className,
 }: AuthorLorebookPanelProps) {
-  const [activeCategory, setActiveCategory] = useState<Category>('characters');
+  const [activeCategory, setActiveCategory] = useState<Category>('인물');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchMode, setSearchMode] = useState<'keyword' | 'semantic'>(
-    'keyword',
-  );
+  const [searchCategory, setSearchCategory] = useState<Category>('all');
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null); // If null, it's create mode
@@ -107,7 +100,7 @@ export function AuthorLorebookPanel({
     queryFn: () => authorService.getWorkDetail(workId.toString()),
   });
 
-  // Fetch Manuscript count (Replaces Episode count)
+  // Fetch Manuscript count (Re장소 Episode count)
   const { data: manuscriptsPage } = useQuery({
     queryKey: ['author', 'manuscripts', workId],
     queryFn: () =>
@@ -117,21 +110,31 @@ export function AuthorLorebookPanel({
   const manuscriptCount = manuscriptsPage?.totalElements || 0;
 
   // Fetch Data based on category (Unified)
-  const { data: lorebooks } = useQuery({
+  const { data: lorebooksData } = useQuery({
     queryKey: ['author', 'lorebook', userId, work?.title, activeCategory],
-    queryFn: () =>
-      authorService.getLorebooksByCategory(
+    queryFn: () => {
+      if (activeCategory === 'all') {
+        return authorService.getLorebooks(userId, work!.title, workId);
+      }
+      return authorService.getLorebooksByCategory(
         userId,
         work!.title,
         activeCategory,
         workId,
-      ),
+      );
+    },
     enabled: !!work?.title && !!userId,
   });
 
+  const lorebooks = Array.isArray(lorebooksData)
+    ? lorebooksData
+    : (lorebooksData as any)?.data && Array.isArray((lorebooksData as any).data)
+      ? (lorebooksData as any).data
+      : [];
+
   const displayItems =
-    lorebooks?.map((item) => {
-      let parsedSettings = {};
+    lorebooks.map((item: any) => {
+      let parsedSettings: any = {};
       try {
         // item.setting is JsonNode (any), which can be an object or a JSON string depending on serialization
         if (item.setting && typeof item.setting === 'object') {
@@ -142,12 +145,37 @@ export function AuthorLorebookPanel({
       } catch (e) {
         console.error('Failed to parse settings', e);
       }
+
+      // Handle nested structure: { "Keyword": { ... } }
+      let content = parsedSettings;
+      const keyword = item.keyword;
+      if (keyword && parsedSettings[keyword]) {
+        content = parsedSettings[keyword];
+      }
+
+      // Handle Event type where content is a string
+      let description = '';
+      if (typeof content === 'string') {
+        description = content;
+      } else {
+        description =
+          content.description ||
+          content.배경 ||
+          content.summary ||
+          content.상세설명 ||
+          content.설명 || // Added for Item type
+          (Array.isArray(content.작중묘사)
+            ? content.작중묘사.join(' ')
+            : content.작중묘사) || // Added for Place type
+          '';
+      }
+
       return {
         ...item,
-        name: item.keyword || '',
-        title: item.keyword || '',
-        description: (parsedSettings as any).description || '',
-        ...parsedSettings,
+        name: keyword || '',
+        title: keyword || '',
+        description,
+        ...(typeof content === 'object' ? content : {}),
       };
     }) || [];
 
@@ -243,11 +271,64 @@ export function AuthorLorebookPanel({
         user_query: query,
         user_id: userId,
         work_id: workId,
-        sim: 0.7, // Default threshold
+        sim: 0.1, // Lower threshold
         limit: 5, // Default topK
       }),
     onSuccess: (data) => {
-      setSearchResults(data);
+      // Transform tuple data to object
+      // Data format: [[id, category, settingObj, episodes, score], ...]
+      if (!Array.isArray(data)) {
+        setSearchResults([]);
+        return;
+      }
+
+      const transformed = data.map((item: any) => {
+        if (!Array.isArray(item)) return item; // Fallback if already object
+
+        const [id, category, setting, episodes, score] = item;
+
+        // Extract keyword/title from setting object keys
+        // setting is like { "강 팀장": { ... } }
+        let keyword = '';
+        let content: any = {};
+
+        if (setting && typeof setting === 'object') {
+          const keys = Object.keys(setting);
+          if (keys.length > 0) {
+            keyword = keys[0];
+            content = setting[keyword] || {};
+          }
+        }
+
+        // Handle description
+        let description = '';
+        if (typeof content === 'string') {
+          description = content;
+        } else if (content) {
+          description =
+            content.description ||
+            content.summary ||
+            content.설명 ||
+            content.상세설명 ||
+            content.배경 ||
+            content.외형 ||
+            '';
+        }
+
+        return {
+          id,
+          category,
+          keyword: keyword || '제목 없음',
+          name: keyword || '제목 없음', // For LorebookCard title
+          title: keyword || '제목 없음',
+          description,
+          setting,
+          score,
+          ...content, // Spread content for getTagsForItem
+        };
+      });
+
+      setSearchResults(transformed);
     },
     onError: () => toast.error('검색에 실패했습니다.'),
   });
@@ -270,87 +351,169 @@ export function AuthorLorebookPanel({
     onError: () => toast.error('유사도 검사에 실패했습니다.'),
   });
 
-  const keywordSearchMutation = useMutation({
-    mutationFn: async ({
-      category,
-      query,
-    }: {
-      category: string;
-      query: string;
-    }) => {
-      // For keyword search, we fetch all and filter locally or use a search API if available.
-      // Current implementation fetches by category and filters.
-      // If we need to send Korean category to backend for fetching:
-      // But getLorebooksByCategory likely takes English 'characters' if it maps to folder/DB type.
-      // Wait, user said "category selection... send '인물' as is".
-      // I'll stick to what I know: The LISTING API might still use English if it hasn't changed.
-      // Only the SEARCH/CREATE APIs were explicitly mentioned.
-      // I will proceed with fetching using `activeCategory` (English) for listing.
-
-      let data: any[] = [];
-      if (category === 'all') {
-        data = await authorService.getLorebooks(userId, work!.title, workId);
-      } else {
-        data = await authorService.getLorebooksByCategory(
-          userId,
-          work!.title,
-          category,
-          workId,
-        );
-      }
-
-      const lowerQuery = query.toLowerCase();
-      return data
-        .map((item) => {
-          let parsedSettings = {};
-          try {
-            if (item.setting && typeof item.setting === 'object') {
-              parsedSettings = item.setting;
-            } else if (typeof item.setting === 'string') {
-              parsedSettings = JSON.parse(item.setting);
-            }
-          } catch (e) {
-            console.error('Failed to parse settings', e);
-          }
-          return {
-            ...item,
-            name: item.keyword || '',
-            title: item.keyword || '',
-            description: (parsedSettings as any).description || '',
-            ...parsedSettings,
-          };
-        })
-        .filter((item) => {
-          const nameMatch = item.name?.toLowerCase().includes(lowerQuery);
-          const descMatch = item.description
-            ?.toLowerCase()
-            .includes(lowerQuery);
-          const titleMatch = item.title?.toLowerCase().includes(lowerQuery);
-          return nameMatch || descMatch || titleMatch;
-        });
-    },
-    onSuccess: (data) => {
-      setSearchResults(data);
-      if (data.length === 0) {
-        toast.info('검색 결과가 없습니다.');
-      }
-    },
-    onError: () => toast.error('검색에 실패했습니다.'),
-  });
-
   const exportMutation = useMutation({
-    mutationFn: () => authorService.exportLorebook(workId.toString()), // This also might need update
+    mutationFn: async () => {
+      // Fetch all lorebooks using wildcard '*' to ensure full export
+      const response = await authorService.getLorebooksByCategory(
+        userId,
+        work!.title,
+        '*',
+        workId,
+      );
+      const items = Array.isArray(response)
+        ? response
+        : (response as any)?.data && Array.isArray((response as any).data)
+          ? (response as any).data
+          : [];
+
+      if (items.length === 0) {
+        throw new Error('NO_DATA');
+      }
+
+      let md = `# ${work?.title || '작품'} 설정집\n\n`;
+      md += `> 생성일: ${new Date().toLocaleDateString()}\n\n`;
+
+      // Table of Contents
+      md += `## 목차\n`;
+      const categoryOrder = [
+        '인물',
+        '장소',
+        '물건',
+        '단체',
+        '세계',
+        '사건',
+        '미분류',
+      ];
+
+      // Group by category
+      const grouped: Record<string, any[]> = {};
+      items.forEach((item: any) => {
+        const cat = item.category || '미분류';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+      });
+
+      const sortedCategories = Object.keys(grouped).sort((a, b) => {
+        const idxA = categoryOrder.indexOf(a);
+        const idxB = categoryOrder.indexOf(b);
+        if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+        if (idxA === -1) return 1;
+        if (idxB === -1) return -1;
+        return idxA - idxB;
+      });
+
+      sortedCategories.forEach((cat) => {
+        md += `- [${cat}](#${cat})\n`;
+      });
+      md += `\n---\n\n`;
+
+      sortedCategories.forEach((cat) => {
+        md += `## ${cat}\n\n`;
+        grouped[cat].forEach((item) => {
+          let settings: any = {};
+          try {
+            if (typeof item.setting === 'object') settings = item.setting;
+            else if (typeof item.setting === 'string')
+              settings = JSON.parse(item.setting);
+          } catch (e) {}
+
+          // If nested keyword structure
+          if (item.keyword && settings[item.keyword]) {
+            settings = settings[item.keyword];
+          }
+
+          md += `### ${item.keyword || '제목 없음'}\n`;
+          if (item.subtitle) md += `**부제**: ${item.subtitle}\n\n`;
+
+          // Add description/summary first
+          const desc =
+            settings.description ||
+            settings.summary ||
+            settings.설명 ||
+            settings.상세설명;
+          if (desc) md += `> ${desc}\n\n`;
+
+          // Add other fields
+          Object.entries(settings).forEach(([key, value]) => {
+            if (
+              [
+                'description',
+                'summary',
+                '설명',
+                '상세설명',
+                'name',
+                'title',
+                'keyword',
+              ].includes(key)
+            )
+              return;
+
+            md += `- **${key}**: `;
+
+            if (Array.isArray(value)) {
+              if (value.length === 0) {
+                md += '(없음)\n';
+              } else if (typeof value[0] !== 'object') {
+                md += `${value.join(', ')}\n`;
+              } else {
+                md += '\n';
+                value.forEach((subItem: any) => {
+                  // Special handling for relationships (인물관계)
+                  if (key === '인물관계' || key === 'relationships') {
+                    const relation = subItem.관계 || subItem.relation || '';
+                    const target = subItem.대상이름 || subItem.targetName || '';
+                    const detail =
+                      subItem.상세내용 || subItem.description || '';
+                    md += `  - **${target}**`;
+                    if (relation) md += ` (${relation})`;
+                    if (detail) md += `: ${detail}`;
+                    md += '\n';
+                  } else {
+                    // Generic object array
+                    md += `  - `;
+                    const parts: string[] = [];
+                    Object.entries(subItem).forEach(([k, v]) => {
+                      if (v) parts.push(`${k}: ${v}`);
+                    });
+                    md += parts.join(', ') + '\n';
+                  }
+                });
+              }
+            } else if (typeof value === 'object' && value !== null) {
+              md += '\n';
+              Object.entries(value).forEach(([subKey, subValue]) => {
+                md += `  - **${subKey}**: ${subValue}\n`;
+              });
+            } else {
+              md += `${value}\n`;
+            }
+          });
+
+          md += `\n---\n\n`;
+        });
+      });
+
+      return md;
+    },
     onSuccess: (data) => {
-      const url = window.URL.createObjectURL(new Blob([data]));
+      const url = window.URL.createObjectURL(
+        new Blob([data], { type: 'text/markdown' }),
+      );
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `${work?.title || 'work'}_설정집.md`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('설정집이 다운로드되었습니다.');
+      toast.success('설정집이 Markdown으로 다운로드되었습니다.');
     },
-    onError: () => toast.error('내보내기에 실패했습니다.'),
+    onError: (error) => {
+      if (error.message === 'NO_DATA') {
+        toast.error('내보낼 설정 데이터가 없습니다.');
+      } else {
+        toast.error('내보내기에 실패했습니다.');
+      }
+    },
   });
 
   const handleExport = () => {
@@ -359,18 +522,14 @@ export function AuthorLorebookPanel({
     }
   };
 
+  // Update searchCategory when activeCategory changes, but only if search is not open (optional, but good UX)
+  // Actually, let's just init it when opening or let user change it.
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery) return;
 
-    if (searchMode === 'keyword') {
-      keywordSearchMutation.mutate({
-        category: activeCategory,
-        query: searchQuery,
-      });
-    } else {
-      searchMutation.mutate({ category: activeCategory, query: searchQuery });
-    }
+    searchMutation.mutate({ category: searchCategory, query: searchQuery });
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -379,20 +538,20 @@ export function AuthorLorebookPanel({
     const data = Object.fromEntries(formData as any);
 
     // Process tags/arrays
-    if (activeCategory === 'characters' && data.traits) {
+    if (activeCategory === '인물' && data.traits) {
       data.traits = (data.traits as string)
         .split(',')
         .map((s) => s.trim()) as any;
     }
-    if (activeCategory === 'worldviews' && data.tags) {
+    if (activeCategory === '세계' && data.tags) {
       data.tags = (data.tags as string).split(',').map((s) => s.trim()) as any;
     }
-    if (activeCategory === 'groups' && data.members) {
+    if (activeCategory === '단체' && data.members) {
       data.members = (data.members as string)
         .split(',')
         .map((s) => s.trim()) as any;
     }
-    if (activeCategory === 'plots' && data.participants) {
+    if (activeCategory === '사건' && data.participants) {
       data.participants = (data.participants as string)
         .split(',')
         .map((s) => s.trim()) as any;
@@ -400,7 +559,7 @@ export function AuthorLorebookPanel({
 
     setPendingSaveData(data);
 
-    // Perform Similarity Check before saving
+    // Perform Similarity Check단체 before saving
     // Use name or title or description as query
     const query = data.name || data.title || data.description || '';
     checkSimilarityMutation.mutate({ category: 'all', query });
@@ -420,22 +579,76 @@ export function AuthorLorebookPanel({
   };
 
   const categories: { id: Category; label: string }[] = [
-    { id: 'characters', label: '인물' },
-    { id: 'places', label: '장소' },
-    { id: 'items', label: '물건' },
-    { id: 'groups', label: '집단' },
-    { id: 'worldviews', label: '세계' },
-    { id: 'plots', label: '사건' },
+    { id: '인물', label: '인물' },
+    { id: '장소', label: '장소' },
+    { id: '물건', label: '물건' },
+    { id: '단체', label: '단체' },
+    { id: '세계', label: '세계' },
+    { id: '사건', label: '사건' },
   ];
 
+  const searchCategories: { id: Category; label: string }[] = [
+    { id: 'all', label: '전체' },
+    ...categories,
+  ];
+
+  const getTagsForItem = (item: any) => {
+    const category = item.category || activeCategory;
+    switch (category) {
+      case '인물':
+        return [
+          item.role,
+          item['직업/신분'],
+          item.age,
+          item['연령'],
+          ...(item.traits || item['성격'] || []),
+        ].filter(Boolean) as string[];
+      case '장소':
+        return [
+          item.location,
+          item['위치'],
+          item.scale,
+          item['규모'],
+          item['분위기'],
+          ...(item['집단'] || []),
+        ].filter(Boolean) as string[];
+      case '물건':
+        return [
+          item.type,
+          item['종류'],
+          item.grade,
+          item['등급'],
+          ...(item['관련인물'] || []),
+        ].filter(Boolean) as string[];
+      case '단체':
+        return [item.leader, item['수장'], item.scale, item['규모']].filter(
+          Boolean,
+        ) as string[];
+      case '세계':
+        return [item.category].filter(Boolean) as string[];
+      case '사건':
+        return [
+          item.importance,
+          item['중요도'],
+          item.date,
+          item['발생 시점'],
+        ].filter(Boolean) as string[];
+      default:
+        return [item.role, item.type, item.category].filter(
+          Boolean,
+        ) as string[];
+    }
+  };
+
   const renderContent = () => {
-    let content = null;
     const commonProps = {
       onEdit: handleEditClick,
       onDelete: handleDeleteClick,
     };
 
-    const items = displayItems.slice().sort((a, b) => b.id - a.id) as any[];
+    const items = displayItems
+      .slice()
+      .sort((a: any, b: any) => b.id - a.id) as any[];
 
     if (!items || items.length === 0) {
       return (
@@ -445,86 +658,22 @@ export function AuthorLorebookPanel({
       );
     }
 
-    switch (activeCategory) {
-      case 'characters':
-        content = items.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            tags={[item.role, item.age].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
-        break;
-      case 'places':
-        content = items.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            tags={[item.location].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
-        break;
-      case 'items':
-        content = items.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            tags={[item.type].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
-        break;
-      case 'groups':
-        content = items.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.name}
-            description={item.description}
-            {...commonProps}
-          />
-        ));
-        break;
-      case 'worldviews':
-        content = items.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.title} // Worldview uses title
-            description={item.description}
-            tags={[item.category]}
-            {...commonProps}
-          />
-        ));
-        break;
-      case 'plots':
-        content = items.map((item) => (
-          <LorebookCard
-            key={item.id}
-            item={item}
-            title={item.title} // Plot uses title
-            description={item.description}
-            tags={[item.importance].filter(Boolean) as string[]}
-            {...commonProps}
-          />
-        ));
-        break;
-    }
-
-    return content;
+    return items.map((item) => (
+      <LorebookCard
+        key={item.id}
+        item={item}
+        title={item.name}
+        description={item.description}
+        category={item.category}
+        tags={getTagsForItem(item)}
+        {...commonProps}
+      />
+    ));
   };
 
   const renderFormFields = () => {
     switch (activeCategory) {
-      case 'characters':
+      case '인물':
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
@@ -618,7 +767,7 @@ export function AuthorLorebookPanel({
             </div>
           </>
         );
-      case 'places':
+      case '장소':
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
@@ -703,7 +852,7 @@ export function AuthorLorebookPanel({
             </div>
           </>
         );
-      case 'items':
+      case '물건':
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
@@ -790,7 +939,7 @@ export function AuthorLorebookPanel({
             </div>
           </>
         );
-      case 'groups':
+      case '단체':
         return (
           <>
             <div className="space-y-2">
@@ -878,7 +1027,7 @@ export function AuthorLorebookPanel({
             </div>
           </>
         );
-      case 'worldviews':
+      case '세계':
         return (
           <>
             <div className="space-y-2">
@@ -982,7 +1131,7 @@ export function AuthorLorebookPanel({
             </div>
           </>
         );
-      case 'plots':
+      case '사건':
         return (
           <>
             <div className="space-y-2">
@@ -1096,13 +1245,13 @@ export function AuthorLorebookPanel({
         </h3>
         <div className="flex gap-1 shrink-0 ml-auto">
           <Button
-            variant={isSearchOpen ? 'secondary' : 'ghost'}
+            variant="ghost"
             size="icon"
-            className="h-6 w-6"
-            title="검색"
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className="h-6 w-6 mr-1"
+            title="설정 검색"
+            onClick={() => setIsSearchOpen(true)}
           >
-            <Search className="w-3 h-3" />
+            <Search className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
@@ -1115,45 +1264,6 @@ export function AuthorLorebookPanel({
           </Button>
         </div>
       </div>
-
-      {isSearchOpen && (
-        <div className="p-2 border-b bg-muted/20 space-y-2">
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder={
-                searchMode === 'keyword' ? '키워드 검색...' : '유사도 검색...'
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSearch(e);
-              }}
-              className="h-8 text-xs"
-            />
-            <Button size="sm" className="h-8" onClick={handleSearch}>
-              검색
-            </Button>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <Button
-              variant={searchMode === 'keyword' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-6 text-[10px]"
-              onClick={() => setSearchMode('keyword')}
-            >
-              키워드
-            </Button>
-            <Button
-              variant={searchMode === 'semantic' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-6 text-[10px]"
-              onClick={() => setSearchMode('semantic')}
-            >
-              유사도
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-scroll overflow-x-hidden h-full">
@@ -1210,6 +1320,88 @@ export function AuthorLorebookPanel({
           </div>
         </div>
       </div>
+
+      {/* Search Dialog */}
+      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <DialogContent className="max-w-xl max-h-[80vh] flex flex-col p-6 gap-6">
+          <DialogHeader className="px-0 pt-0 pb-2 border-b">
+            <DialogTitle className="text-lg font-semibold">
+              설정 검색
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              작품 내 모든 설정을 검색합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4">
+            {/* Search Controls */}
+            <div className="flex items-center gap-2">
+              <Select
+                value={searchCategory}
+                onValueChange={(val) => setSearchCategory(val as Category)}
+              >
+                <SelectTrigger className="w-[110px] h-9 text-xs">
+                  <SelectValue placeholder="카테고리" />
+                </SelectTrigger>
+                <SelectContent>
+                  {searchCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Input & Button */}
+            <div className="relative flex items-center gap-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="찾고 싶은 내용을 문장으로 설명해주세요..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearch(e);
+                }}
+                className="pl-9 h-10 text-sm"
+              />
+              <Button onClick={handleSearch} className="h-10 px-4 shrink-0">
+                {searchMutation.isPending && (
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                )}
+                검색
+              </Button>
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1 h-[400px] -mx-2 px-2">
+            {searchResults.length > 0 ? (
+              <div className="space-y-3">
+                {searchResults.map((item) => (
+                  <LorebookCard
+                    key={item.id}
+                    item={item}
+                    title={item.title || item.name}
+                    description={item.description}
+                    category={item.category}
+                    tags={getTagsForItem(item)}
+                    onEdit={(item) => {
+                      handleEditClick(item);
+                      setIsSearchOpen(false); // Close search when editing
+                    }}
+                    onDelete={handleDeleteClick}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 py-10">
+                <Search className="w-8 h-8 opacity-20" />
+                <p className="text-sm">검색 결과가 없습니다.</p>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {/* Similarity Check Dialog */}
       <Dialog
@@ -1320,6 +1512,7 @@ function LorebookCard({
   title,
   description,
   tags = [],
+  category,
   onEdit,
   onDelete,
 }: {
@@ -1327,6 +1520,7 @@ function LorebookCard({
   title: string;
   description: string;
   tags?: string[];
+  category?: string;
   onEdit: (item: any) => void;
   onDelete: (id: number) => void;
 }) {
@@ -1334,7 +1528,14 @@ function LorebookCard({
     <Card className="relative group">
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <h5 className="font-semibold text-sm line-clamp-1">{title}</h5>
+          <div className="flex items-center gap-2">
+            <h5 className="font-semibold text-sm line-clamp-1">{title}</h5>
+            {category && (
+              <Badge variant="outline" className="text-[10px] px-1 h-5">
+                {category}
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               variant="ghost"
