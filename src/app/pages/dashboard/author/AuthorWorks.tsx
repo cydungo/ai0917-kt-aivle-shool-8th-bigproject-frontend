@@ -85,6 +85,7 @@ import {
   ManuscriptDto,
   ManuscriptUploadRequestDto,
   LorebookSaveRequestDto,
+  LorebookConflictSolveRequestDto,
   WorkStatus,
 } from '../../../types/author';
 import { cn } from '../../../components/ui/utils';
@@ -1085,54 +1086,107 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
   // Confirm Publish Mutation (Apply Analysis Results)
   const confirmPublishMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedWorkId || !selectedManuscript || !settingBookDiff) return;
-      const work = works?.find((w) => w.id === selectedWorkId);
-      if (!work) return;
+      console.log('DEBUG: confirmPublishMutation started');
 
-      // TODO: Implement actual saving logic for each item in settingBookDiff
-      // This requires iterating over '신규 업로드', '설정 결합', and resolved '충돌' items
-      // and calling authorService.saveLorebookManual or similar for each.
-      // For now, we simulate success to allow the flow to complete.
-
-      const newUploads = settingBookDiff['신규 업로드'] as any;
-      if (newUploads && typeof newUploads === 'object') {
-        for (const [category, items] of Object.entries(newUploads)) {
-          if (!Array.isArray(items)) continue;
-
-          for (const item of items) {
-            const itemObj = item as any;
-            const keys = Object.keys(itemObj).filter((k) => k !== 'ep_num');
-            if (keys.length === 0) continue;
-
-            const keyword = keys[0];
-            const settingData = itemObj[keyword];
-
-            try {
-              const req: LorebookSaveRequestDto = {
-                category,
-                keyword,
-                subtitle: selectedManuscript.subtitle || '',
-                setting:
-                  typeof settingData === 'string'
-                    ? settingData
-                    : JSON.stringify(settingData),
-                episode: [selectedManuscript.episode],
-              };
-              await authorService.saveLorebookManual(
-                integrationId,
-                work.title,
-                selectedWorkId,
-                req,
-              );
-            } catch (e) {
-              console.error('Failed to save item:', keyword, e);
-            }
-          }
-        }
+      if (!selectedWorkId || !selectedManuscript || !settingBookDiff) {
+        console.error('DEBUG: Missing required state', {
+          selectedWorkId,
+          selectedManuscript,
+          settingBookDiff,
+        });
+        return;
       }
 
-      // We process only new items for now as a proof of concept.
-      // Updates and conflicts require more complex logic.
+      const work = works?.find((w) => w.id === selectedWorkId);
+      if (!work) {
+        console.error('DEBUG: Work not found for id', selectedWorkId);
+        return;
+      }
+
+      // For now, we simulate success to allow the flow to complete.
+
+      // Helper function to reconstruct the setting object structure
+      const reconstructSection = (sectionItems: any[]) => {
+        if (!sectionItems || sectionItems.length === 0) return [];
+
+        const grouped: Record<string, any[]> = {};
+
+        sectionItems.forEach((item) => {
+          const category = item.category;
+          const keyword = item.name;
+
+          // Find setting data logic (reused)
+          let settingData = item[keyword];
+          if (!settingData) {
+            if (item.new) {
+              settingData = item.new;
+            } else {
+              const reservedKeys = [
+                'ep_num',
+                'category',
+                'id',
+                'original',
+                'new',
+                'name',
+                'description',
+              ];
+              const contentEntry = Object.entries(item).find(
+                ([k]) => !reservedKeys.includes(k),
+              );
+              if (contentEntry) settingData = contentEntry[1];
+            }
+          }
+          if (!settingData && item.description) {
+            settingData = item.description;
+          }
+
+          if (!grouped[category]) {
+            grouped[category] = [];
+          }
+
+          // Construct the item object: { [keyword]: settingData, ep_num: ... }
+          grouped[category].push({
+            [keyword]: settingData,
+            ep_num: item.ep_num || [selectedManuscript.episode],
+          });
+        });
+
+        return grouped;
+      };
+
+      try {
+        const finalSetting = {
+          '설정 결합': reconstructSection(
+            Array.isArray(settingBookDiff['설정 결합'])
+              ? settingBookDiff['설정 결합']
+              : [],
+          ),
+          '신규 업로드': reconstructSection(
+            Array.isArray(settingBookDiff['신규 업로드'])
+              ? settingBookDiff['신규 업로드']
+              : [],
+          ),
+        };
+
+        const req: LorebookConflictSolveRequestDto = {
+          setting: finalSetting,
+          episodes: selectedManuscript.id,
+        };
+
+        console.log('DEBUG: Sending conflict solve req:', req);
+
+        await authorService.saveAfterConflict(
+          integrationId,
+          work.title,
+          selectedWorkId,
+          req,
+        );
+        console.log('DEBUG: Conflict solve save success');
+      } catch (e) {
+        console.error('Failed to save conflict solve:', e);
+        toast.error('설정집 업데이트에 실패했습니다.');
+        return; // Exit on error
+      }
     },
     onSuccess: () => {
       toast.success('설정집이 업데이트되었습니다.');
@@ -1666,10 +1720,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>제목</Label>
-                <Input
-                  value={editMetadataTitle}
-                  onChange={(e) => setEditMetadataTitle(e.target.value)}
-                />
+                <Input value={editMetadataTitle} disabled />
               </div>
               <div className="space-y-2">
                 <Label>시놉시스</Label>

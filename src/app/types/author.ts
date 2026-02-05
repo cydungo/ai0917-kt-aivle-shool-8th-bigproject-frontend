@@ -124,13 +124,13 @@ export interface LorebookSaveRequestDto {
   category: string;
   keyword: string;
   subtitle: string;
-  setting: string;
+  settings: string;
   episode?: number[];
 }
 
 export interface LorebookUpdateRequestDto {
   keyword: string;
-  setting: string;
+  settings: string;
   subtitle?: string;
 }
 

@@ -164,7 +164,7 @@ export function AuthorLorebookPanel({
       return authorService.saveLorebookManual(userId, work!.title, workId, {
         keyword: lorebookTitle,
         subtitle: subtitle || '',
-        setting: settings,
+        settings,
         category: toBackendCategory(activeCategory) as any,
         episode: [],
       });
@@ -194,7 +194,7 @@ export function AuthorLorebookPanel({
         {
           keyword: lorebookTitle,
           subtitle: subtitle || '',
-          setting: settings,
+          settings,
         },
       );
     },

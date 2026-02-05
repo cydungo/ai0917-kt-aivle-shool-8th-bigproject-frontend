@@ -326,10 +326,10 @@ function WorkItem({
                   >
                     <FileText className="w-4 h-4 mr-2 text-muted-foreground shrink-0" />
                     <span className="truncate flex-1 text-left">
-                      {manuscript.subtitle || '무제'}
-                      <span className="text-xs text-muted-foreground ml-1">
+                      <span className="text-xs text-muted-foreground mr-0.5">
                         ({manuscript.episode}화)
                       </span>
+                      {manuscript.subtitle || '무제'}
                     </span>
                   </div>
                 );
