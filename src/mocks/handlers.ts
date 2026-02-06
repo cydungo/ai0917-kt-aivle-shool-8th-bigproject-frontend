@@ -1,4 +1,13 @@
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, delay, RequestHandler } from 'msw';
+import {
+  ORIGINAL_LOREBOOKS,
+  ORIGINAL_IP_EXPANSION_PROPOSALS,
+  ORIGINAL_WORK_ID,
+  ORIGINAL_WORK_TITLE,
+  ORIGINAL_TITLES,
+  ORIGINAL_GENRES,
+  ORIGINAL_NAMES,
+} from './original_data';
 
 // Define the base URL from environment variables
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
@@ -13,101 +22,10 @@ const generateList = <T>(count: number, generator: (index: number) => T): T[] =>
 const getRandomItem = <T>(items: T[]): T =>
   items[Math.floor(Math.random() * items.length)];
 
-const TITLES = [
-  '회귀했더니 천재 흑마법사',
-  '전지적 독자 시점',
-  '나 혼자만 레벨업',
-  '화산귀환',
-  '재벌집 막내아들',
-  '전생검신',
-  '템빨',
-  '광마회귀',
-  '데뷔 못 하면 죽는 병 걸림',
-  '이번 생은 가주가 되겠습니다',
-  '나를 죽여줘',
-  '백작가의 망나니가 되었다',
-  'SSS급 자살헌터',
-  '전생했더니 슬라임이었던 건에 대하여',
-  '소드마스터의 막내아들',
-  '검술명가 막내아들',
-  '닥터 최태수',
-  '달빛조각사',
-  '나노 마신',
-  '마도전생기',
-  '무한의 마법사',
-  '빌런의 엔딩은 죽음뿐',
-  '악녀는 마리오네트',
-  '어느 날 공주가 되어버렸다',
-  '재혼 황후',
-  '황제의 외동딸',
-  '황제의 외동딸',
-  '픽 미 업',
-  '디펜스 게임의 폭군이 되었다',
-  '게임 속 바바리안으로 살아남기',
-  '천재 타자의 강속구',
-  '축구천재가 되다',
-  '홈플레이트의 빌런',
-  '탑 매니지먼트',
-  '배우, 다시 서다',
-  '천재 아이돌의 연예계 공략법',
-];
-
-const GENRES = [
-  '판타지',
-  '무협',
-  '현대판타지',
-  '로맨스판타지',
-  'SF',
-  '스포츠',
-  '대체역사',
-  '게임판타지',
-  '미스터리',
-  '스릴러',
-  '라이트노벨',
-];
-
-const NAMES = [
-  '김독자',
-  '성진우',
-  '청명',
-  '진도준',
-  '그리드',
-  '이자하',
-  '박문대',
-  '피렌티아',
-  '케일 헤니투스',
-  '김공자',
-  '리무루',
-  '진 룬칸델',
-  '최태수',
-  '이현',
-  '천여운',
-  '천하진',
-  '시로네',
-  '페넬로페',
-  '카예나',
-  '아타나시아',
-  '나비에',
-  '아리아드나',
-  '로키',
-  '애쉬',
-  '비요른',
-  '강건우',
-  '이현우',
-  '정윤호',
-  '서준',
-  '강우진',
-  '온하준',
-  '유중혁',
-  '한수영',
-  '차해인',
-  '백윤호',
-  '당보',
-  '장일소',
-  '이성민',
-  '위드',
-  '서윤',
-];
+// Use Original Data
+const TITLES = ORIGINAL_TITLES;
+const GENRES = ORIGINAL_GENRES;
+const NAMES = ORIGINAL_NAMES;
 
 const MOCK_PROPOSALS = generateList(10, (i) => ({
   id: i,
@@ -146,6 +64,22 @@ const MOCK_WORKS = generateList(5, (i) => ({
   statusDescription: '상태 설명',
 }));
 
+// Add Original Work
+MOCK_WORKS.push({
+  id: ORIGINAL_WORK_ID,
+  title: ORIGINAL_WORK_TITLE,
+  description: '연금술과 증기기관이 공존하는 스팀펑크 판타지',
+  status: 'ONGOING',
+  synopsis:
+    '몰락한 연금술 명가의 후계자 엘라라가 시간을 되돌리는 아티팩트 "크로노스 코어"를 두고 벌이는 복수와 모험의 대서사시.',
+  genre: '판타지',
+  coverImageUrl: 'https://via.placeholder.com/300?text=Clockwork+Alchemist',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  writer: '김에이블',
+  statusDescription: '절찬 연재중',
+});
+
 // Map<WorkId, Lorebook[]>
 const MOCK_LOREBOOKS = new Map<number, any[]>();
 
@@ -164,15 +98,8 @@ MOCK_WORKS.forEach((work) => {
       'worldviews',
       'plots',
     ]);
-    const names = {
-      characters: ['주인공', '조력자', '빌런', '스승', '라이벌', '가족'],
-      places: ['수도', '던전', '아카데미', '마탑', '황궁', '빈민가'],
-      items: ['성검', '마도서', '아티팩트', '물약', '지도', '열쇠'],
-      groups: ['길드', '기사단', '암살단', '상단', '용병단', '학회'],
-      worldviews: ['마나', '오러', '신성력', '정령', '차원', '시스템'],
-      plots: ['각성', '회귀', '전쟁', '입학', '복수', '구원'],
-    };
-    const keyword = getRandomItem((names as any)[category]);
+    // Use generic descriptions instead of specific copyrighted names
+    const keyword = `${category}_${i}`;
 
     return {
       id: work.id * 100 + i,
@@ -203,11 +130,44 @@ MOCK_WORKS.forEach((work) => {
   );
 });
 
+// Initialize Original Lorebooks
+MOCK_LOREBOOKS.set(ORIGINAL_WORK_ID, [...ORIGINAL_LOREBOOKS]);
+
+// Shared resolver for author list
+const authorListResolver = ({ request }: { request: Request }) => {
+  const url = new URL(request.url);
+  const page = Number(url.searchParams.get('page') || 0);
+  const size = Number(url.searchParams.get('size') || 10);
+
+  const authors = generateList(50, (i) => ({
+    id: i,
+    name: `작가 ${i}`,
+    email: `author${i}@example.com`,
+    workCount: Math.floor(Math.random() * 10),
+    status: getRandomItem(['ACTIVE', 'INACTIVE', 'BANNED']),
+    createdAt: new Date().toISOString(),
+  }));
+
+  const start = page * size;
+  const end = start + size;
+  const content = authors.slice(start, end);
+
+  return HttpResponse.json({
+    content,
+    pageable: {
+      pageNumber: page,
+      pageSize: size,
+    },
+    totalElements: authors.length,
+    totalPages: Math.ceil(authors.length / size),
+  });
+};
+
 // ----------------------------------------------------------------------
 // Handlers Definition
 // ----------------------------------------------------------------------
 
-export const handlers = [
+export const handlers: RequestHandler[] = [
   // ======================================================================
   // 1. Test API
   // ======================================================================
@@ -273,430 +233,227 @@ export const handlers = [
   }),
 
   http.post(`${BACKEND_URL}/api/v1/auth/password/reset`, async () => {
+    await delay(1000);
     return HttpResponse.json({
-      success: true,
-      message: 'Password reset successful',
+      message: '비밀번호 재설정 이메일이 발송되었습니다.',
     });
   }),
 
-  http.get(`${BACKEND_URL}/api/v1/auth/naver/login`, () =>
-    HttpResponse.json({
-      url: 'https://nid.naver.com/oauth2.0/authorize?mock=true',
-      message: 'Naver Login URL generated (Mocked)',
-    }),
-  ),
+  http.post(`${BACKEND_URL}/api/v1/auth/password/verify-code`, async () => {
+    await delay(500);
+    return HttpResponse.json({ verified: true });
+  }),
+
+  http.post(`${BACKEND_URL}/api/v1/auth/password/change`, async () => {
+    await delay(1000);
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.post(`${BACKEND_URL}/api/v1/auth/join`, async () => {
+    await delay(1000);
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.get(`${BACKEND_URL}/api/v1/auth/check-email`, async () => {
+    await delay(500);
+    return HttpResponse.json({ available: true });
+  }),
+
+  http.post(`${BACKEND_URL}/api/v1/auth/send-verification`, async () => {
+    await delay(500);
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.post(`${BACKEND_URL}/api/v1/auth/verify-email`, async () => {
+    await delay(500);
+    return HttpResponse.json({ verified: true });
+  }),
 
   // ======================================================================
-  // 3. Admin API
+  // 3. Author API
   // ======================================================================
 
-  // 3.1 Dashboard
-  http.get(`${BACKEND_URL}/api/v1/admin/dashboard/summary`, () =>
-    HttpResponse.json({
-      totalUsers: 1250,
-      activeUsers: 850,
-      totalSales: 15000000,
-      serverStatus: 'NORMAL',
-    }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/admin/dashboard/dau`, () =>
-    HttpResponse.json({
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      datasets: [{ label: 'DAU', data: [120, 190, 300, 250, 200, 350, 400] }],
-    }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/admin/dashboard/resources`, () =>
-    HttpResponse.json({ cpu: 45, memory: 60, disk: 30 }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/admin/dashboard/logs`, () =>
-    HttpResponse.json({
-      logs: generateList(20, (i) => ({
-        id: i,
-        level: i % 10 === 0 ? 'ERROR' : 'INFO',
-        message: `System Log ${i}: ${i % 10 === 0 ? 'Critical Failure' : 'Normal Operation'}`,
-        timestamp: new Date().toISOString(),
-        service: 'AuthService',
-      })),
-    }),
-  ),
-
-  // 3.2 Access
-  http.get(`${BACKEND_URL}/api/v1/admin/access/summary`, () =>
-    HttpResponse.json({
-      adminCount: 5,
-      managerCount: 12,
-      authorCount: 1232,
-      deactivatedCount: 45,
-    }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/admin/access/users`, ({ request }) => {
+  // WorkController
+  http.get(`${BACKEND_URL}/api/v1/author/works`, ({ request }) => {
     const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') || 0);
-    const size = Number(url.searchParams.get('size') || 10);
-    const total = 120;
-
-    return HttpResponse.json({
-      content: generateList(size, (i) => {
-        const role = getRandomItem([
-          'Author',
-          'Manager',
-          'Admin',
-          'DEACTIVATED',
-        ]);
-        return {
-          id: page * size + i,
-          email: `user${page * size + i}@test.com`,
-          name: `User ${page * size + i}`,
-          role: role,
-          status: role === 'DEACTIVATED' ? 'INACTIVE' : 'ACTIVE',
-          lastLoginAt: new Date().toISOString(),
-          lastAt:
-            role === 'DEACTIVATED'
-              ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-              : undefined,
-          createdAt: new Date().toISOString(),
-        };
-      }),
-      page,
-      size,
-      totalElements: total,
-      totalPages: Math.ceil(total / size),
-    });
+    const authorId = url.searchParams.get('authorId');
+    // In a real app, filter by authorId. Here we just return all mock works.
+    return HttpResponse.json(MOCK_WORKS);
   }),
 
-  // 3.3 Notice
-  http.get(`${BACKEND_URL}/api/v1/notice`, ({ request }) => {
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') || 0);
-    const size = Number(url.searchParams.get('size') || 10);
-    const keyword = url.searchParams.get('keyword') || '';
-
-    const content = generateList(size, (i) => {
-      const id = page * size + i;
-      const titleBase = `[공지] 시스템 점검 안내 ${id}`;
-      const title =
-        keyword && !titleBase.includes(keyword)
-          ? `${titleBase} (${keyword})`
-          : titleBase;
-      return {
-        id,
-        title,
-        content:
-          '시스템 점검이 예정되어 있습니다. 점검 시간 동안 서비스 이용이 제한될 수 있습니다.',
-        originalFilename: i % 3 === 0 ? `notice_${id}.pdf` : null,
-        writer: 'Admin',
-        createdAt: new Date(Date.now() - id * 86400000).toISOString(),
-      };
-    });
-
-    return HttpResponse.json({
-      content,
-      totalElements: 50,
-      totalPages: 5,
-      number: page,
-    });
+  http.get(`${BACKEND_URL}/api/v1/author/works/:id`, ({ params }) => {
+    const id = Number(params.id);
+    const work = MOCK_WORKS.find((w) => w.id === id);
+    if (!work) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(work);
   }),
 
-  // ======================================================================
-  // 4. Manager API
-  // ======================================================================
-
-  // 4.0 Author Dashboard (Added for Error Fix)
-  http.get(`${BACKEND_URL}/api/v1/author/dashboard/summary`, () =>
-    HttpResponse.json({
-      totalWorks: 5,
-      completedWorks: 2,
-      totalViews: 12500,
-      monthlyIncome: 3500000,
-    }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/author/dashboard/notice`, ({ request }) => {
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') || 0);
-    const size = Number(url.searchParams.get('size') || 10);
-    const content = generateList(size, (i) => {
-      const id = page * size + i + 1;
-      return {
-        id,
-        title: `[공지] 작가님들을 위한 ${id}월 가이드`,
-        content: '작가 분들을 위한 운영 가이드와 시스템 업데이트 안내입니다.',
-        writer: '관리자',
-        originalFilename: i % 3 === 0 ? `author_notice_${id}.pdf` : null,
-        createdAt: new Date(Date.now() - id * 86400000).toISOString(),
-      };
-    });
-    return HttpResponse.json({
-      content,
-      totalElements: 50,
-      totalPages: 5,
-      number: page,
-    });
-  }),
-
-  // 4.1 Dashboard
-  http.get(`${BACKEND_URL}/api/v1/manager/dashboard/summary`, () =>
-    HttpResponse.json({
-      pendingProposals: 0,
-      managedAuthors: 42,
-      todayDau: 2543,
-      yesterdayDau: 2120,
-      dauChangeRate: Math.round(((2543 - 2120) / 2120) * 1000) / 10,
-    }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/manager/dashboard`, () => {
-    const summary = {
-      pendingProposals: 0,
-      managedAuthors: 42,
-      todayDau: 2543,
-      yesterdayDau: 2120,
-      dauChangeRate: Math.round(((2543 - 2120) / 2120) * 1000) / 10,
+  http.post(`${BACKEND_URL}/api/v1/author/works`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    const newWork = {
+      id: MOCK_WORKS.length + 100,
+      ...body,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
-    const notices = generateList(5, (i) => ({
-      id: i + 1,
-      title: `운영 공지 ${i + 1}`,
-      content:
-        '운영자 대시보드 개선 및 시스템 점검 안내. 세부 내용은 공지 상세에서 확인하세요.',
-      writer: '관리자',
-      createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-    }));
-    return HttpResponse.json({ summary, notices });
+    MOCK_WORKS.push(newWork);
+    return HttpResponse.json(newWork.id);
   }),
 
-  // 4.2 IP Expansion
-  http.get(`${BACKEND_URL}/api/v1/manager/ipext`, () =>
-    HttpResponse.json({
-      content: generateList(10, (i) => ({
-        id: i,
-        title: `${getRandomItem(TITLES)} 웹툰화 제안`,
-        authorName: getRandomItem(NAMES),
-        category: '웹툰',
-        status: getRandomItem(['PENDING', 'REVIEWING', 'APPROVED']),
-        submittedAt: new Date().toISOString(),
-      })),
-      totalPages: 5,
-    }),
-  ),
-  http.get(
-    `${BACKEND_URL}/api/v1/manager/ipext/proposals/:id`,
-    ({ params }) => {
-      const formats = [
-        'webtoon',
-        'drama',
-        'game',
-        'movie',
-        'commercial',
-        'spinoff',
-      ];
-      const selectedFormat = formats[Number(params.id) % formats.length];
-
-      let mediaDetails = {};
-      if (selectedFormat === 'webtoon') {
-        mediaDetails = {
-          style: 'character_centric',
-          pacing: 'fast',
-          endingPoint: 'season1_climax',
-          colorTone: 'vivid',
-        };
-      } else if (selectedFormat === 'drama') {
-        mediaDetails = {
-          seasonType: 'mini',
-          episodeDuration: '60min',
-          subFocus: 'romance',
-        };
-      } else if (selectedFormat === 'game') {
-        mediaDetails = {
-          gameGenre: 'rpg',
-          coreLoop: 'collection',
-          platform: 'mobile',
-        };
-      } else if (selectedFormat === 'movie') {
-        mediaDetails = {
-          runningTime: '120min',
-          colorTheme: 'noir',
-          focusAct: 'climax',
-        };
-      } else if (selectedFormat === 'commercial') {
-        mediaDetails = {
-          visualFormat: 'photo',
-          usagePurpose: 'sns_ad',
-          targetProduct: 'fashion',
-        };
-      } else if (selectedFormat === 'spinoff') {
-        mediaDetails = {
-          spinoffType: 'prequel',
-          targetCharacter: 'Villain',
-          publishPace: 'weekly',
-        };
+  http.patch(
+    `${BACKEND_URL}/api/v1/author/works/:id/status`,
+    async ({ params, request }) => {
+      const id = Number(params.id);
+      const status = new URL(request.url).searchParams.get('status');
+      const work = MOCK_WORKS.find((w) => w.id === id);
+      if (work && status) {
+        work.status = status as any;
       }
-
-      return HttpResponse.json({
-        id: params.id,
-        title: `${getRandomItem(TITLES)} IP 확장 제안서`,
-        authorName: getRandomItem(NAMES),
-        category: selectedFormat,
-        status: 'REVIEWING',
-        content: '이 작품은 독창적인 세계관을 바탕으로...',
-        aiGuideline: '주인공의 성격을 좀 더 부각시키는 방향으로...',
-
-        // Edit Mode Pre-fill Data
-        format: selectedFormat,
-        strategy: {
-          genres: [1], // Fantasy
-          targetGenre: '로맨스 판타지',
-          universe: 'shared',
-        },
-        business: {
-          targetAge: ['20s', '30s'],
-          targetGender: 'female',
-          budgetRange: 'high',
-          toneManner: '감성적이고 서정적인 분위기',
-        },
-        mediaDetails: mediaDetails,
-        mediaPrompt:
-          '원작의 감동을 그대로 전달하면서도 새로운 매체의 특성을 살려주세요.',
-
-        lorebooks: [
-          {
-            id: 101,
-            title: '주인공 설정집',
-            category: '인물',
-            keyword: '주인공',
-            setting: '용감하고 정의로운 성격',
-            authorName: '김작가',
-            workTitle: '원작 소설',
-          },
-          {
-            id: 102,
-            title: '제국 설정집',
-            category: '세계',
-            keyword: '제국',
-            setting: '마법이 발달한 거대 제국',
-            authorName: '김작가',
-            workTitle: '원작 소설',
-          },
-        ],
-        crownSettingId: 101,
-      });
-    },
-  ),
-
-  // 4.3 Assets
-  http.get(`${BACKEND_URL}/api/v1/manager/assets`, () =>
-    HttpResponse.json({
-      content: generateList(12, (i) => ({
-        id: i,
-        title: `판타지 마을 배경 ${i}`,
-        type: '3D Model',
-        category: 'Fantasy',
-        status: 'APPROVED',
-        thumbnailUrl: 'https://via.placeholder.com/150',
-      })),
-      totalPages: 3,
-    }),
-  ),
-
-  // 4.4 Analyze
-  http.get(`${BACKEND_URL}/api/v1/manager/analyze/analysis`, () =>
-    HttpResponse.json({
-      content: generateList(10, (i) => ({
-        id: i,
-        workTitle: getRandomItem(TITLES),
-        authorName: getRandomItem(NAMES),
-        analyzedAt: new Date().toISOString(),
-        score: 85 + (i % 15),
-      })),
-      totalPages: 4,
-    }),
-  ),
-
-  // 4.5 Trends & Contest & Authors
-  http.get(`${BACKEND_URL}/api/v1/manager/iptrend`, () =>
-    HttpResponse.json({
-      latestReport: {
-        id: 100,
-        fileName: '2025-02-02_IP_Trend_Analysis.pdf',
-        createdAt: new Date().toISOString(),
-        status: 'COMPLETED',
-        fileSize: 102400,
-      },
-      statistics: {
-        totalReports: 25,
-        completedReports: 20,
-        failedReports: 5,
-        lastGeneratedAt: new Date().toISOString(),
-        // Extra fields for compatibility if needed
-        monthlyGrowth: 15.2,
-        topFormat: '웹툰',
-      },
-      recentReports: generateList(5, (i) => ({
-        id: i,
-        fileName: `Report_${i}.pdf`,
-        createdAt: new Date().toISOString(),
-        status: 'COMPLETED',
-      })),
-      trends: generateList(12, (i) => ({
-        month: `${i + 1}월`,
-        count: 10 + Math.floor(Math.random() * 20),
-      })),
-      summary: {
-        currentMonthCount: 1,
-        totalCount: 24,
-        lastUpdate: '2025-01-15',
-        topKeywords: ['회빙환', 'OSMU'],
-      },
-    }),
-  ),
-
-  // 4.6 AI Analysis (Author)
-  http.post(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/upload`,
-    async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return HttpResponse.json({ success: true });
-    },
-  ),
-
-  http.get(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:id`,
-    ({ params }) => {
-      return HttpResponse.json({
-        id: Number(params.id),
-        episode: 1,
-        subtitle: '프롤로그',
-        txt: '원문 내용 텍스트...',
-        createdAt: new Date().toISOString(),
-      });
-    },
-  ),
-
-  http.delete(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:id`,
-    async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return HttpResponse.json({ success: true });
+      return new HttpResponse(null, { status: 200 });
     },
   ),
 
   http.patch(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:id`,
-    async ({ request, params }) => {
+    `${BACKEND_URL}/api/v1/author/works/:id`,
+    async ({ params, request }) => {
+      const id = Number(params.id);
       const body = (await request.json()) as any;
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const work = MOCK_WORKS.find((w) => w.id === id);
+      if (work) {
+        Object.assign(work, body);
+      }
+      return new HttpResponse(null, { status: 200 });
+    },
+  ),
+
+  http.delete(`${BACKEND_URL}/api/v1/author/works/:id`, ({ params }) => {
+    const id = Number(params.id);
+    const index = MOCK_WORKS.findIndex((w) => w.id === id);
+    if (index > -1) {
+      MOCK_WORKS.splice(index, 1);
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ManuscriptController
+  http.get(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/list`,
+    ({ params }) => {
+      // Logic to filter manuscripts by work title/id would go here
+      // For mock, we just return manuscripts for the first work or generic ones
+      const work = MOCK_WORKS.find(
+        (w) => w.title === decodeURIComponent(params.title as string),
+      );
+      const workId = work ? work.id : ORIGINAL_WORK_ID;
+      const manuscripts = MOCK_MANUSCRIPTS.get(workId) || [];
+
       return HttpResponse.json({
-        id: Number(params.id),
-        subtitle: body.subtitle,
-        updatedAt: new Date().toISOString(),
+        content: manuscripts,
+        totalPages: 1,
+        totalElements: manuscripts.length,
+        size: 10,
+        number: 0,
       });
     },
   ),
 
+  http.get(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:id`,
+    ({ params }) => {
+      const id = Number(params.id);
+      // Flatten all manuscripts to find by ID
+      const allManuscripts = Array.from(MOCK_MANUSCRIPTS.values()).flat();
+      const manuscript = allManuscripts.find((m) => m.id === id);
+      if (!manuscript) return new HttpResponse(null, { status: 404 });
+      return HttpResponse.json(manuscript);
+    },
+  ),
+
+  // Manuscript Upload (Create)
+  http.post(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/upload`,
+    async ({ request, params }) => {
+      const body = (await request.json()) as any;
+      const work = MOCK_WORKS.find(
+        (w) => w.title === decodeURIComponent(params.title as string),
+      );
+      const workId = work ? work.id : ORIGINAL_WORK_ID;
+
+      const newId = Math.floor(Math.random() * 100000);
+      const newManuscript = {
+        id: newId,
+        workId: workId,
+        ...body,
+        createdAt: new Date().toISOString(),
+      };
+
+      const current = MOCK_MANUSCRIPTS.get(workId) || [];
+      current.push(newManuscript);
+      MOCK_MANUSCRIPTS.set(workId, current);
+
+      return HttpResponse.json(newId);
+    },
+  ),
+
+  // Manuscript Update Text
+  http.patch(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/upload`,
+    async ({ request }) => {
+      const body = (await request.json()) as any;
+      // Mock update success
+      return HttpResponse.json(body.id || 1);
+    },
+  ),
+
+  // Manuscript Category Extraction
+  http.post(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/categories`,
+    async () => {
+      await delay(1000);
+      return HttpResponse.json({
+        categories: [
+          { name: '엘라라', category: 'character', confidence: 0.9 },
+          { name: '기어헤이븐', category: 'place', confidence: 0.85 },
+        ],
+      });
+    },
+  ),
+
+  // Manuscript Setting Conflict Check
+  http.post(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/setting`,
+    async () => {
+      await delay(1000);
+      return HttpResponse.json({
+        conflicts: [],
+        status: 'PASS',
+      });
+    },
+  ),
+
+  // Manuscript Delete
+  http.delete(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:id`,
+    () => {
+      return HttpResponse.json('삭제 완료');
+    },
+  ),
+
+  // Manuscript Update Info
+  http.patch(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:id`,
+    () => {
+      return HttpResponse.json('수정 완료');
+    },
+  ),
+
+  // AuthorLorebookController & AiLorebookController
   http.get(
     `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook`,
     ({ request }) => {
       const url = new URL(request.url);
       const workId = Number(url.searchParams.get('workId'));
       const lorebooks = MOCK_LOREBOOKS.get(workId) || [];
-
       return HttpResponse.json(lorebooks);
     },
   ),
@@ -709,26 +466,20 @@ export const handlers = [
       const workId = Number(url.searchParams.get('workId'));
 
       const lorebooks = MOCK_LOREBOOKS.get(workId) || [];
-      const filtered = lorebooks.filter((l) => l.category === category);
+      const filtered =
+        category === '*' || category === 'all'
+          ? lorebooks
+          : lorebooks.filter((l) => l.category === category);
 
       return HttpResponse.json(filtered);
     },
   ),
 
   http.post(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook`,
+    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/setting_save`,
     async ({ request }) => {
       const body = (await request.json()) as any;
-      const workId = Number(body.workId); // Assuming workId is passed in body or inferred
-
-      // In a real app, workId might come from the URL or body.
-      // The current frontend implementation seems to rely on the URL param context
-      // but let's assume we can get the workId.
-      // For mock purposes, if workId is missing in body, we might need to extract from URL if possible,
-      // or default to a known ID. But let's check if the frontend sends it.
-      // If not, we'll try to find it from the MOCK_LOREBOOKS keys or default to 0.
-
-      const targetWorkId = body.workId ? Number(body.workId) : 0;
+      const targetWorkId = body.workId ? Number(body.workId) : ORIGINAL_WORK_ID;
       const currentLorebooks = MOCK_LOREBOOKS.get(targetWorkId) || [];
 
       const newId = Math.max(...currentLorebooks.map((l) => l.id), 0) + 1;
@@ -743,1277 +494,279 @@ export const handlers = [
       currentLorebooks.push(newLorebook);
       MOCK_LOREBOOKS.set(targetWorkId, currentLorebooks);
 
-      return HttpResponse.json(newLorebook);
-    },
-  ),
-
-  http.put(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:id`,
-    async ({ params, request }) => {
-      const id = Number(params.id);
-      const body = (await request.json()) as any;
-      const workId = Number(body.workId); // Ensure frontend sends workId
-
-      const currentLorebooks = MOCK_LOREBOOKS.get(workId) || [];
-      const index = currentLorebooks.findIndex((l) => l.id === id);
-
-      if (index !== -1) {
-        currentLorebooks[index] = {
-          ...currentLorebooks[index],
-          ...body,
-          updatedAt: new Date().toISOString(),
-        };
-        MOCK_LOREBOOKS.set(workId, currentLorebooks);
-        return HttpResponse.json(currentLorebooks[index]);
-      }
-
-      return new HttpResponse(null, { status: 404 });
-    },
-  ),
-
-  http.delete(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:category/:id`,
-    async ({ params, request }) => {
-      // Need workId to find the list
-      // The URL pattern implies userId and title, but getting workId might require query param or lookup
-      // For simplicity, we'll search all lists
-      const id = Number(params.id);
-
-      for (const [wId, books] of MOCK_LOREBOOKS.entries()) {
-        const index = books.findIndex((b) => b.id === id);
-        if (index !== -1) {
-          books.splice(index, 1);
-          MOCK_LOREBOOKS.set(wId, books);
-          return HttpResponse.json({ success: true });
-        }
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return HttpResponse.json({ success: true }); // Fallback success
-    },
-  ),
-
-  http.post(
-    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/manuscript/setting`,
-    async () => {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
       return HttpResponse.json({
-        check: ['키워드1', '키워드2'],
-        setting_book: '설정집 내용...',
-        diff: '변경점...',
+        ...newLorebook,
+        similarSettings: [],
+        checkResult: 'PASS',
       });
     },
   ),
-
-  http.post(
-    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/conflict_solve`,
-    async ({ request }) => {
-      const body = await request.json();
-      console.log('Conflict Solve Request:', body);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      return HttpResponse.text('충돌 해결 및 저장 완료');
-    },
-  ),
-
-  http.post(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/categories`,
-    async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return HttpResponse.json({
-        인물: [
-          '가렌',
-          '럭스',
-          '피테르',
-          '티아나',
-          '자르반 3세',
-          '자르반 4세',
-          '숙부',
-          '마법사',
-          '광신자',
-          '용맹한 수호자',
-        ],
-        세계: ['룬 전쟁', '데마시아 왕국', '데마시아 이념', '마법', '심연'],
-        장소: [
-          '크라운가드 저택',
-          '하이 실버미어',
-          '데마시아',
-          '프렐요드 국경',
-          '침묵의 숲',
-          '화이트록',
-          '용기의 전당',
-          '빛의 사자 수도회',
-        ],
-        사건: [
-          '가렌의 군 입대',
-          '숙부의 죽음',
-          '프렐요드 국경 출정',
-          '부패한 광신자 축출',
-          '불굴의 선봉대 선발 시험',
-          '가렌의 검대장 임명',
-          '럭스의 마법 기운 발견',
-        ],
-        물건: ['데마시아산 강철', '무기'],
-        집단: [
-          '크라운가드 가문',
-          '데마시아군',
-          '기동대 기사',
-          '방벽 부대',
-          '불굴의 선봉대',
-          '평민',
-          '궁정인',
-          '빛의 사자 수도회',
-        ],
-      });
-    },
-  ),
-
-  // Manager Lorebooks
-  http.get(
-    `${BACKEND_URL}/api/v1/manager/works/:workId/lorebooks`,
-    ({ params }) => {
-      const workId = Number(params.workId);
-      const categories = ['인물', '세계', '장소', '사건', '물건', '단체'];
-
-      const specificData = [
-        {
-          keyword: '주인공',
-          category: '인물',
-          setting:
-            '회귀 전의 기억을 모두 가지고 있는 상태. 냉철하고 계산적이다.',
-        },
-        {
-          keyword: '제국 아카데미',
-          category: '장소',
-          setting: '대륙 최고의 교육 기관. 귀족과 평민이 함께 다닌다.',
-        },
-        {
-          keyword: '마나 호흡법',
-          category: '세계',
-          setting: '자연의 마나를 몸으로 받아들이는 기초 수련법.',
-        },
-        {
-          keyword: '황실 기사단',
-          category: '단체',
-          setting: '황제에게 절대적인 충성을 맹세한 최정예 기사 집단.',
-        },
-        {
-          keyword: '엑스칼리버',
-          category: '물건',
-          setting: '바위에 꽂힌 전설의 검. 진정한 왕만이 뽑을 수 있다.',
-        },
-        {
-          keyword: '마왕 토벌전',
-          category: '사건',
-          setting: '10년 전 있었던 대륙 최대의 전쟁. 많은 영웅이 희생되었다.',
-        },
-        {
-          keyword: '서브 남주',
-          category: '인물',
-          setting: '황태자. 주인공을 라이벌로 생각한다.',
-        },
-        {
-          keyword: '북부 대공',
-          category: '인물',
-          setting: '차가운 성격의 대공. 여주인공에게만 따뜻하다.',
-        },
-        {
-          keyword: '마법 탑',
-          category: '장소',
-          setting: '마법사들의 연구 기관. 외부와 단절되어 있다.',
-        },
-        {
-          keyword: '고대 유적',
-          category: '장소',
-          setting: '잊혀진 고대 문명의 흔적. 강력한 아티팩트가 잠들어 있다.',
-        },
-        {
-          keyword: '드래곤 하트',
-          category: '물건',
-          setting: '드래곤의 심장. 무한한 마나를 품고 있다.',
-        },
-        {
-          keyword: '암살자 길드',
-          category: '단체',
-          setting: '의뢰를 받으면 누구든 제거하는 어둠의 조직.',
-        },
-        {
-          keyword: '회귀의 날',
-          category: '사건',
-          setting: '주인공이 과거로 돌아온 바로 그 날.',
-        },
-        {
-          keyword: '정령계',
-          category: '세계',
-          setting: '정령들이 사는 차원. 계약을 통해 힘을 빌릴 수 있다.',
-        },
-        {
-          keyword: '성녀',
-          category: '인물',
-          setting: '신성력을 가진 교단의 상징. 치유 능력이 뛰어나다.',
-        },
-      ];
-
-      return HttpResponse.json(
-        specificData.map((data, i) => ({
-          id: workId * 100 + i,
-          keyword: data.keyword,
-          category: data.category,
-          setting: data.setting,
-          updatedAt: new Date().toISOString(),
-        })),
-      );
-    },
-  ),
-
-  // Manager IP Expansion Creation
-  http.post(
-    `${BACKEND_URL}/api/v1/manager/ip-expansion/proposals`,
-    async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return HttpResponse.json({
-        success: true,
-        id: Math.floor(Math.random() * 1000),
-      });
-    },
-  ),
-
-  http.get(
-    `${BACKEND_URL}/api/v1/manager/ip-expansion/proposals`,
-    ({ request }) => {
-      const url = new URL(request.url);
-      const page = Number(url.searchParams.get('page') || '0');
-      const size = Number(url.searchParams.get('size') || '10');
-
-      const allData = generateList(34, (i) => {
-        const id = i;
-        const authorIndex = id % NAMES.length;
-        const workIndex = id % TITLES.length;
-        const formats = [
-          'webtoon',
-          'game',
-          'drama',
-          'movie',
-          'animation',
-          'goods',
-          'publication',
-        ];
-        const format = formats[i % formats.length];
-        const formatNames: Record<string, string> = {
-          webtoon: '웹툰',
-          game: '게임',
-          drama: '드라마',
-          movie: '영화',
-          animation: '애니메이션',
-          goods: '굿즈',
-          publication: '출판',
-        };
-
-        return {
-          id: i,
-          title: `${TITLES[workIndex]} ${formatNames[format]}화 제안`,
-          status: getRandomItem([
-            'PENDING',
-            'REVIEWING',
-            'APPROVED',
-            'PROPOSED',
-          ]),
-          statusDescription: '검토 중입니다.',
-          createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-          authorId: authorIndex,
-          authorName: NAMES[authorIndex],
-          workId: workIndex,
-          workTitle: TITLES[workIndex],
-          content: '이 작품은 독창적인 세계관을 바탕으로...',
-          format: format,
-          strategy: {
-            genre: 'original',
-            targetGenre: '판타지',
-            universe: 'shared',
-          },
-          business: {
-            targetAge: ['20s', '30s'],
-            targetGender: 'all',
-            budgetRange: 'medium',
-            toneManner: '진지한, 웅장한',
-          },
-          mediaDetails: {
-            style: format === 'webtoon' ? 'casual' : 'realistic',
-            seasonType: 'series',
-            episodes: 12,
-          },
-          contentStrategy: {
-            coreNarrative: '주인공의 성장을 중심으로 한 영웅 서사',
-            characterArc: '평범한 소년에서 영웅으로 거듭나는 과정',
-            worldBuilding: '마법과 기술이 공존하는 독창적인 세계관',
-            themeMessage: '희망과 용기',
-            visualStyle: '화려한 액션과 섬세한 감정 묘사',
-            differentiation: '독특한 마법 시스템과 매력적인 조연들',
-          },
-          crownSettingId: i * 10 + 1,
-          lorebooks: [
-            {
-              id: i * 10 + 1,
-              keyword: '주인공 설정',
-              authorName: NAMES[authorIndex],
-              workTitle: TITLES[workIndex],
-              category: '인물',
-              setting: '주인공의 성격 및 외모 상세 설정',
-            },
-            {
-              id: i * 10 + 2,
-              keyword: '세계관 설정',
-              authorName: NAMES[authorIndex],
-              workTitle: TITLES[workIndex],
-              category: '세계',
-              setting: '작품의 배경이 되는 세계관 상세 설정',
-            },
-            // Add cross-work/author reference randomly
-            ...(i % 3 === 0
-              ? [
-                  {
-                    id: i * 10 + 3,
-                    keyword: '크로스오버 캐릭터',
-                    authorName: NAMES[(authorIndex + 1) % NAMES.length],
-                    workTitle: TITLES[(workIndex + 1) % TITLES.length],
-                    category: '인물',
-                    setting: '다른 작품에서 찬조 출연하는 캐릭터 설정',
-                  },
-                ]
-              : []),
-            ...(i % 4 === 0
-              ? [
-                  {
-                    id: i * 10 + 4,
-                    keyword: '참조 장소',
-                    authorName: NAMES[(authorIndex + 2) % NAMES.length],
-                    workTitle: TITLES[(workIndex + 2) % TITLES.length],
-                    category: '장소',
-                    setting: '타 작품의 배경 장소 참조',
-                  },
-                ]
-              : []),
-          ],
-        };
-      });
-
-      const totalElements = allData.length;
-      const totalPages = Math.ceil(totalElements / size);
-      const content = allData.slice(page * size, (page + 1) * size);
-
-      return HttpResponse.json({
-        content,
-        pageable: {
-          pageNumber: page,
-          pageSize: size,
-          sort: { empty: false, sorted: true, unsorted: false },
-          offset: page * size,
-          paged: true,
-          unpaged: false,
-        },
-        totalPages,
-        totalElements,
-        last: page === totalPages - 1,
-        size,
-        number: page,
-        sort: { empty: false, sorted: true, unsorted: false },
-        numberOfElements: content.length,
-        first: page === 0,
-        empty: content.length === 0,
-      });
-    },
-  ),
-
-  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/list`, ({ request }) => {
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') || 0);
-    const size = Number(url.searchParams.get('size') || 10);
-    const total = 60;
-
-    return HttpResponse.json({
-      content: generateList(size, (i) => ({
-        id: page * size + i,
-        fileName: `2025-${((page * size + i) % 12) + 1}-01_IP_Trend_Analysis_${page * size + i}.pdf`,
-        createdAt: new Date(
-          Date.now() - (page * size + i) * 86400000 * 30,
-        ).toISOString(),
-        status: i % 5 === 0 ? 'FAILED' : 'COMPLETED',
-        summary: '판타지 장르의 웹툰화 전환율 상승에 따른 IP 확장 전략 제언',
-      })),
-      page,
-      size,
-      totalElements: total,
-      totalPages: Math.ceil(total / size),
-    });
-  }),
-
-  http.get(
-    `${BACKEND_URL}/api/v1/manager/iptrend/preview/:id`,
-    ({ params }) => {
-      return HttpResponse.json({
-        id: Number(params.id),
-        title: 'IP 트렌드 분석 리포트',
-        analysisDate: '2025-01-15',
-        content: '<p>분석 내용입니다...</p>',
-        pdfUrl: 'https://example.com/report.pdf',
-      });
-    },
-  ),
-
-  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/exists-today`, () =>
-    HttpResponse.json(false),
-  ),
-
-  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/genre`, () =>
-    HttpResponse.json([
-      { genre: '판타지', growth: 12.5 },
-      { genre: '로맨스판타지', growth: 8.2 },
-      { genre: '무협', growth: -2.1 },
-    ]),
-  ),
-
-  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/report`, () => {
-    // Minimal valid PDF (Hello World)
-    const pdfBase64 =
-      'JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG9pbnQKPDwKICAvVHlwZSAvQ2F0YWxvZwogIC9QYWdlcyAyIDAgUgo+PgplbmRvYmoKCjIgMCBvYmogICUgcGFnZXMKPDwKICAvVHlwZSAvUGFnZXwKICAvTWVkaWFCb3ggWyAwIDAgMjAwIDIwMCBdCiAgL0NvdW50IDEKICAvS2lkcyBbIDMgMCBSIF0KPj4KZW5kb2JqCgozIDAgb2JqICAlIHBhZ2UgMQo8PAogIC9UeXBlIC9QYWdlCiAgL1BhcmVudCAyIDAgUgogIC9SZXNvdXJjZXMgPDwKICAgIC9Gb250IDw8CiAgICAgIC9GMSA0IDAgUgogICAgPj4KICA+PgogIC9Db250ZW50cyA1IDAgUgo+PgplbmRvYmoKCjQgMCBvYmogICUgZm9udAo8PAogIC9UeXBlIC9Gb250CiAgL1N1YnR5cGUgL1R5cGUxCiAgL0Jhc2VGb250IC9UaW1lcy1Sb21hbgo+PgplbmRvYmoKCjUgMCBvYmogICUgcGFnZSBjb250ZW50Cjw8CiAgL0xlbmd0aCA0NAo+PgpzdHJlYW0KQlQKNzAgNTAgVGQKL0YxIDEyIFRmCihIZWxsbywgd29ybGQhKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCgp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTAgMDAwMDAgbiAKMDAwMDAwMDA2MCAwMDAwMCBuIAowMDAwMDAwMTU3IDAwMDAwIG4gCjAwMDAwMDAyNTUgMDAwMDAgbiAKMDAwMDAwMDM0NCAwMDAwMCBuIAp0cmFpbGVyCjw8CiAgL1NpemUgNgogIC9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo0MTMKJSVFT0YK';
-
-    const binaryString = atob(pdfBase64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const blob = new Blob([bytes], { type: 'application/pdf' });
-    return new HttpResponse(blob, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="latest_report.pdf"',
-      },
-    });
-  }),
-
-  http.get(
-    `${BACKEND_URL}/api/v1/manager/iptrend/download/:id`,
-    ({ params }) => {
-      const id = params.id;
-      // Minimal valid PDF (Hello World)
-      const pdfBase64 =
-        'JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG9pbnQKPDwKICAvVHlwZSAvQ2F0YWxvZwogIC9QYWdlcyAyIDAgUgo+PgplbmRvYmoKCjIgMCBvYmogICUgcGFnZXMKPDwKICAvVHlwZSAvUGFnZXwKICAvTWVkaWFCb3ggWyAwIDAgMjAwIDIwMCBdCiAgL0NvdW50IDEKICAvS2lkcyBbIDMgMCBSIF0KPj4KZW5kb2JqCgozIDAgb2JqICAlIHBhZ2UgMQo8PAogIC9UeXBlIC9QYWdlCiAgL1BhcmVudCAyIDAgUgogIC9SZXNvdXJjZXMgPDwKICAgIC9Gb250IDw8CiAgICAgIC9GMSA0IDAgUgogICAgPj4KICA+PgogIC9Db250ZW50cyA1IDAgUgo+PgplbmRvYmoKCjQgMCBvYmogICUgZm9udAo8PAogIC9UeXBlIC9Gb250CiAgL1N1YnR5cGUgL1R5cGUxCiAgL0Jhc2VGb250IC9UaW1lcy1Sb21hbgo+PgplbmRvYmoKCjUgMCBvYmogICUgcGFnZSBjb250ZW50Cjw8CiAgL0xlbmd0aCA0NAo+PgpzdHJlYW0KQlQKNzAgNTAgVGQKL0YxIDEyIFRmCihIZWxsbywgd29ybGQhKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCgp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTAgMDAwMDAgbiAKMDAwMDAwMDA2MCAwMDAwMCBuIAowMDAwMDAwMTU3IDAwMDAwIG4gCjAwMDAwMDAyNTUgMDAwMDAgbiAKMDAwMDAwMDM0NCAwMDAwMCBuIAp0cmFpbGVyCjw8CiAgL1NpemUgNgogIC9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo0MTMKJSVFT0YK';
-
-      const binaryString = atob(pdfBase64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const blob = new Blob([bytes], {
-        type: 'application/pdf',
-      });
-      return new HttpResponse(blob, {
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="report_${id}.pdf"`,
-        },
-      });
-    },
-  ),
-
-  http.post(`${BACKEND_URL}/api/v1/manager/iptrend/generate`, async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return HttpResponse.json({
-      success: true,
-      message: 'Report generation started',
-    });
-  }),
-
-  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/scheduler/run`, () => {
-    return HttpResponse.json({ success: true, message: 'Scheduler triggered' });
-  }),
-
-  // Manager Author Management
-  http.get(`${BACKEND_URL}/api/v1/manager/authors/summary`, () =>
-    HttpResponse.json({
-      totalAuthors: 1234,
-      newAuthors: 15,
-      activeAuthors: 980,
-    }),
-  ),
-  http.get(`${BACKEND_URL}/api/v1/manager/authors/list`, ({ request }) => {
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') || 0);
-    const size = Number(url.searchParams.get('size') || 10);
-    const total = 120;
-
-    return HttpResponse.json({
-      content: generateList(size, (i) => ({
-        id: page * size + i,
-        name: NAMES[(page * size + i) % NAMES.length],
-        email: `author${page * size + i}@example.com`,
-        workCount: 3 + (i % 5),
-        createdAt: new Date(Date.now() - i * 86400000 * 30).toISOString(),
-        status: i % 10 === 0 ? 'INACTIVE' : 'ACTIVE',
-      })),
-      page,
-      size,
-      totalElements: total,
-      totalPages: Math.ceil(total / size),
-    });
-  }),
-  http.get(`${BACKEND_URL}/api/v1/manager/authors`, ({ request }) => {
-    const url = new URL(request.url);
-    const page = Number(url.searchParams.get('page') || 0);
-    const size = Number(url.searchParams.get('size') || 10);
-    const total = 150;
-
-    return HttpResponse.json({
-      content: generateList(size, (i) => {
-        const id = page * size + i;
-        return {
-          id: id,
-          name: NAMES[id % NAMES.length],
-          email: `author${id}@example.com`,
-          workCount: 3 + (id % 5),
-          createdAt: new Date(Date.now() - id * 86400000 * 30).toISOString(),
-          status: id % 10 === 0 ? 'INACTIVE' : 'ACTIVE',
-          recentWorks: generateList(3, (j) => ({
-            id: j,
-            title: TITLES[(id + j) % TITLES.length],
-            createdAt: new Date(Date.now() - j * 86400000).toISOString(),
-          })),
-          lastLogin: new Date().toISOString(),
-        };
-      }),
-      page,
-      size,
-      totalElements: total,
-      totalPages: Math.ceil(total / size),
-    });
-  }),
-  http.get(`${BACKEND_URL}/api/v1/manager/authors/:id`, ({ params }) => {
-    const id = Number(params.id);
-    return HttpResponse.json({
-      id,
-      name: NAMES[id % NAMES.length],
-      email: `author${id}@example.com`,
-      workCount: 3 + (id % 5),
-      createdAt: new Date(Date.now() - id * 86400000 * 30).toISOString(),
-      status: id % 10 === 0 ? 'INACTIVE' : 'ACTIVE',
-      recentWorks: generateList(3, (j) => ({
-        id: j,
-        title: TITLES[(id + j) % TITLES.length],
-        createdAt: new Date(Date.now() - j * 86400000).toISOString(),
-      })),
-      lastLogin: new Date().toISOString(),
-    });
-  }),
-  // Linked authors for Manager
-  http.get(`${BACKEND_URL}/api/v1/manager/authors/linked`, () =>
-    HttpResponse.json(
-      generateList(6, (i) => ({
-        id: i,
-        name: NAMES[i % NAMES.length],
-      })),
-    ),
-  ),
-  // Works for a specific author (Manager view)
-  http.get(`${BACKEND_URL}/api/v1/manager/authors/:id/works`, ({ params }) => {
-    const id = Number(params.id);
-    return HttpResponse.json(
-      generateList(8, (i) => ({
-        id: id * 100 + i,
-        title: `${TITLES[(id + i) % TITLES.length]}`,
-      })),
-    );
-  }),
-
-  http.post(`${BACKEND_URL}/api/v1/manager/authors/:pwd`, ({ params }) => {
-    const pwd = String(params.pwd);
-    // Mock logic: accept any 6-digit code or legacy AUTH- code
-    if ((pwd.length === 6 && /^\d+$/.test(pwd)) || pwd.startsWith('AUTH-')) {
-      localStorage.setItem('msw-author-linked', 'true');
-      return HttpResponse.json({
-        authorId: 123,
-        name: '김작가',
-      });
-    }
-    // Otherwise return 404 or 400
-    return new HttpResponse(null, { status: 404 });
-  }),
-
-  // ======================================================================
-  // 5. Author API
-  // ======================================================================
-
-  // 5.0 Manager & Invite Code
-
-  http.post(`${BACKEND_URL}/api/v1/author/manager/code`, () => {
-    // Return 6-digit code as Map<String, Object>
-    return HttpResponse.json({
-      code: Math.floor(100000 + Math.random() * 900000).toString(),
-      expiresIn: 300,
-    });
-  }),
-
-  // 5.1 Works
-  http.get(`${BACKEND_URL}/api/v1/author/works`, () =>
-    HttpResponse.json(MOCK_WORKS),
-  ),
-
-  http.get(`${BACKEND_URL}/api/v1/author/works/:workId`, ({ params }) => {
-    const id = Number(params.workId);
-    const work = MOCK_WORKS.find((w) => w.id === id);
-    if (!work) return new HttpResponse(null, { status: 404 });
-    return HttpResponse.json(work);
-  }),
-
-  http.post(`${BACKEND_URL}/api/v1/author/works`, async ({ request }) => {
-    const body = (await request.json()) as any;
-    const newId = Math.max(...MOCK_WORKS.map((w) => w.id), 0) + 1;
-    const newWork = {
-      id: newId,
-      title: body.title,
-      description: body.description,
-      status: 'NEW' as const,
-      statusDescription: '신규 생성됨',
-      synopsis: body.synopsis || '',
-      genre: body.genre || '판타지',
-      coverImageUrl:
-        body.coverImageUrl ||
-        `https://via.placeholder.com/300?text=Work+${newId}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      writer: 'Author',
-    };
-    MOCK_WORKS.push(newWork);
-    MOCK_MANUSCRIPTS.set(newId, []);
-    return HttpResponse.json(newId);
-  }),
-
-  http.patch(`${BACKEND_URL}/api/v1/author/works`, async ({ request }) => {
-    const body = (await request.json()) as any;
-    const index = MOCK_WORKS.findIndex((w) => w.id === body.id);
-    if (index !== -1) {
-      MOCK_WORKS[index] = {
-        ...MOCK_WORKS[index],
-        ...body,
-        updatedAt: new Date().toISOString(),
-      };
-      return HttpResponse.json(MOCK_WORKS[index].id);
-    }
-    return new HttpResponse(null, { status: 404 });
-  }),
 
   http.patch(
-    `${BACKEND_URL}/api/v1/author/works/:workId/status`,
-    ({ params, request }) => {
-      const id = Number(params.workId);
-      const url = new URL(request.url);
-      const status = url.searchParams.get('status');
-      const index = MOCK_WORKS.findIndex((w) => w.id === id);
-      if (index !== -1 && status) {
-        MOCK_WORKS[index].status = status as any;
-        MOCK_WORKS[index].updatedAt = new Date().toISOString();
-        return HttpResponse.json({ success: true });
-      }
-      return new HttpResponse(null, { status: 404 });
-    },
-  ),
-
-  http.delete(`${BACKEND_URL}/api/v1/author/works/:workId`, ({ params }) => {
-    return new HttpResponse(null, { status: 200 });
-  }),
-
-  // 5.2 Episodes (Removed - replaced by Manuscripts)
-
-  // 5.3 Lorebooks (Settings)
-  http.get(`${BACKEND_URL}/api/v1/author/lorebook`, () =>
-    HttpResponse.json(
-      generateList(5, (i) => ({
-        id: i,
-        title: `설정집 ${i}`,
-        description: '설정집 설명',
-        updatedAt: new Date().toISOString(),
-      })),
-    ),
-  ),
-
-  // Lorebook Category List (Unified Handler)
-  http.get(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:category`,
-    ({ params }) => {
-      const { category } = params;
-      const generateLorebookList = (count: number) => {
-        return Array.from({ length: count }).map((_, i) => {
-          let settingContent: any = { description: 'Default description' };
-          let keyword = `Entry ${i}`;
-
-          switch (category) {
-            case 'characters':
-              keyword = `Character ${i}`;
-              settingContent = {
-                description: 'A brave hero.',
-                role: 'Protagonist',
-                age: '20',
-                traits: ['Brave', 'Strong'],
-              };
-              break;
-            case 'places':
-              keyword = `Place ${i}`;
-              settingContent = {
-                description: 'A dark dungeon.',
-                location: 'North',
-              };
-              break;
-            case 'items':
-              keyword = `Item ${i}`;
-              settingContent = {
-                description: 'A legendary sword.',
-                type: 'Weapon',
-                grade: 'S',
-              };
-              break;
-            case 'groups':
-              keyword = `Group ${i}`;
-              settingContent = {
-                description: 'A powerful guild.',
-                leader: 'Leader Name',
-              };
-              break;
-            case 'worldviews':
-              keyword = `Worldview ${i}`;
-              settingContent = {
-                description: 'A magical world.',
-                tags: ['Fantasy', 'Magic'],
-              };
-              break;
-            case 'plots':
-              keyword = `Plot ${i}`;
-              settingContent = {
-                description: 'The war begins.',
-                order: i,
-              };
-              break;
-          }
-
-          return {
-            id: i,
-            userId: params.userId,
-            workId: 1, // Mock workId
-            category: category,
-            keyword: keyword,
-            setting: JSON.stringify(settingContent),
-            epNum: [],
-          };
-        });
-      };
-
-      return HttpResponse.json(generateLorebookList(5));
-    },
-  ),
-
-  // Lorebook Search
-  http.get(`${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/search`, () =>
-    HttpResponse.json(
-      Array.from({ length: 3 }).map((_, i) => ({
-        id: i,
-        userId: 'user1',
-        workId: 1,
-        category: 'characters',
-        keyword: `Search Result ${i}`,
-        setting: JSON.stringify({
-          description: 'Search result description.',
-        }),
-        epNum: [],
-      })),
-    ),
-  ),
-
-  // 5.4 Publish Confirm
-  http.post(
-    `${BACKEND_URL}/api/v1/author/works/:workId/publish/confirm`,
-    () => {
-      return HttpResponse.json({ success: true });
-    },
-  ),
-
-  // 5.5 Serialization & AI Analysis (Replaces AI Server Calls)
-  // Old episode endpoint removed
-
-  // New Endpoint: Keyword Extraction
-  http.post(`${BACKEND_URL}/api/v1/ai/author/categories`, async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    return HttpResponse.json({
-      check: {
-        인물: ['강민우', '이수연', '김철수'],
-        세계: ['마나', '헌터 시스템'],
-        장소: ['아카데미 기숙사', '서울 타워', '지하 벙커'],
-        사건: ['게이트 발생', '화룡의 둥지 공략'],
-        물건: ['엑스칼리버'],
-        집단: ['피닉스 길드', '헌터 협회'],
-      },
-    });
-  }),
-
-  // New Endpoint: Novel Analysis (Final Review)
-  http.post(`${BACKEND_URL}/api/v1/ai/author/setting`, async ({ request }) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Mock Data for Final Review Modal
-    const response = {
-      충돌: [
-        {
-          id: 'conf-1',
-          category: '인물',
-          name: '강민우',
-          reason: '성격 묘사 충돌',
-          original:
-            '냉철하고 계산적인 성격. 이익을 위해서라면 동료도 이용할 수 있다. 항상 포커페이스를 유지하며 감정을 드러내지 않는다.',
-          new: '다혈질이고 정의로운 성격. 불의를 보면 참지 못하고 나선다. 동료를 끔찍이 아끼며 감정 표현이 솔직하다.',
-        },
-        {
-          id: 'conf-2',
-          category: '설정',
-          name: '마나 운영법',
-          reason: '설정 모순 발생',
-          original:
-            '마나는 심장에서 생성되어 전신으로 퍼진다. 심장이 파괴되면 마나를 사용할 수 없다.',
-          new: '마나는 대기 중에 존재하며, 호흡을 통해 단전으로 축적된다. 신체 내부에서 생성되지 않는다.',
-        },
-        {
-          id: 'conf-3',
-          category: '장소',
-          name: '아카데미 기숙사',
-          reason: '위치 정보 불일치',
-          original: '아카데미 본관 북쪽에 위치하며, 숲과 인접해 있어 조용하다.',
-          new: '아카데미 본관 남쪽 번화가 근처에 위치하며, 항상 시끌벅적하다.',
-        },
-      ],
-      '설정 결합': [
-        {
-          id: 'upd-1',
-          category: '장소',
-          name: '서울 타워',
-          original: JSON.stringify(
-            {
-              description:
-                '서울의 랜드마크이자 헌터 협회의 본거지. 높이 555m의 마천루로, 최상층에는 협회장실이 위치해 있다.',
-              features: ['헌터 협회 본부', '결계 보호', '높이 555m'],
-              status: 'SAFE',
-            },
-            null,
-            2,
-          ),
-          new: JSON.stringify(
-            {
-              description:
-                '서울의 랜드마크이자 헌터 협회의 본거지. 높이 555m의 마천루. 최근 몬스터 습격으로 인해 외벽 일부가 파손되었으나, 여전히 굳건하게 자리를 지키고 있다.',
-              features: [
-                '헌터 협회 본부',
-                '결계 보호',
-                '높이 555m',
-                '외벽 파손',
-                '보안 강화',
-              ],
-              status: 'DAMAGED',
-            },
-            null,
-            2,
-          ),
-        },
-        {
-          id: 'upd-2',
-          category: '인물',
-          name: '이수연',
-          original: JSON.stringify(
-            {
-              role: '히로인',
-              ability: '화염 마법 (A급)',
-              affiliation: '피닉스 길드',
-            },
-            null,
-            2,
-          ),
-          new: JSON.stringify(
-            {
-              role: '히로인',
-              ability: '화염 마법 (S급으로 성장)',
-              affiliation: '피닉스 길드 (부길드장 승진)',
-              recent_event: '화룡의 둥지 공략 성공',
-            },
-            null,
-            2,
-          ),
-        },
-      ],
-      '신규 업로드': [
-        {
-          id: 'new-1',
-          category: '물건',
-          name: '엑스칼리버',
-          description:
-            '전설 속의 성검. 빛 속성 마력을 증폭시키는 효과가 있다. 자격이 있는 자만이 뽑을 수 있다고 전해진다.',
-        },
-        {
-          id: 'new-2',
-          category: '장소',
-          name: '지하 벙커',
-          description:
-            '전쟁 대비용으로 지어진 비밀 벙커. 현재는 주인공 일행의 아지트로 사용되고 있다.',
-        },
-        {
-          id: 'new-3',
-          category: '사건',
-          name: '게이트 발생',
-          description:
-            '서울 한복판에 S급 게이트가 발생하여 비상 사태가 선포되었다.',
-        },
-        {
-          id: 'new-4',
-          category: '인물',
-          name: '김철수',
-          description:
-            '주인공의 어릴 적 친구이자 라이벌. 검술에 뛰어난 재능을 보인다.',
-        },
-      ],
-    };
-
-    return HttpResponse.json(response);
-  }),
-
-  // Publish Analysis (Save Settings)
-  http.post(`${BACKEND_URL}/api/v1/author/works/:workId/setting`, async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return HttpResponse.json({
-      success: true,
-      message: '설정집이 성공적으로 반영되었습니다.',
-    });
-  }),
-
-  // Search Lorebook Similarity (Lorebook Q&A / Similarity)
-  http.post(
-    `${BACKEND_URL}/api/v1/author/lorebooks/:workId/userQ`,
-    async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      return HttpResponse.json(
-        generateList(3, (i) => ({
-          id: i,
-          title: `유사한 설정 ${i}`,
-          content: '기존 설정집에서 발견된 유사한 내용입니다.',
-          similarity: 85 - i * 5,
-        })),
-      );
-    },
-  ),
-
-  // 5.6 Author-Manager Linkage Code Generation
-  http.post(`${BACKEND_URL}/api/v1/author/manager/code`, async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // Generate a 6-digit random number string
-    const randomCode = Math.floor(Math.random() * 1000000)
-      .toString()
-      .padStart(6, '0');
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes from now
-
-    return HttpResponse.json({
-      ok: true,
-      code: randomCode,
-      expiresAt: expiresAt,
-    });
-  }),
-
-  // 5.7 Get My Manager
-
-  // ======================================================================
-  // 6. Author Manuscript & Lorebook API (New Specs)
-  // ======================================================================
-
-  // Manuscript List
-  http.get(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/list`,
-    ({ request, params }) => {
-      const url = new URL(request.url);
-      const page = Number(url.searchParams.get('page') || 0);
-      const size = Number(url.searchParams.get('size') || 10);
-
-      const title = decodeURIComponent(String(params.title));
-      const work = MOCK_WORKS.find((w) => w.title === title);
-
-      let list = [];
-      if (work) {
-        list = MOCK_MANUSCRIPTS.get(work.id) || [];
-      } else {
-        // Fallback or empty if not found
-        list = [];
-      }
-
-      // Sort by episode desc
-      list.sort((a, b) => b.episode - a.episode);
-
-      const total = list.length;
-      const content = list.slice(page * size, (page + 1) * size);
-
-      return HttpResponse.json({
-        content,
-        page,
-        size,
-        totalElements: total,
-        totalPages: Math.ceil(total / size),
-      });
-    },
-  ),
-
-  // Manuscript Upload
-  http.post(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/upload`,
-    async ({ request }) => {
+    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/:tags/:itemId`,
+    async ({ params, request }) => {
+      const itemId = Number(params.itemId);
       const body = (await request.json()) as any;
-      const workId = Number(body.workId);
 
-      if (!MOCK_MANUSCRIPTS.has(workId)) {
-        MOCK_MANUSCRIPTS.set(workId, []);
-      }
+      // Find lorebook in all works
+      let targetLorebook = null;
+      let targetWorkId = -1;
 
-      const list = MOCK_MANUSCRIPTS.get(workId)!;
-      const newId = Math.floor(Math.random() * 100000);
-
-      const newManuscript = {
-        id: newId,
-        workId: workId,
-        episode: body.episode,
-        subtitle: body.subtitle,
-        createdAt: new Date().toISOString(),
-        txt: body.txt,
-      };
-
-      list.push(newManuscript);
-
-      // Update Work Status if NEW
-      const workIndex = MOCK_WORKS.findIndex((w) => w.id === workId);
-      if (workIndex !== -1) {
-        if (MOCK_WORKS[workIndex].status === 'NEW') {
-          MOCK_WORKS[workIndex].status = 'ONGOING';
-          MOCK_WORKS[workIndex].updatedAt = new Date().toISOString();
-        }
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return HttpResponse.json({ success: true, message: 'Upload successful' });
-    },
-  ),
-
-  // Manuscript Detail
-  http.get(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:manuscriptId`,
-    ({ params }) => {
-      const id = Number(params.manuscriptId);
-      let found = null;
-
-      for (const [_, list] of MOCK_MANUSCRIPTS) {
-        found = list.find((m) => m.id === id);
-        if (found) break;
-      }
-
-      if (found) {
-        return HttpResponse.json(found);
-      }
-      return new HttpResponse(null, { status: 404 });
-    },
-  ),
-
-  // Manuscript Delete
-  http.delete(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/manuscript/:manuscriptId`,
-    ({ params }) => {
-      const id = Number(params.manuscriptId);
-      let workId = -1;
-
-      for (const [wId, list] of MOCK_MANUSCRIPTS) {
-        const idx = list.findIndex((m) => m.id === id);
-        if (idx !== -1) {
-          list.splice(idx, 1);
-          workId = wId;
+      for (const [workId, lorebooks] of MOCK_LOREBOOKS.entries()) {
+        const found = lorebooks.find((l) => l.id === itemId);
+        if (found) {
+          targetLorebook = found;
+          targetWorkId = workId;
           break;
         }
       }
 
-      if (workId !== -1) {
-        const list = MOCK_MANUSCRIPTS.get(workId)!;
-        if (list.length === 0) {
-          const workIndex = MOCK_WORKS.findIndex((w) => w.id === workId);
-          if (workIndex !== -1) {
-            MOCK_WORKS[workIndex].status = 'NEW';
-            MOCK_WORKS[workIndex].updatedAt = new Date().toISOString();
-          }
-        }
+      if (targetLorebook) {
+        Object.assign(targetLorebook, body);
+        targetLorebook.updatedAt = new Date().toISOString();
+        return HttpResponse.json({
+          ...targetLorebook,
+          similarSettings: [],
+          checkResult: 'PASS',
+        });
       }
 
-      return HttpResponse.json({ success: true });
+      return new HttpResponse(null, { status: 404 });
     },
   ),
 
-  // Lorebook List (All)
-  http.get(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook`,
-    ({ request }) => {
-      // Returns a flat list or categorized list? Spec says "Lorebook List (All)".
-      // Assuming returns a list of LorebookDto
-      return HttpResponse.json(
-        generateList(10, (i) => ({
-          id: i,
-          title: `설정 ${i}`,
-          description: '설정 설명...',
-          updatedAt: new Date().toISOString(),
-          category: getRandomItem([
-            '인물',
-            '세계',
-            '장소',
-            '사건',
-            '물건',
-            '집단',
-          ]),
-        })),
-      );
-    },
-  ),
-
-  // Lorebook List (Category)
-  http.get(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:category`,
-    ({ params }) => {
-      const category = String(params.category);
-      // Generate mock data based on category
-      return HttpResponse.json(
-        generateList(5, (i) => {
-          let settings = {};
-          if (category === 'characters') {
-            settings = {
-              role: '주연',
-              age: '20세',
-              traits: ['용감함', '지혜로움'],
-            };
-          } else if (category === 'places') {
-            settings = { location: '북부', features: ['춥다', '산악지대'] };
-          }
-
-          return {
-            id: i,
-            title: `${category} 설정 ${i}`,
-            description: `${category}에 대한 설명입니다.`,
-            updatedAt: new Date().toISOString(),
-            category: category,
-            settings: JSON.stringify(settings),
-          };
-        }),
-      );
-    },
-  ),
-
-  // Lorebook Create
-  http.post(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:category`,
-    async ({ request, params }) => {
-      const category = String(params.category);
-      const body = (await request.json()) as any;
-      return HttpResponse.json({
-        id: Math.floor(Math.random() * 1000),
-        title: body.title,
-        description: body.description,
-        updatedAt: new Date().toISOString(),
-        category: category,
-        settings: body.settings,
-      });
-    },
-  ),
-
-  // Lorebook Update
-  http.put(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:category/:lorebookId`,
-    async ({ request, params }) => {
-      const category = String(params.category);
-      const id = Number(params.lorebookId);
-      const body = (await request.json()) as any;
-      return HttpResponse.json({
-        id: id,
-        title: body.title,
-        description: body.description,
-        updatedAt: new Date().toISOString(),
-        category: category,
-        settings: body.settings,
-      });
-    },
-  ),
-
-  // Lorebook Delete
   http.delete(
-    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:category/:lorebookId`,
-    () => {
-      return HttpResponse.json({ success: true });
+    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:tags/:id`,
+    ({ params }) => {
+      const id = Number(params.id);
+      for (const [workId, lorebooks] of MOCK_LOREBOOKS.entries()) {
+        const index = lorebooks.findIndex((l) => l.id === id);
+        if (index > -1) {
+          lorebooks.splice(index, 1);
+          return HttpResponse.json('삭제 완료');
+        }
+      }
+      return new HttpResponse(null, { status: 404 });
     },
   ),
 
-  // Lorebook Similarity Search
-  http.post(
-    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/userq`,
-    async ({ request }) => {
-      const body = (await request.json()) as any;
-      return HttpResponse.json(
-        generateList(body.limit || 3, (i) => ({
-          id: i,
-          title: `유사 설정 ${i}`,
-          description: `사용자 질문 "${body.user_query}"에 대한 유사 설정입니다.`,
-          category: body.category === '*' ? '인물' : body.category,
-          similarity: 0.85 - i * 0.1,
-        })),
-      );
-    },
+  // Invite Code
+  http.get(`${BACKEND_URL}/api/v1/author/invite-code`, () =>
+    HttpResponse.json({
+      ok: true,
+      code: '123456',
+      expiresAt: new Date(Date.now() + 5 * 60000).toISOString(),
+    }),
   ),
 
-  // Lorebook Manual Save
-  http.post(
-    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/setting_save`,
-    () => {
-      return HttpResponse.json({
-        success: true,
-        message: 'Saved successfully',
-      });
-    },
+  // ======================================================================
+  // 4. Manager API
+  // ======================================================================
+
+  // Manager Author Controller
+  http.get(`${BACKEND_URL}/api/v1/manager/authors/summary`, () =>
+    HttpResponse.json({
+      totalAuthors: 150,
+      newAuthorsToday: 3,
+      activeAuthors: 120,
+      totalWorks: 450,
+    }),
   ),
 
-  // Lorebook Update
-  http.patch(
-    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/:category/:lorebookId`,
-    () => {
-      return HttpResponse.json({
-        success: true,
-        message: 'Updated successfully',
-      });
-    },
-  ),
+  http.get(`${BACKEND_URL}/api/v1/manager/authors`, authorListResolver),
 
-  // 5.6 Author Manager
-  http.get(`${BACKEND_URL}/api/v1/author/manager`, () => {
-    const linked = localStorage.getItem('msw-author-linked');
-    const isLinked = linked !== 'false';
-    if (!isLinked) {
-      return HttpResponse.json({
-        managerId: null,
-        managerName: null,
-        managerEmail: null,
-        managerIntegrationId: null,
-        linkedAt: null,
-        isOnline: false,
-      });
-    }
+  http.get(`${BACKEND_URL}/api/v1/manager/authors/list`, authorListResolver),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/authors/:id`, ({ params }) => {
+    const id = Number(params.id);
     return HttpResponse.json({
-      managerId: 'manager_123',
-      managerName: '김운영',
-      managerEmail: 'manager_kim@ip-ergo-sum.com',
-      managerIntegrationId: 'mg_int_12345',
-      linkedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-      isOnline: Math.random() > 0.5,
+      id,
+      name: `작가 ${id}`,
+      email: `author${id}@example.com`,
+      phone: '010-1234-5678',
+      status: 'ACTIVE',
+      joinDate: '2025-01-01',
+      works: MOCK_WORKS,
     });
   }),
-  http.delete(`${BACKEND_URL}/api/v1/author/manager`, () => {
-    localStorage.setItem('msw-author-linked', 'false');
-    return HttpResponse.json({ success: true });
+
+  http.post(`${BACKEND_URL}/api/v1/manager/authors/:pwd`, ({ params }) => {
+    if (params.pwd === '123456') {
+      return HttpResponse.json({ ok: true, matched: true, authorId: 1 });
+    }
+    return HttpResponse.json({ ok: false, message: 'Invalid code' });
   }),
+
+  // Manager Dashboard Controller
+  http.get(`${BACKEND_URL}/api/v1/manager/dashboard`, () =>
+    HttpResponse.json({
+      stats: {
+        totalUsers: 1000,
+        dau: 150,
+        mau: 800,
+      },
+      notices: [
+        { id: 1, title: '점검 안내', content: '...', date: '2025-02-07' },
+      ],
+    }),
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/dashboard/summary`, () =>
+    HttpResponse.json({
+      activeCampaigns: 5,
+      pendingProposals: 3,
+      systemStatus: 'NORMAL',
+    }),
+  ),
+
+  // IP Trend Controller
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend`, () =>
+    HttpResponse.json({
+      latestReport: {
+        id: 1,
+        title: '2025년 2월 1주차 트렌드',
+        date: '2025-02-07',
+      },
+      statistics: { topGenre: '판타지', emergingKeyword: '회귀' },
+    }),
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/list`, () =>
+    HttpResponse.json({
+      content: generateList(10, (i) => ({
+        id: i,
+        title: `2025년 2월 ${i}주차 트렌드 리포트`,
+        createdAt: new Date().toISOString(),
+      })),
+      totalPages: 1,
+      totalElements: 10,
+    }),
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/preview/:reportId`, () =>
+    HttpResponse.json({
+      previewUrl: 'https://via.placeholder.com/600x800?text=Report+Preview',
+    }),
+  ),
+
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/iptrend/report`,
+    () =>
+      new HttpResponse(new ArrayBuffer(10), {
+        headers: { 'Content-Type': 'application/pdf' },
+      }),
+  ),
+
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/iptrend/download/:reportId`,
+    () =>
+      new HttpResponse(new ArrayBuffer(10), {
+        headers: { 'Content-Type': 'application/pdf' },
+      }),
+  ),
+
+  http.post(`${BACKEND_URL}/api/v1/manager/iptrend/generate`, () =>
+    HttpResponse.json({
+      status: 'STARTED',
+      message: '리포트 생성이 시작되었습니다.',
+    }),
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/iptrend/exists-today`, () =>
+    HttpResponse.json(true),
+  ),
+
+  http.post(`${BACKEND_URL}/api/v1/manager/iptrend/scheduler/run`, () =>
+    HttpResponse.json({ success: true, message: '스케줄러 실행됨' }),
+  ),
+
+  // IP Expansion (Manager)
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ip-expansion/proposals`,
+    ({ request }) => {
+      const url = new URL(request.url);
+      const status = url.searchParams.get('status');
+      const filtered =
+        status && status !== 'ALL'
+          ? ORIGINAL_IP_EXPANSION_PROPOSALS.filter((p) => p.status === status)
+          : ORIGINAL_IP_EXPANSION_PROPOSALS;
+
+      return HttpResponse.json({
+        content: filtered,
+        totalPages: 1,
+        totalElements: filtered.length,
+      });
+    },
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/manager/ip-expansion/:id`, ({ params }) => {
+    const id = Number(params.id);
+    const proposal = ORIGINAL_IP_EXPANSION_PROPOSALS.find((p) => p.id === id);
+    if (!proposal) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json(proposal);
+  }),
+
+  http.post(
+    `${BACKEND_URL}/api/v1/manager/ip-expansion`,
+    async ({ request }) => {
+      const body = (await request.json()) as any;
+      const newProposal = {
+        id: Math.floor(Math.random() * 100000) + 20000,
+        ...body,
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      ORIGINAL_IP_EXPANSION_PROPOSALS.unshift(newProposal);
+      return HttpResponse.json(newProposal);
+    },
+  ),
+
+  http.patch(
+    `${BACKEND_URL}/api/v1/manager/ip-expansion/:id`,
+    async ({ params, request }) => {
+      const id = Number(params.id);
+      const body = (await request.json()) as any;
+      const proposal = ORIGINAL_IP_EXPANSION_PROPOSALS.find((p) => p.id === id);
+      if (proposal) {
+        Object.assign(proposal, body);
+        proposal.updatedAt = new Date().toISOString();
+        return HttpResponse.json(proposal);
+      }
+      return new HttpResponse(null, { status: 404 });
+    },
+  ),
+
+  http.delete(
+    `${BACKEND_URL}/api/v1/manager/ip-expansion/:id`,
+    ({ params }) => {
+      const id = Number(params.id);
+      const index = ORIGINAL_IP_EXPANSION_PROPOSALS.findIndex(
+        (p) => p.id === id,
+      );
+      if (index > -1) {
+        ORIGINAL_IP_EXPANSION_PROPOSALS.splice(index, 1);
+      }
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
+
+  // Admin API
+  http.get(`${BACKEND_URL}/api/v1/admin/dashboard`, () =>
+    HttpResponse.json({
+      visitors: 1200,
+      revenue: 5000000,
+      activeUsers: 800,
+    }),
+  ),
+
+  http.get(`${BACKEND_URL}/api/v1/admin/users`, () =>
+    HttpResponse.json({
+      content: [
+        { id: 1, name: 'User 1', email: 'user1@example.com', role: 'AUTHOR' },
+        { id: 2, name: 'User 2', email: 'user2@example.com', role: 'MANAGER' },
+      ],
+      totalPages: 1,
+    }),
+  ),
 ];
