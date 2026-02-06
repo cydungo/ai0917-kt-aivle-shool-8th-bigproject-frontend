@@ -233,7 +233,7 @@ function Field({
       </Label>
       {isArray ? (
         <div className="space-y-2">
-          {(value as string[]).map((item, idx) => (
+          {(Array.isArray(value) ? value : []).map((item: string, idx: number) => (
             <div key={idx} className="flex gap-2">
               <Input
                 value={item}
