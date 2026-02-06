@@ -211,7 +211,9 @@ function WorkItem({
     placeholderData: (previousData) => previousData,
   });
 
-  const manuscripts = manuscriptsPage?.content || [];
+  const manuscripts = (manuscriptsPage?.content || [])
+    .slice()
+    .sort((a, b) => b.episode - a.episode);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
