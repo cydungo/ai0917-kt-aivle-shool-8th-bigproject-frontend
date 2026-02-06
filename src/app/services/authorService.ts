@@ -231,11 +231,11 @@ export const authorService = {
 
   // Lorebooks (Settings)
   getLorebooks: async (userId: string, title: string, workId: number) => {
-    const response = await apiClient.get<LorebookDto[]>(
+    const response = await apiClient.get<any>(
       `/api/v1/author/${userId}/${title}/lorebook`,
       { params: { workId } },
     );
-    return response.data;
+    return response.data.content || response.data;
   },
 
   getLorebooksByCategory: async (
@@ -280,10 +280,38 @@ export const authorService = {
     workId: number,
     data: LorebookSaveRequestDto,
   ) => {
+    const response = await apiClient.post<number>(
+      `/api/v1/author/${userId}/${title}/lorebook`,
+      data,
+      { params: { workId } },
+    );
+    return response.data;
+  },
+
+  // Specific Create API (User Request)
+  createLorebookSpecific: async (
+    userId: string,
+    title: string,
+    data: any, // Using any to be flexible with the request body as per user request
+  ) => {
     const response = await apiClient.post(
       `/api/v1/ai/author/${userId}/${title}/lorebook/setting_save`,
       data,
-      { params: { workId } },
+    );
+    return response.data;
+  },
+
+  // Specific Update API (User Request)
+  updateLorebookSpecific: async (
+    userId: string,
+    title: string,
+    tag: string,
+    itemId: string, // or number, assuming itemId is passed
+    data: any,
+  ) => {
+    const response = await apiClient.patch(
+      `/api/v1/ai/author/${userId}/${title}/lorebook/${tag}/${itemId}`,
+      data,
     );
     return response.data;
   },
