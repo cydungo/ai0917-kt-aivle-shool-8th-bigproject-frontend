@@ -761,10 +761,11 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
       const work = works?.find((w) => w.id === selectedWorkId);
       if (!work) return;
 
-      // Use uploadManuscript to update (re-upload) content
-      await authorService.uploadManuscript(integrationId, work.title, {
+      // Use updateManuscriptContent to update content via PATCH
+      await authorService.updateManuscriptContent(integrationId, work.title, {
         workId: selectedWorkId,
-        subtitle: selectedManuscript.subtitle,
+        episode: selectedManuscript.episode,
+        subtitle: selectedManuscript.subtitle || '',
         txt: editorContent,
       });
     },
@@ -827,20 +828,35 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
         txt,
       });
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       toast.success('원문이 등록되었습니다.');
       setIsUploadManuscriptOpen(false);
       setNewManuscriptSubtitle('');
       setNewManuscriptEpisode(1);
       const work = works?.find((w) => w.id === variables.workId);
       if (work) {
+        // Automatically update status to ONGOING if it is NEW
+        if (work.status === 'NEW') {
+          try {
+            await authorService.updateWorkStatus(work.id, 'ONGOING');
+          } catch (e) {
+            console.error('Failed to auto-update work status', e);
+          }
+        }
+
         queryClient.invalidateQueries({
           queryKey: ['author', 'manuscript', integrationId, work.title],
         });
+        queryClient.invalidateQueries({ queryKey: ['author', 'works'] });
       }
     },
-    onError: () => {
-      toast.error('원문 등록에 실패했습니다.');
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || '';
+      if (message.includes('분석이 완료되지 않아')) {
+        toast.error('이전 원고의 분석을 먼저 수행해주세요.');
+      } else {
+        toast.error('원문 등록에 실패했습니다.');
+      }
     },
   });
 
@@ -1506,6 +1522,14 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
               />
             </div>
             <div className="space-y-2">
+              <Label>장르 (선택)</Label>
+              <Input
+                value={newWorkGenre}
+                onChange={(e) => setNewWorkGenre(e.target.value)}
+                placeholder="예: 판타지, 로맨스"
+              />
+            </div>
+            <div className="space-y-2">
               <Label>시놉시스 (선택)</Label>
               <Textarea
                 value={newWorkSynopsis}
@@ -1514,14 +1538,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                 className="h-24 resize-none"
               />
             </div>
-            <div className="space-y-2">
-              <Label>장르 (선택)</Label>
-              <Input
-                value={newWorkGenre}
-                onChange={(e) => setNewWorkGenre(e.target.value)}
-                placeholder="예: 판타지, 로맨스"
-              />
-            </div>
+
             <div className="space-y-2">
               <Label>표지 이미지 URL (선택)</Label>
               <Input
