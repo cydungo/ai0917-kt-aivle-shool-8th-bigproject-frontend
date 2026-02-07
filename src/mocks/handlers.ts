@@ -19,90 +19,51 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 const generateList = <T>(count: number, generator: (index: number) => T): T[] =>
   Array.from({ length: count }, (_, i) => generator(i + 1));
 
-const getRandomItem = <T>(items: T[]): T =>
-  items[Math.floor(Math.random() * items.length)];
+// Deterministic helpers instead of random
+const getItem = <T>(items: T[], index: number): T =>
+  items[index % items.length];
 
-const getRandomInt = (min: number, max: number) =>
-  Math.floor(Math.random() * (max - min + 1)) + min;
+const getInt = (index: number, min: number, max: number) =>
+  min + (index % (max - min + 1));
 
 // ----------------------------------------------------------------------
-// Creative Data (Original & Witty)
+// Professional Data (Static & Seeded)
 // ----------------------------------------------------------------------
 
-const CREATIVE_WORKS = [
+const PROFESSIONAL_NOTICES = [
   {
-    title: '내 여자친구는 AI라니',
-    genre: '로맨스',
-    desc: '완벽한 그녀의 유일한 단점은 충전이 필요하다는 것.',
+    title: '서버 정기 점검 안내',
+    content:
+      '보다 안정적인 서비스 제공을 위해 서버 점검이 진행될 예정입니다. 이용에 참고 부탁드립니다.',
   },
   {
-    title: '코딩하다 과로사했더니 이세계 마왕',
-    genre: '판타지',
-    desc: '버그 없는 세상을 만들기 위한 마왕의 고군분투기.',
+    title: '신규 기능 업데이트 안내: 작가 대시보드',
+    content:
+      '작가님들의 편의를 위해 대시보드 기능이 개선되었습니다. 상세 내용은 가이드 문서를 확인해주세요.',
   },
   {
-    title: '회귀한 재벌 3세의 천재적 투자법',
-    genre: '현대판타지',
-    desc: '비트코인, 테슬라... 이번 생은 내가 접수한다.',
+    title: '개인정보 처리방침 변경 안내',
+    content:
+      '개인정보 처리방침이 일부 개정되었습니다. 변경된 내용을 확인해주시기 바랍니다.',
   },
   {
-    title: '무림맹주가 아이돌로 데뷔하다',
-    genre: '무협',
-    desc: '천마신교 교주가 센터라고? 프로듀스 무림 101!',
+    title: '시스템 안정화 작업 완료',
+    content:
+      '최근 발생한 간헐적 접속 지연 현상이 해결되었습니다. 이용에 불편을 드려 죄송합니다.',
   },
   {
-    title: '우주 함대의 취사병 전설',
-    genre: 'SF',
-    desc: '맛없는 전투식량은 가라. 우주 최강 셰프의 탄생.',
-  },
-  {
-    title: '공작 영애는 사실 폭탄마입니다',
-    genre: '로판',
-    desc: '사교계의 꽃? 아니, 사교계의 불꽃.',
-  },
-  {
-    title: 'S급 헌터는 야근이 싫습니다',
-    genre: '현대판타지',
-    desc: '던전 공략보다 칼퇴가 더 중요한 헌터의 일상.',
-  },
-  {
-    title: '좀비 세상에서 나 혼자 힐링 캠프',
-    genre: '스릴러',
-    desc: '남들은 생존 경쟁, 나는 불멍 타임.',
-  },
-  {
-    title: '천재 해커의 이중생활',
-    genre: '드라마',
-    desc: '낮에는 편의점 알바, 밤에는 국가정보원 비밀 요원.',
-  },
-  {
-    title: '마법학교의 낙제생은 네크로맨서',
-    genre: '판타지',
-    desc: '친구를 사귀랬더니 시체를 일으켜 세웠다.',
+    title: '2월 베스트 작가 선정 결과',
+    content: '2월 베스트 작가로 선정되신 분들을 발표합니다. 축하드립니다!',
   },
 ];
 
-const NOTICES = [
-  {
-    title: '서버실이 너무 더워서 옷을 좀 벗겼습니다...',
-    content: '쿨링 팬 커버 말이에요. 오해하지 마세요. (긴급 점검 안내)',
-  },
-  {
-    title: '[이벤트] 밸런타인데이 기념 "초콜릿보다 달콤한 연참" 챌린지',
-    content: '작가님들의 당 충전을 위해 마음만 보냅니다.',
-  },
-  {
-    title: '[업데이트] 작가님들의 멘탈 케어를 위한 "AI 칭찬봇" 도입',
-    content: '이제 악플 보고 상처받지 마세요. AI가 우쭈쭈 해드립니다.',
-  },
-  {
-    title: '새벽 3시에 알림 보내서 죄송합니다.',
-    content: '개발자가 야근하다가 실수로 버튼을 눌렀어요... 살려주세요.',
-  },
-  {
-    title: '매니저 대시보드 리뉴얼 안내',
-    content: '이제 더 직관적이고 섹시한 디자인으로 여러분을 맞이합니다.',
-  },
+const SYSTEM_LOG_MESSAGES = [
+  '데이터베이스 백업 완료',
+  '시스템 리소스 모니터링: 정상',
+  '신규 회원 가입 처리',
+  'API 요청 처리 시간 최적화',
+  '보안 패치 자동 적용',
+  '일일 리포트 생성 완료',
 ];
 
 // ----------------------------------------------------------------------
@@ -110,23 +71,23 @@ const NOTICES = [
 // ----------------------------------------------------------------------
 
 // Works
-const MOCK_WORKS = CREATIVE_WORKS.map((work, i) => ({
+const MOCK_WORKS = ORIGINAL_TITLES.map((title, i) => ({
   id: i + 1,
-  title: work.title,
-  description: work.desc,
-  status: getRandomItem(['ONGOING', 'COMPLETED', 'HIATUS', 'NEW']),
-  synopsis: work.desc + ' 주인공의 파란만장한 모험이 시작됩니다.',
-  genre: work.genre,
-  coverImageUrl: `https://via.placeholder.com/300?text=${encodeURIComponent(work.title.substring(0, 5))}`,
-  createdAt: new Date(
-    Date.now() - getRandomInt(1, 100) * 86400000,
-  ).toISOString(),
+  title: title,
+  description: `${title} - 독자들의 마음을 사로잡는 흥미진진한 스토리.`,
+  status: getItem(['ONGOING', 'COMPLETED', 'HIATUS', 'NEW'], i),
+  synopsis: `이 작품은 ${getItem(ORIGINAL_GENRES, i)} 장르의 수작으로, 주인공의 모험과 성장을 다룹니다.`,
+  genre: getItem(ORIGINAL_GENRES, i),
+  coverImageUrl: `https://via.placeholder.com/300?text=${encodeURIComponent(title.substring(0, 5))}`,
+  createdAt: new Date(Date.now() - getInt(i, 1, 100) * 86400000).toISOString(),
   updatedAt: new Date().toISOString(),
-  writer: `작가${i + 1}`,
+  writer: getItem(ORIGINAL_NAMES, i),
   statusDescription: '연재 중',
 }));
 
-// Add Original Work
+// Add Original Work (Ensure it exists and overwrites if ID conflicts, though IDs 1-20 are taken above)
+// We'll push it as a distinct entry or replace if needed.
+// Since ORIGINAL_WORK_ID is 101, it won't conflict with 1-20.
 MOCK_WORKS.push({
   id: ORIGINAL_WORK_ID,
   title: ORIGINAL_WORK_TITLE,
@@ -145,29 +106,26 @@ MOCK_WORKS.push({
 // Lorebooks
 const MOCK_LOREBOOKS = new Map<number, any[]>();
 MOCK_WORKS.forEach((work) => {
-  const lorebooks = generateList(getRandomInt(5, 10), (i) => ({
+  const lorebooks = generateList(getInt(work.id, 5, 10), (i) => ({
     id: work.id * 100 + i,
     workId: work.id,
     name: `${work.genre} 설정 ${i}`,
-    category: getRandomItem([
-      'characters',
-      'places',
-      'items',
-      'groups',
-      'worldviews',
-      'plots',
-    ]),
+    category: getItem(
+      ['characters', 'places', 'items', 'groups', 'worldviews', 'plots'],
+      i,
+    ),
     description: `${work.title}의 중요한 설정입니다.`,
     keyword: `키워드${i}`,
     setting: JSON.stringify({
       description: `이 설정은 작품의 전개에 매우 중요한 역할을 합니다.`,
-      tags: ['중요', '비밀'],
+      tags: ['중요', '설정'],
     }),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));
   MOCK_LOREBOOKS.set(work.id, lorebooks);
 });
+// Override Original Work Lorebooks
 MOCK_LOREBOOKS.set(ORIGINAL_WORK_ID, [...ORIGINAL_LOREBOOKS]);
 
 // Manuscripts
@@ -189,15 +147,13 @@ MOCK_WORKS.forEach((work) => {
 // Authors
 const MOCK_AUTHORS = generateList(50, (i) => ({
   id: i + 1,
-  name: `작가${i + 1}`,
+  name: getItem(ORIGINAL_NAMES, i),
   email: `author${i + 1}@example.com`,
-  workCount: getRandomInt(1, 5),
-  status: getRandomItem(['ACTIVE', 'INACTIVE', 'BANNED']),
-  joinDate: new Date(
-    Date.now() - getRandomInt(1, 365) * 86400000,
-  ).toISOString(),
+  workCount: getInt(i, 1, 5),
+  status: getItem(['ACTIVE', 'INACTIVE', 'BANNED'], i),
+  joinDate: new Date(Date.now() - getInt(i, 1, 365) * 86400000).toISOString(),
   lastActivityAt: new Date(
-    Date.now() - getRandomInt(0, 48) * 3600000,
+    Date.now() - getInt(i, 0, 48) * 3600000,
   ).toISOString(),
 }));
 
@@ -290,16 +246,16 @@ export const handlers: RequestHandler[] = [
   http.get(`${BACKEND_URL}/api/v1/manager/dashboard`, () => {
     return HttpResponse.json({
       summary: {
-        pendingProposals: getRandomInt(5, 20),
+        pendingProposals: 12,
         managedAuthors: MOCK_AUTHORS.length,
         activeAuthors: MOCK_AUTHORS.filter((a) => a.status === 'ACTIVE').length,
       },
-      notices: NOTICES.map((n, i) => ({
+      notices: PROFESSIONAL_NOTICES.map((n, i) => ({
         id: i + 1,
         title: n.title,
         content: n.content,
         createdAt: new Date().toISOString(),
-        viewCount: getRandomInt(10, 500),
+        viewCount: getInt(i, 10, 500),
       })),
     });
   }),
@@ -307,7 +263,7 @@ export const handlers: RequestHandler[] = [
   // Dashboard Summary (Standalone)
   http.get(`${BACKEND_URL}/api/v1/manager/dashboard/summary`, () => {
     return HttpResponse.json({
-      pendingProposals: getRandomInt(5, 20),
+      pendingProposals: 12,
       managedAuthors: MOCK_AUTHORS.length,
       activeAuthors: MOCK_AUTHORS.filter((a) => a.status === 'ACTIVE').length,
     });
@@ -317,7 +273,7 @@ export const handlers: RequestHandler[] = [
   http.get(`${BACKEND_URL}/api/v1/manager/authors/summary`, () => {
     return HttpResponse.json({
       totalAuthors: MOCK_AUTHORS.length,
-      newAuthors: getRandomInt(1, 10),
+      newAuthors: 5,
       activeAuthors: MOCK_AUTHORS.filter((a) => a.status === 'ACTIVE').length,
     });
   }),
@@ -469,6 +425,22 @@ export const handlers: RequestHandler[] = [
     },
   ),
 
+  http.patch(
+    `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook/:category/:itemId`,
+    async ({ params, request }) => {
+      const { category, itemId } = params;
+      const data = (await request.json()) as any;
+
+      // Here we would normally update the store, but for now just return success
+      return HttpResponse.json({
+        id: Number(itemId),
+        category,
+        ...data,
+        updatedAt: new Date().toISOString(),
+      });
+    },
+  ),
+
   // Conflict Solve (Mock)
   http.post(
     `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/conflict_solve`,
@@ -529,24 +501,18 @@ export const handlers: RequestHandler[] = [
       },
       dauData: {
         dates: generateList(7, (i) => `2025-02-0${i}`),
-        values: generateList(7, () => getRandomInt(100, 300)),
+        values: generateList(7, (i) => getInt(i, 100, 300)),
       },
       resourceUsage: {
-        cpu: getRandomInt(20, 80),
-        memory: getRandomInt(40, 90),
-        disk: getRandomInt(30, 60),
+        cpu: 45,
+        memory: 60,
+        disk: 55,
       },
       recentLogs: generateList(5, (i) => ({
         id: i,
         timestamp: new Date().toISOString(),
-        level: getRandomItem(['INFO', 'WARN', 'ERROR']),
-        message: getRandomItem([
-          '사용자가 비밀번호를 까먹었습니다.',
-          '서버실 온도가 약간 높습니다 (25도).',
-          '누군가 관리자 페이지에 접근을 시도했습니다.',
-          '배포가 성공적으로 완료되었습니다.',
-          '커피 머신 물 부족 알림.',
-        ]),
+        level: getItem(['INFO', 'WARN', 'ERROR'], i),
+        message: getItem(SYSTEM_LOG_MESSAGES, i),
         source: 'System',
       })),
     });
@@ -566,16 +532,16 @@ export const handlers: RequestHandler[] = [
   http.get(`${BACKEND_URL}/api/v1/admin/dashboard/dau`, () => {
     return HttpResponse.json({
       dates: generateList(7, (i) => `2025-02-0${i}`),
-      values: generateList(7, () => getRandomInt(100, 300)),
+      values: generateList(7, (i) => getInt(i, 100, 300)),
     });
   }),
 
   // Resources
   http.get(`${BACKEND_URL}/api/v1/admin/dashboard/resources`, () => {
     return HttpResponse.json({
-      cpu: getRandomInt(20, 80),
-      memory: getRandomInt(40, 90),
-      disk: getRandomInt(30, 60),
+      cpu: 45,
+      memory: 60,
+      disk: 55,
     });
   }),
 
@@ -585,16 +551,8 @@ export const handlers: RequestHandler[] = [
       logs: generateList(20, (i) => ({
         id: i,
         timestamp: new Date(Date.now() - i * 60000).toISOString(),
-        level: getRandomItem(['INFO', 'WARN', 'ERROR']),
-        message: getRandomItem([
-          '사용자가 비밀번호를 까먹었습니다.',
-          '서버실 온도가 약간 높습니다 (25도).',
-          '누군가 관리자 페이지에 접근을 시도했습니다.',
-          '배포가 성공적으로 완료되었습니다.',
-          '커피 머신 물 부족 알림.',
-          'DB 커넥션 풀이 목마르다고 합니다.',
-          '신규 가입자가 폭주하고 있습니다! (희망사항)',
-        ]),
+        level: getItem(['INFO', 'WARN', 'ERROR'], i),
+        message: getItem(SYSTEM_LOG_MESSAGES, i),
         source: 'System',
       })),
       totalCount: 100,
