@@ -389,7 +389,7 @@ export function ManagerIPExpansion() {
 
       {/* Project List */}
       <div className="mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {isLoading ? (
             <div className="col-span-full py-20 text-center text-slate-500">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
@@ -1679,21 +1679,39 @@ function CreateIPExpansionDialog({
   });
 
   const { data: works } = useQuery({
-    queryKey: ['manager', 'works', selectedAuthor?.id],
-    queryFn: () =>
-      selectedAuthor?.id
-        ? managerService.getWorks(selectedAuthor.id)
-        : Promise.resolve([]),
+    queryKey: ['manager', 'author-works', selectedAuthor?.id],
+    queryFn: async () => {
+      if (!selectedAuthor?.id) return [];
+      try {
+        // Fetch detailed author info which includes recentWorks
+        const detail = await managerService.getAuthorDetail(selectedAuthor.id);
+        return detail.recentWorks || [];
+      } catch (error) {
+        console.error('Failed to fetch author works:', error);
+        return [];
+      }
+    },
     enabled: !!selectedAuthor?.id,
   });
 
   const { data: lorebooks } = useQuery({
-    queryKey: ['manager', 'lorebooks', selectedWork?.id],
+    queryKey: [
+      'manager',
+      'lorebooks',
+      selectedAuthor?.id,
+      selectedWork?.title,
+      selectedWork?.id,
+    ],
     queryFn: () =>
-      selectedWork?.id
-        ? managerService.getLorebooks(selectedWork.id)
+      selectedAuthor?.id && selectedWork?.title && selectedWork?.id
+        ? managerService.getLorebooksByAuthorAndTitle(
+            selectedAuthor.id,
+            selectedWork.title,
+            selectedWork.id,
+          )
         : Promise.resolve([]),
-    enabled: !!selectedWork?.id,
+    enabled:
+      !!selectedAuthor?.id && !!selectedWork?.title && !!selectedWork?.id,
   });
 
   const categories = [

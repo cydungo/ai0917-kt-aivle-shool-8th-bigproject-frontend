@@ -125,6 +125,18 @@ export const managerService = {
     return response.data;
   },
 
+  getLorebooksByAuthorAndTitle: async (
+    userId: string | number,
+    title: string,
+    workId: number,
+  ) => {
+    const response = await apiClient.get<LorebookDto[]>(
+      `/api/v1/author/${userId}/${title}/lorebook`,
+      { params: { workId } },
+    );
+    return response.data;
+  },
+
   // IP Expansion
   getIPProposals: async (page = 0, size = 10) => {
     const response = await apiClient.get<PageResponse<IPProposalDto>>(
