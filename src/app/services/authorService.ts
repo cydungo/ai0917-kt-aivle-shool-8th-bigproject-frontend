@@ -292,28 +292,35 @@ export const authorService = {
   createLorebookSpecific: async (
     userId: string,
     title: string,
+    workId: number,
     data: any, // Using any to be flexible with the request body as per user request
   ) => {
     const response = await apiClient.post(
       `/api/v1/ai/author/${userId}/${title}/lorebook/setting_save`,
       data,
+      { params: { workId } },
     );
     return response.data;
   },
 
-  // Specific Update API (User Request)
+  // 설정집 특정 항목 수정 (PATCH)
   updateLorebookSpecific: async (
     userId: string,
     title: string,
     tag: string,
-    itemId: string, // or number, assuming itemId is passed
+    itemId: string,
     data: any,
   ) => {
-    const response = await apiClient.patch(
-      `/api/v1/ai/author/${userId}/${title}/lorebook/${tag}/${itemId}`,
-      data,
-    );
-    return response.data;
+    try {
+      const response = await apiClient.patch(
+        `/api/v1/ai/author/${userId}/${title}/lorebook/${tag}/${itemId}`,
+        data,
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update lorebook specific item:', error);
+      throw error;
+    }
   },
 
   updateLorebook: async (
