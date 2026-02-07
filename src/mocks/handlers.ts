@@ -450,9 +450,18 @@ export const handlers: RequestHandler[] = [
   // AuthorLorebookController & AiLorebookController
   http.get(
     `${BACKEND_URL}/api/v1/author/:userId/:title/lorebook`,
-    ({ request }) => {
+    ({ request, params }) => {
       const url = new URL(request.url);
-      const workId = Number(url.searchParams.get('workId'));
+      let workId = Number(url.searchParams.get('workId'));
+
+      if (!workId) {
+        const title = decodeURIComponent(params.title as string);
+        const work = MOCK_WORKS.find((w) => w.title === title);
+        if (work) {
+          workId = work.id;
+        }
+      }
+
       const lorebooks = MOCK_LOREBOOKS.get(workId) || [];
       return HttpResponse.json(lorebooks);
     },
@@ -499,6 +508,14 @@ export const handlers: RequestHandler[] = [
         similarSettings: [],
         checkResult: 'PASS',
       });
+    },
+  ),
+
+  http.post(
+    `${BACKEND_URL}/api/v1/ai/author/:userId/:title/lorebook/conflict_solve`,
+    async ({ request }) => {
+      // Mock conflict solve success
+      return HttpResponse.json('충돌이 해결되었습니다.');
     },
   ),
 
