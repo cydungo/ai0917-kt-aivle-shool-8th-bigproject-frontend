@@ -43,12 +43,6 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
               >
                 Pricing
               </a>
-              <a
-                href="#about"
-                className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
-              >
-                About
-              </a>
             </div>
 
             {/* Desktop Right Side - Dark Mode Toggle + CTA */}
@@ -409,7 +403,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-3">
-              <Logo />
+              <Logo onClick={() => (window.location.href = '#')} />
             </div>
 
             <div className="flex items-center gap-8 text-sm text-muted-foreground">
@@ -432,7 +426,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
           </div>
 
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            © 2026 IPSUM. All rights reserved.
+            © 2026 IP.SUM All rights reserved.
           </div>
         </div>
       </footer>
