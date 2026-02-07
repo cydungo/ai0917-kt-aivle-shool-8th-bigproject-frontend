@@ -41,33 +41,25 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-sans p-1">
-      {/* Welcome Section */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">대시보드</h1>
-        <p className="text-sm text-muted-foreground">
-          담당 작가 및 작품 현황을 한눈에 확인하세요.
-        </p>
-      </div>
-
+    <div className="space-y-6 max-w-7xl mx-auto font-sans p-4">
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {/* Pending Proposals */}
         <Card
           className="border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
           onClick={() => handleNavigate('/manager/ip-expansion')}
         >
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">
-                승인 대기 제안
-              </p>
-              <div className="text-2xl font-bold text-foreground">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center shrink-0">
+              <FileText className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="space-y-1 overflow-hidden">
+              <div className="text-2xl font-bold text-foreground truncate">
                 {summary?.pendingProposals || 0}
               </div>
-            </div>
-            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <p className="text-sm text-muted-foreground truncate">
+                승인 대기 제안
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -77,34 +69,34 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
           className="border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
           onClick={() => handleNavigate('/manager/authors')}
         >
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">
-                담당 작가
-              </p>
-              <div className="text-2xl font-bold text-foreground">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
+              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="space-y-1 overflow-hidden">
+              <div className="text-2xl font-bold text-foreground truncate">
                 {summary?.managedAuthors || 0}
               </div>
-            </div>
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <p className="text-sm text-muted-foreground truncate">
+                담당 작가
+              </p>
             </div>
           </CardContent>
         </Card>
 
         {/* Active Authors */}
         <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">
-                활동 중인 작가
-              </p>
-              <div className="text-2xl font-bold text-foreground">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center shrink-0">
+              <Activity className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="space-y-1 overflow-hidden">
+              <div className="text-2xl font-bold text-foreground truncate">
                 {summary?.activeAuthors || 0}
               </div>
-            </div>
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-              <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <p className="text-sm text-muted-foreground truncate">
+                활동 중인 작가
+              </p>
             </div>
           </CardContent>
         </Card>

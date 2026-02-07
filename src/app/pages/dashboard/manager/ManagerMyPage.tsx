@@ -54,20 +54,6 @@ export function ManagerMyPage({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <User className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">마이페이지</h1>
-            <p className="text-sm text-muted-foreground">
-              관리자님의 프로필 정보와 계정 설정을 관리하세요.
-            </p>
-          </div>
-        </div>
-      </div>
-
       <div className="grid gap-6 md:grid-cols-12">
         {/* 오른쪽: 상세 정보 및 계정 관리 */}
         <div className="md:col-span-8 space-y-6">
