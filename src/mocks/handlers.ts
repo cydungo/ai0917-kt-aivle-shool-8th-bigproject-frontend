@@ -487,6 +487,188 @@ export const handlers: RequestHandler[] = [
     },
   ),
 
+  // Manager IP Expansion Author Works
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ipext/:authorId/authorwork`,
+    ({ params }) => {
+      // Mock returning works for the author
+      // For simplicity, just return all mock works
+      return HttpResponse.json(MOCK_WORKS);
+    },
+  ),
+
+  // Manager IP Expansion Conflict Check
+  http.post(`${BACKEND_URL}/api/v1/ai/manager/ipext/settings`, async () => {
+    await delay(1000);
+    return HttpResponse.json({
+      충돌: {
+        인물: [
+          {
+            강태호: '[결과: 충돌]\n [판단사유: 인물의 성격 묘사가 상충됩니다.]',
+            신규설정: {
+              별명: ['불도저'],
+              성격: ['저돌적임', '다혈질'],
+              배경: ['특수부대 출신 경호원'],
+              종족: ['인간'],
+            },
+            기존설정: {
+              별명: ['그림자'],
+              성격: ['냉철함', '신중함'],
+              배경: ['정보국 요원'],
+              종족: ['인간'],
+            },
+          },
+        ],
+        세계: [],
+        장소: [],
+        사건: [
+          {
+            '대규모 투자 설명회':
+              '[결과: 충돌]\n [판단사유: 사건 이름이 동일한 사건이 존재합니다. 키워드를 변경해주세요.]',
+            신규설정: {
+              '관련 인물': ['이준', '이사진', '강독고 팀장'],
+              설명: [
+                '이준이 아틀라스 네트웍스의 위상을 증명하는 화려한 대규모 투자 설명회 단상에 올라 발표를 진행함. 이사진들은 갑작스러운 사고나 복통으로 자리를 비웠고, 설명회는 이준의 독무대가 됨.',
+              ],
+            },
+            기존설정: {
+              '관련 인물': ['이준', '김회장'],
+              설명: ['이준이 투자 설명회를 망치는 사건.'],
+            },
+          },
+        ],
+        물건: [],
+        집단: [],
+      },
+    });
+  }),
+
+  // Manager IP Expansion Authors
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ipext/:managerId/author`,
+    ({ params }) => {
+      // Mock returning authors associated with manager
+      return HttpResponse.json(
+        MOCK_AUTHORS.slice(0, 10).map((a) => ({
+          ...a,
+          workCount: a.workCount || 0,
+        })),
+      );
+    },
+  ),
+
+  // Manager IP Expansion Author Works
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ipext/:authorId/authorwork`,
+    ({ params }) => {
+      const authorId = Number(params.authorId);
+      // Return works, ensuring they have IDs and titles
+      const works = MOCK_WORKS.map((w) => ({
+        id: w.id,
+        title: w.title,
+        genre: w.genre,
+        status: w.status,
+      }));
+      return HttpResponse.json(works);
+    },
+  ),
+
+  // Manager IP Expansion Work Lorebooks
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ipext/:workId/authorworklorebook`,
+    ({ params }) => {
+      const workId = Number(params.workId);
+      // Return lorebooks for the work
+      return HttpResponse.json(MOCK_LOREBOOKS);
+    },
+  ),
+
+  // Manager IP Expansion Proposals List
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ipext/:managerId`,
+    ({ params, request }) => {
+      const url = new URL(request.url);
+      const page = Number(url.searchParams.get('page') || 0);
+      const size = Number(url.searchParams.get('size') || 10);
+
+      const content = ORIGINAL_IP_EXPANSION_PROPOSALS.slice(
+        page * size,
+        (page + 1) * size,
+      );
+
+      return HttpResponse.json({
+        content: content,
+        pageable: { pageNumber: page, pageSize: size },
+        totalElements: ORIGINAL_IP_EXPANSION_PROPOSALS.length,
+        totalPages: Math.ceil(ORIGINAL_IP_EXPANSION_PROPOSALS.length / size),
+        number: page,
+        size: size,
+      });
+    },
+  ),
+
+  // Manager IP Expansion Proposal Detail
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ipext/:managerId/:id`,
+    ({ params }) => {
+      const id = Number(params.id);
+      const proposal = ORIGINAL_IP_EXPANSION_PROPOSALS.find((p) => p.id === id);
+      if (!proposal) return new HttpResponse(null, { status: 404 });
+      return HttpResponse.json(proposal);
+    },
+  ),
+
+  // Manager IP Expansion Proposal Update
+  http.patch(
+    `${BACKEND_URL}/api/v1/manager/ipext/:managerId/:id`,
+    async ({ params, request }) => {
+      const id = Number(params.id);
+      const data = (await request.json()) as any;
+
+      const index = ORIGINAL_IP_EXPANSION_PROPOSALS.findIndex(
+        (p) => p.id === id,
+      );
+      if (index !== -1) {
+        ORIGINAL_IP_EXPANSION_PROPOSALS[index] = {
+          ...ORIGINAL_IP_EXPANSION_PROPOSALS[index],
+          ...data,
+        };
+      }
+
+      return HttpResponse.json('수정 완료');
+    },
+  ),
+
+  // IP Expansion Conflict Check
+  http.post(`${BACKEND_URL}/api/v1/ai/manager/ipext/settings`, async () => {
+    await delay(1000);
+    return HttpResponse.json({
+      충돌: {
+        인물: [],
+        세계: [],
+        장소: [],
+        사건: [
+          {
+            '대규모 투자 설명회':
+              '[결과: 충돌]\n [판단사유: 사건 이름이 동일한 사건이 존재합니다. 키워드를 변경해주세요.]',
+            신규설정: {
+              '관련 인물': ['이준', '이사진', '강독고 팀장'],
+              설명: [
+                '이준이 아틀라스 네트웍스의 위상을 증명하는 화려한 대규모 투자 설명회 단상에 올라 발표를 진행함. 이사진들은 갑작스러운 사고나 복통으로 자리를 비웠고, 설명회는 이준의 독무대가 됨.',
+              ],
+            },
+            기존설정: {
+              '관련 인물': ['이준', '김회장'],
+              설명: ['이준이 투자 설명회를 망치는 사건.'],
+            },
+          },
+        ],
+        물건: [],
+        집단: [],
+      },
+    });
+  }),
+
   // Invite Code
   http.get(`${BACKEND_URL}/api/v1/author/invite-code`, () =>
     HttpResponse.json({
