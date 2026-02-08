@@ -17,6 +17,7 @@ import TermsPage from './pages/legal/TermsPage';
 import { authService } from './services/authService';
 import AILabPage from './pages/lab/AILabPage';
 import { Toaster } from './components/ui/sonner';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 type UserType = 'Manager' | 'Author' | 'Admin' | 'Deactivated' | null;
 
@@ -91,64 +92,66 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Toaster />
-      <Routes>
-        {/* 권한별 대시보드 */}
-        <Route
-          path="/"
-          element={
-            userType === 'Manager' ? (
-              <ManagerDashboard
-                onLogout={handleLogout}
-                onHome={() => navigate('/')}
-              />
-            ) : userType === 'Author' ? (
-              <AuthorDashboard
-                onLogout={handleLogout}
-                onHome={() => navigate('/')}
-              />
-            ) : userType === 'Admin' ? (
-              <AdminDashboard
-                onLogout={handleLogout}
-                onHome={() => navigate('/')}
-              />
-            ) : (
-              <LandingPage onSignInClick={() => navigate('/login')} />
-            )
-          }
-        />
+    <ErrorBoundary>
+      <div className="min-h-screen bg-background">
+        <Toaster />
+        <Routes>
+          {/* 권한별 대시보드 */}
+          <Route
+            path="/"
+            element={
+              userType === 'Manager' ? (
+                <ManagerDashboard
+                  onLogout={handleLogout}
+                  onHome={() => navigate('/')}
+                />
+              ) : userType === 'Author' ? (
+                <AuthorDashboard
+                  onLogout={handleLogout}
+                  onHome={() => navigate('/')}
+                />
+              ) : userType === 'Admin' ? (
+                <AdminDashboard
+                  onLogout={handleLogout}
+                  onHome={() => navigate('/')}
+                />
+              ) : (
+                <LandingPage onSignInClick={() => navigate('/login')} />
+              )
+            }
+          />
 
-        {/* 인증 라우트 */}
-        <Route
-          path="/login"
-          element={
-            userType ? (
-              <Navigate to="/" />
-            ) : (
-              <LoginPage
-                onLogin={(t) => handleLogin(t)}
-                onBack={() => navigate('/')}
+          {/* 인증 라우트 */}
+          <Route
+            path="/login"
+            element={
+              userType ? (
+                <Navigate to="/" />
+              ) : (
+                <LoginPage
+                  onLogin={(t) => handleLogin(t)}
+                  onBack={() => navigate('/')}
+                />
+              )
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <SignupPage
+                onSignupComplete={() => navigate('/login')}
+                onBack={() => navigate('/login')}
               />
-            )
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <SignupPage
-              onSignupComplete={() => navigate('/login')}
-              onBack={() => navigate('/login')}
-            />
-          }
-        />
+            }
+          />
 
-        {/* 법적 약관 및 404 */}
-        <Route path="/lab" element={<AILabPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </div>
+          {/* 법적 약관 및 404 */}
+          <Route path="/lab" element={<AILabPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </ErrorBoundary>
   );
 }
