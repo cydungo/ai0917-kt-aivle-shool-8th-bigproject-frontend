@@ -1703,15 +1703,10 @@ function CreateIPExpansionDialog({
       selectedWork?.id,
     ],
     queryFn: () =>
-      selectedAuthor?.id && selectedWork?.title && selectedWork?.id
-        ? managerService.getLorebooksByAuthorAndTitle(
-            selectedAuthor.id,
-            selectedWork.title,
-            selectedWork.id,
-          )
+      selectedWork?.id
+        ? managerService.getManagerWorkLorebooks(selectedWork.id)
         : Promise.resolve([]),
-    enabled:
-      !!selectedAuthor?.id && !!selectedWork?.title && !!selectedWork?.id,
+    enabled: !!selectedWork?.id,
   });
 
   const categories = [
@@ -1739,7 +1734,7 @@ function CreateIPExpansionDialog({
   }, [works, workSearch]);
 
   const filteredLorebooks = useMemo(() => {
-    if (!lorebooks) return [];
+    if (!lorebooks || !Array.isArray(lorebooks)) return [];
     let filtered = lorebooks.filter((l: any) =>
       l.keyword.toLowerCase().includes(lorebookSearch.toLowerCase()),
     );
@@ -2462,49 +2457,51 @@ function CreateIPExpansionDialog({
                           </div>
                         ) : (
                           <div className="p-3 space-y-2">
-                            {filteredLorebooks.map((lorebook: any) => {
-                              const isSelected = selectedLorebooks.some(
-                                (item) => item.id === lorebook.id,
-                              );
-                              return (
-                                <label
-                                  key={lorebook.id}
-                                  className={cn(
-                                    'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all border text-sm group',
-                                    isSelected
-                                      ? 'bg-slate-50 border-slate-400 ring-1 ring-slate-400 shadow-sm'
-                                      : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm',
-                                  )}
-                                >
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onCheckedChange={() =>
-                                      toggleLorebook(lorebook)
-                                    }
-                                    className="mt-0.5 data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900"
-                                  />
-                                  <div className="flex-1 min-w-0 select-none">
-                                    <div className="font-bold flex items-center gap-2 text-slate-800">
-                                      <HighlightText
-                                        text={lorebook.keyword}
-                                        highlight={lorebookSearch}
-                                      />
-                                      <Badge
-                                        variant="secondary"
-                                        className="text-[10px] h-4 px-1 bg-slate-100 text-slate-600 border-slate-200"
-                                      >
-                                        {lorebook.category}
-                                      </Badge>
+                            {filteredLorebooks.map(
+                              (lorebook: any, index: number) => {
+                                const isSelected = selectedLorebooks.some(
+                                  (item) => item.id === lorebook.id,
+                                );
+                                return (
+                                  <label
+                                    key={`${lorebook.id}-${index}`}
+                                    className={cn(
+                                      'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all border text-sm group',
+                                      isSelected
+                                        ? 'bg-slate-50 border-slate-400 ring-1 ring-slate-400 shadow-sm'
+                                        : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm',
+                                    )}
+                                  >
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() =>
+                                        toggleLorebook(lorebook)
+                                      }
+                                      className="mt-0.5 data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900"
+                                    />
+                                    <div className="flex-1 min-w-0 select-none">
+                                      <div className="font-bold flex items-center gap-2 text-slate-800">
+                                        <HighlightText
+                                          text={lorebook.keyword}
+                                          highlight={lorebookSearch}
+                                        />
+                                        <Badge
+                                          variant="secondary"
+                                          className="text-[10px] h-4 px-1 bg-slate-100 text-slate-600 border-slate-200"
+                                        >
+                                          {lorebook.category}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                                        {typeof lorebook.setting === 'string'
+                                          ? lorebook.setting
+                                          : JSON.stringify(lorebook.setting)}
+                                      </p>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                                      {typeof lorebook.setting === 'string'
-                                        ? lorebook.setting
-                                        : JSON.stringify(lorebook.setting)}
-                                    </p>
-                                  </div>
-                                </label>
-                              );
-                            })}
+                                  </label>
+                                );
+                              },
+                            )}
                           </div>
                         )}
                       </ScrollArea>
