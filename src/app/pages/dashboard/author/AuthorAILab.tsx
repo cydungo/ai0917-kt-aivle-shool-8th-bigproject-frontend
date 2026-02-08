@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mermaid } from '../../../../components/Mermaid';
+import { Mermaid } from '../../../components/Mermaid';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';

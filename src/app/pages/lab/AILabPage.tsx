@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../components/ui/utils';
 import { toast } from 'sonner';
-import { Mermaid } from '../../../components/Mermaid';
+import { Mermaid } from '../../components/Mermaid';
 
 // API Method Types
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
