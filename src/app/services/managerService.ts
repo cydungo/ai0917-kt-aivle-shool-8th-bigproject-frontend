@@ -138,17 +138,53 @@ export const managerService = {
   },
 
   // IP Expansion
-  getIPProposals: async (page = 0, size = 10) => {
+  getIPProposals: async (
+    managerId: number | string = 'me',
+    page = 0,
+    size = 10,
+  ) => {
     const response = await apiClient.get<PageResponse<IPProposalDto>>(
-      '/api/v1/manager/ipext',
+      `/api/v1/manager/ipext/${managerId}`,
       { params: { page, size } },
     );
     return response.data;
   },
 
-  getIPProposalDetail: async (id: number) => {
+  getIPProposalDetail: async (
+    id: number,
+    managerId: string | number = 'me',
+  ) => {
     const response = await apiClient.get<IPProposalDto>(
-      `/api/v1/manager/ipext/${id}`,
+      `/api/v1/manager/ipext/${managerId}/${id}`,
+    );
+    return response.data;
+  },
+
+  getManagerAuthors: async (managerId: number | string = 'me') => {
+    const response = await apiClient.get<ManagerAuthorDto[]>(
+      `/api/v1/manager/ipext/${managerId}/author`,
+    );
+    return response.data;
+  },
+
+  getAuthorWorks: async (authorId: number) => {
+    const response = await apiClient.get<any[]>(
+      `/api/v1/manager/ipext/${authorId}/authorwork`,
+    );
+    return response.data;
+  },
+
+  getAuthorWorkLorebooks: async (workId: number) => {
+    const response = await apiClient.get<LorebookDto[]>(
+      `/api/v1/manager/ipext/${workId}/authorworklorebook`,
+    );
+    return response.data;
+  },
+
+  checkConflicts: async (data: any) => {
+    const response = await apiClient.post(
+      '/api/v1/ai/manager/ipext/settings',
+      data,
     );
     return response.data;
   },
@@ -158,8 +194,15 @@ export const managerService = {
     return response.data;
   },
 
-  updateIPProposal: async (id: number, data: any) => {
-    const response = await apiClient.patch(`/api/v1/manager/ipext/${id}`, data);
+  updateIPProposal: async (
+    id: number,
+    data: any,
+    managerId: string | number = 'me',
+  ) => {
+    const response = await apiClient.patch(
+      `/api/v1/manager/ipext/${managerId}/${id}`,
+      data,
+    );
     return response.data;
   },
 
@@ -190,21 +233,6 @@ export const managerService = {
   getIPMatching: async () => {
     const response = await apiClient.get<IPMatchingDto[]>(
       '/api/v1/manager/ipext/matching',
-    );
-    return response.data;
-  },
-
-  checkIPExpansionConflicts: async (data: any) => {
-    const response = await apiClient.post(
-      '/api/v1/ai/manager/ipext/settings',
-      data,
-    );
-    return response.data;
-  },
-
-  getManagerWorkLorebooks: async (workId: number) => {
-    const response = await apiClient.get<LorebookDto[]>(
-      `/api/v1/manager/ipext/${workId}/authorworklorebook`,
     );
     return response.data;
   },
