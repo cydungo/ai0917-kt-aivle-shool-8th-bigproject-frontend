@@ -477,6 +477,16 @@ export const handlers: RequestHandler[] = [
     },
   ),
 
+  // Manager IP Expansion Lorebooks
+  http.get(
+    `${BACKEND_URL}/api/v1/manager/ipext/:workId/authorworklorebook`,
+    ({ params }) => {
+      const workId = Number(params.workId);
+      const lorebooks = MOCK_LOREBOOKS.get(workId) || [];
+      return HttpResponse.json(lorebooks);
+    },
+  ),
+
   // Invite Code
   http.get(`${BACKEND_URL}/api/v1/author/invite-code`, () =>
     HttpResponse.json({
