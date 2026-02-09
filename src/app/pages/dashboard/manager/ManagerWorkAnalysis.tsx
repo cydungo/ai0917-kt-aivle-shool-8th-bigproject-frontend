@@ -6,6 +6,9 @@ import {
   List,
   FileText,
   X,
+  GitGraph,
+  Clock,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
@@ -34,6 +37,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../../api/axios';
 import { toast } from 'sonner';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../../components/ui/tabs';
+import { Mermaid } from '../../../components/Mermaid';
 
 export function ManagerWorkAnalysis() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -43,6 +53,31 @@ export function ManagerWorkAnalysis() {
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [selectedAuthorId, setSelectedAuthorId] = useState<string>('');
   const [selectedAuthorWorkId, setSelectedAuthorWorkId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState('relationship');
+
+  // AI Analysis Data Query
+  const {
+    data: analysisData,
+    isLoading: isAnalysisLoading,
+    refetch: runAnalysis,
+  } = useQuery({
+    queryKey: ['manager', 'work-analysis', selectedAuthorWorkId],
+    queryFn: async () => {
+      if (!selectedAuthorWorkId) return null;
+      // Using Author API endpoint for analysis
+      const res = await apiClient.get(
+        `/api/v1/ai/author/works/${selectedAuthorWorkId}/analysis`,
+      );
+      return res.data;
+    },
+    enabled: false, // Only run when requested
+  });
+
+  const handleRunAnalysis = () => {
+    if (!selectedAuthorId || !selectedAuthorWorkId) return;
+    runAnalysis();
+    toast.info('AI 분석을 시작합니다. 잠시만 기다려주세요.');
+  };
 
   const works = [
     {
@@ -204,48 +239,140 @@ export function ManagerWorkAnalysis() {
 
       {/* AI 작품 분석 Modal */}
       <Dialog open={showAnalysisModal} onOpenChange={setShowAnalysisModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>작품 분석</DialogTitle>
+        <DialogContent className="max-w-[95vw] h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-6 border-b shrink-0">
+            <DialogTitle>AI 작품 분석</DialogTitle>
           </DialogHeader>
-          {/* Linked Authors */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">작가 선택</div>
-              <LinkedAuthorsSelect
-                value={selectedAuthorId}
-                onChange={(v) => {
-                  setSelectedAuthorId(v);
-                  setSelectedAuthorWorkId('');
-                }}
-              />
+
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {/* Selection Area */}
+            <div className="p-6 border-b bg-slate-50/50 space-y-4 shrink-0">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="text-sm font-medium text-slate-700">
+                    작가 선택
+                  </div>
+                  <LinkedAuthorsSelect
+                    value={selectedAuthorId}
+                    onChange={(v) => {
+                      setSelectedAuthorId(v);
+                      setSelectedAuthorWorkId('');
+                    }}
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div className="text-sm font-medium text-slate-700">
+                    작품 선택
+                  </div>
+                  <AuthorWorksSelect
+                    authorId={selectedAuthorId}
+                    value={selectedAuthorWorkId}
+                    onChange={(v) => setSelectedAuthorWorkId(v)}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    disabled={
+                      !selectedAuthorId ||
+                      !selectedAuthorWorkId ||
+                      isAnalysisLoading
+                    }
+                    onClick={handleRunAnalysis}
+                    className="w-full sm:w-auto"
+                  >
+                    {isAnalysisLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        분석 중...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        분석 시작
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <div className="text-sm text-muted-foreground">작품 선택</div>
-              <AuthorWorksSelect
-                authorId={selectedAuthorId}
-                value={selectedAuthorWorkId}
-                onChange={(v) => setSelectedAuthorWorkId(v)}
-              />
+
+            {/* Analysis Result Area */}
+            <div className="flex-1 overflow-hidden bg-slate-50 relative">
+              {isAnalysisLoading ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white/50 backdrop-blur-sm z-10">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  <p className="text-slate-600 font-medium">
+                    AI가 작품을 심층 분석하고 있습니다...
+                  </p>
+                </div>
+              ) : null}
+
+              {analysisData ? (
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="h-full flex flex-col"
+                >
+                  <div className="px-6 pt-4 border-b bg-white shrink-0">
+                    <TabsList className="bg-slate-100">
+                      <TabsTrigger value="relationship" className="gap-2">
+                        <GitGraph className="w-4 h-4" />
+                        인물 관계도
+                      </TabsTrigger>
+                      <TabsTrigger value="timeline" className="gap-2">
+                        <Clock className="w-4 h-4" />
+                        사건 타임라인
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <div className="flex-1 overflow-auto p-6">
+                    <TabsContent value="relationship" className="h-full mt-0">
+                      <Card className="h-full border-slate-200 shadow-sm">
+                        <CardHeader className="border-b border-slate-100 py-4">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <GitGraph className="w-4 h-4 text-indigo-500" />
+                            인물 관계도
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 h-[calc(100%-60px)] overflow-auto flex items-center justify-center bg-white">
+                          <Mermaid chart={analysisData.relationship} />
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="timeline" className="h-full mt-0">
+                      <Card className="h-full border-slate-200 shadow-sm">
+                        <CardHeader className="border-b border-slate-100 py-4">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-indigo-500" />
+                            사건 타임라인
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-6 h-[calc(100%-60px)] overflow-auto flex items-center justify-center bg-white">
+                          <Mermaid chart={analysisData.timeline} />
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-slate-300" />
+                  </div>
+                  <p>작가와 작품을 선택하고 분석 버튼을 눌러주세요.</p>
+                </div>
+              )}
             </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="p-4 border-t bg-white shrink-0">
             <Button
               variant="outline"
               onClick={() => setShowAnalysisModal(false)}
             >
-              취소
-            </Button>
-            <Button
-              disabled={!selectedAuthorId || !selectedAuthorWorkId}
-              onClick={() => {
-                toast.info(
-                  'AI 서버 준비 중입니다. 서버 가동 후 분석을 시작할게요.',
-                );
-                setShowAnalysisModal(false);
-              }}
-            >
-              분석
+              닫기
             </Button>
           </DialogFooter>
         </DialogContent>
