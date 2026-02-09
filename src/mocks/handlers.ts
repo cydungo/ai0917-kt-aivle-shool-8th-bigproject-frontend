@@ -204,6 +204,10 @@ export const handlers: RequestHandler[] = [
   // ======================================================================
   // 2. User API (Auth)
   // ======================================================================
+  http.get(`${BACKEND_URL}/api/v1/auth/csrf`, () => {
+    return HttpResponse.json({ token: 'mock-csrf-token' });
+  }),
+
   http.get(`${BACKEND_URL}/api/v1/auth/me`, () => {
     const storedRole = localStorage.getItem('msw-session-role');
     if (storedRole) {
@@ -233,10 +237,79 @@ export const handlers: RequestHandler[] = [
     return HttpResponse.json({ success: true, role, type: 'AUTH' });
   }),
 
+  http.post(`${BACKEND_URL}/api/v1/auth/refresh`, () => {
+    return HttpResponse.json({ accessToken: 'mock-access-token' });
+  }),
+
   http.post(`${BACKEND_URL}/api/v1/auth/logout`, () => {
     localStorage.removeItem('msw-session-role');
     return HttpResponse.json({ success: true });
   }),
+
+  // System Notices
+  http.get(`${BACKEND_URL}/api/v1/author/sysnotice`, () => {
+    return HttpResponse.json({
+      notices: PROFESSIONAL_NOTICES.map((n, i) => ({
+        id: i + 1,
+        title: n.title,
+        content: n.content,
+        read: i > 2,
+        createdAt: new Date().toISOString(),
+        source: 'SYSTEM',
+      })),
+    });
+  }),
+
+  http.get(`${BACKEND_URL}/api/v1/author/sysnotice/subscribe`, () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        const data = JSON.stringify({
+          title: '시스템 알림 (Mock)',
+          content: 'SSE 연결이 성공했습니다.',
+          source: 'SYSTEM',
+          id: 999,
+          read: false,
+        });
+        controller.enqueue(
+          new TextEncoder().encode(`event: system-notice\ndata: ${data}\n\n`),
+        );
+      },
+    });
+    return new HttpResponse(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+      },
+    });
+  }),
+
+  http.patch(`${BACKEND_URL}/api/v1/author/sysnotice/:source/:id/read`, () => {
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.patch(`${BACKEND_URL}/api/v1/author/sysnotice/read-all`, () => {
+    return HttpResponse.json({ success: true });
+  }),
+
+  // Work Analysis (Mermaid)
+  http.get(
+    `${BACKEND_URL}/api/v1/ai/author/works/:workId/analysis`,
+    ({ params }) => {
+      // const workId = Number(params.workId);
+      return HttpResponse.json({
+        relationship: `graph TD
+    A[이준] -->|팀장| B[강독고]
+    A -->|동료| C[김대리]
+    B -->|보고| D[이사]
+    style A fill:#f9f,stroke:#333,stroke-width:2px`,
+        timeline: `timeline
+    title 주요 사건 타임라인
+    2024-01 : 프로젝트 착수
+    2024-02 : 1차 위기 발생
+    2024-03 : 해결 및 성장
+    2024-04 : 최종 발표`,
+      });
+    },
+  ),
 
   // ======================================================================
   // 3. Manager API
