@@ -44,6 +44,54 @@ export const authorService = {
     return response.data;
   },
 
+  // System Notices (Real-time)
+  getSystemNotices: async (integrationId: string) => {
+    const response = await apiClient.get<any>('/api/v1/author/sysnotice', {
+      params: { integrationId },
+    });
+    // Backend returns list directly or wrapped
+    // User requirement: GET /api/v1/author/sysnotice?integrationId={authorIntegrationid}
+    const notices = Array.isArray(response.data)
+      ? response.data
+      : response.data.notices || [];
+    return {
+      content: notices,
+      totalElements: notices.length,
+      totalPages: 1,
+      last: true,
+      size: notices.length,
+      number: 0,
+      page: 0,
+    } as PageResponse<AuthorNoticeDto>;
+  },
+
+  getSystemNoticeSubscribeUrl: (integrationId: string) => {
+    // SSE URL
+    const baseUrl =
+      apiClient.defaults.baseURL || import.meta.env.VITE_BACKEND_URL;
+    return `${baseUrl}/api/v1/author/sysnotice/subscribe?integrationId=${integrationId}`;
+  },
+
+  readSystemNotice: async (
+    id: number,
+    source: string,
+    integrationId: string,
+  ) => {
+    await apiClient.patch(
+      `/api/v1/author/sysnotice/${source}/${id}/read`,
+      null,
+      {
+        params: { integrationId },
+      },
+    );
+  },
+
+  readAllSystemNotices: async (integrationId: string) => {
+    await apiClient.patch('/api/v1/author/sysnotice/read-all', null, {
+      params: { integrationId },
+    });
+  },
+
   // Works
   getWorks: async (integrationId: string) => {
     // CSV defines /api/v1/author/works
@@ -88,9 +136,48 @@ export const authorService = {
     return response.data;
   },
 
+  getWorkAnalysis: async (workId: number) => {
+    const response = await apiClient.get<{
+      relationship: string;
+      timeline: string;
+    }>(`/api/v1/ai/author/works/${workId}/analysis`);
+    return response.data;
+  },
+
   publishConfirm: async (workId: string) => {
     const response = await apiClient.post(
       `/api/v1/author/works/${workId}/publish/confirm`,
+    );
+    return response.data;
+  },
+
+  // IP Expansion (Manager Integration)
+  getManagerIPExpansions: async (managerId: string) => {
+    const response = await apiClient.get<PageResponse<IPProposalDto>>(
+      `/api/v1/manager/ipext/${managerId}`,
+    );
+    return response.data.content;
+  },
+
+  getManagerIPExpansionDetail: async (managerId: string, ipextId: string) => {
+    const response = await apiClient.get<IPProposalDto>(
+      `/api/v1/manager/ipext/${managerId}/${ipextId}`,
+    );
+    return response.data;
+  },
+
+  approveIPProposal: async (id: number, comment?: string) => {
+    const response = await apiClient.post(
+      `/api/v1/author/ip-expansion/proposals/${id}/approve`,
+      { comment },
+    );
+    return response.data;
+  },
+
+  rejectIPProposal: async (id: number, reason: string) => {
+    const response = await apiClient.post(
+      `/api/v1/author/ip-expansion/proposals/${id}/reject`,
+      { reason },
     );
     return response.data;
   },
@@ -345,29 +432,9 @@ export const authorService = {
     return response.data;
   },
 
-  // IP Expansion
-  getIPProposals: async () => {
-    const response = await apiClient.get<IPProposalDto[]>(
-      '/api/v1/author/ip-expansion/proposals',
-    );
-    return response.data;
-  },
-
-  approveIPProposal: async (proposalId: number, comment?: string) => {
-    const response = await apiClient.post(
-      `/api/v1/author/ip-expansion/proposals/${proposalId}/approve`,
-      { comment },
-    );
-    return response.data;
-  },
-
-  rejectIPProposal: async (proposalId: number, comment: string) => {
-    const response = await apiClient.post(
-      `/api/v1/author/ip-expansion/proposals/${proposalId}/reject`,
-      { comment },
-    );
-    return response.data;
-  },
+  // IP Expansion (Manager's List for Author)
+  // Replaced by getManagerIPExpansions and getManagerIPExpansionDetail above
+  // Kept for backward compatibility if needed, but should be removed eventually
 
   getIPMatching: async () => {
     const response = await apiClient.get<IPMatchingDto[]>(
