@@ -45,10 +45,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {/* Pending Proposals */}
-        <Card
-          className="border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => handleNavigate('/manager/ip-expansion')}
-        >
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center shrink-0">
               <FileText className="w-6 h-6 text-orange-600 dark:text-orange-400" />
@@ -65,10 +62,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
         </Card>
 
         {/* Managed Authors */}
-        <Card
-          className="border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => handleNavigate('/manager/authors')}
-        >
+        <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
               <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -128,7 +122,7 @@ export function ManagerHome({ onNavigate }: ManagerHomeProps) {
                 {notices.map((notice) => (
                   <div
                     key={notice.id}
-                    className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                    className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors group"
                     onClick={() =>
                       handleNavigate(`/manager/notices/${notice.id}`)
                     }
