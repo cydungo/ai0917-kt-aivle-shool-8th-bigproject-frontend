@@ -353,6 +353,22 @@ export const authorService = {
     return response.data;
   },
 
+  approveIPProposal: async (proposalId: number, comment?: string) => {
+    const response = await apiClient.post(
+      `/api/v1/author/ip-expansion/proposals/${proposalId}/approve`,
+      { comment },
+    );
+    return response.data;
+  },
+
+  rejectIPProposal: async (proposalId: number, comment: string) => {
+    const response = await apiClient.post(
+      `/api/v1/author/ip-expansion/proposals/${proposalId}/reject`,
+      { comment },
+    );
+    return response.data;
+  },
+
   getIPMatching: async () => {
     const response = await apiClient.get<IPMatchingDto[]>(
       '/api/v1/author/ip-expansion/matching',
