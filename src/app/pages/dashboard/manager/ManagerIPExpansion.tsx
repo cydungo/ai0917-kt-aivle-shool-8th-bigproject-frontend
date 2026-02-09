@@ -110,6 +110,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../api/axios';
 import { cn } from '../../../components/ui/utils';
 import { managerService } from '../../../services/managerService';
+import { authService } from '../../../services/authService';
 import { toast } from 'sonner';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { Checkbox } from '../../../components/ui/checkbox';
@@ -198,8 +199,39 @@ const SettingComparison = ({
         }
 
         const formatValue = (val: any) => {
-          if (Array.isArray(val)) return val.join(', ');
-          return String(val || '-');
+          if (val === null || val === undefined) return '-';
+          if (Array.isArray(val)) {
+            if (val.length === 0) return '-';
+            if (typeof val[0] === 'object') {
+              return val.map((item, i) => (
+                <div
+                  key={i}
+                  className="mb-1 last:mb-0 pl-2 border-l-2 border-slate-200"
+                >
+                  {Object.entries(item).map(([k, v]) => (
+                    <div key={k} className="flex gap-1">
+                      <span className="font-semibold text-slate-500">{k}:</span>
+                      <span>{String(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              ));
+            }
+            return val.join(', ');
+          }
+          if (typeof val === 'object') {
+            return (
+              <div className="pl-2 border-l-2 border-slate-200">
+                {Object.entries(val).map(([k, v]) => (
+                  <div key={k} className="flex gap-1">
+                    <span className="font-semibold text-slate-500">{k}:</span>
+                    <span>{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          return String(val);
         };
 
         return (
@@ -372,7 +404,7 @@ export function ManagerIPExpansion() {
 
   const { data: proposalsData, isLoading } = useQuery({
     queryKey: ['manager', 'ip-expansion', 'proposals', page],
-    queryFn: () => managerService.getIPProposals(page, PAGE_SIZE),
+    queryFn: () => managerService.getIPProposals('me', page, PAGE_SIZE),
   });
 
   const proposals = proposalsData?.content || [];
@@ -1631,7 +1663,7 @@ function CreateIPExpansionDialog({
 
     // 5. Item Mechanic
     const crownItem = selectedLorebooks.find(
-      (l) => l.id === selectedCrownSetting,
+      (l) => l.lorebookId === selectedCrownSetting,
     );
     const isCrownItem = crownItem?.category === '물건';
     if (isHigh(counts.items) || isCrownItem) {
@@ -1755,39 +1787,69 @@ function CreateIPExpansionDialog({
   const [authorSearch, setAuthorSearch] = useState('');
   const [workSearch, setWorkSearch] = useState('');
   const [lorebookSearch, setLorebookSearch] = useState('');
+  const [viewingLorebook, setViewingLorebook] = useState<any>(null);
 
   const [showAllGenres, setShowAllGenres] = useState(false);
   const [showAllSpinoffs, setShowAllSpinoffs] = useState(false);
   const [showCoreSettingDetail, setShowCoreSettingDetail] = useState(false);
 
+  // Fetch Current User (Manager)
+  const { data: userData } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: authService.me,
+    enabled: isOpen,
+  });
+
   // Data Queries
   const { data: authors } = useQuery({
-    queryKey: ['manager', 'authors', 'list'],
-    queryFn: () => managerService.getAuthors({}),
-    enabled: isOpen && currentStep === 1,
+    queryKey: [
+      'manager',
+      'authors',
+      'list',
+      userData?.integrationId || userData?.userId,
+    ],
+    queryFn: () => {
+      const managerId = userData?.integrationId || userData?.userId;
+      if (!managerId) return [];
+      return managerService.getManagerAuthors(managerId);
+    },
+    enabled:
+      isOpen &&
+      currentStep === 1 &&
+      !!(userData?.integrationId || userData?.userId),
   });
 
   const { data: works } = useQuery({
-    queryKey: ['manager', 'author-works', selectedAuthor?.id],
+    queryKey: [
+      'manager',
+      'author-works',
+      selectedAuthor?.integrationId || selectedAuthor?.id,
+    ],
     queryFn: async () => {
-      if (!selectedAuthor?.id) return [];
+      const authId = selectedAuthor?.integrationId || selectedAuthor?.id;
+      if (!authId) return [];
       try {
-        return await managerService.getAuthorWorks(selectedAuthor.id);
+        return await managerService.getAuthorWorks(authId);
       } catch (error) {
         console.error('Failed to fetch author works:', error);
         return [];
       }
     },
-    enabled: !!selectedAuthor?.id,
+    enabled: !!(selectedAuthor?.integrationId || selectedAuthor?.id),
   });
 
   const { data: lorebooks } = useQuery({
-    queryKey: ['manager', 'lorebooks', selectedAuthor?.id, selectedWork?.id],
+    queryKey: [
+      'manager',
+      'lorebooks',
+      selectedAuthor?.id,
+      selectedWork?.workId,
+    ],
     queryFn: () =>
-      selectedWork?.id
-        ? managerService.getAuthorWorkLorebooks(selectedWork.id)
+      selectedWork?.workId
+        ? managerService.getAuthorWorkLorebooks(selectedWork.workId)
         : Promise.resolve([]),
-    enabled: !!selectedWork?.id,
+    enabled: !!selectedWork?.workId,
   });
 
   const categories = [
@@ -1801,7 +1863,9 @@ function CreateIPExpansionDialog({
 
   const filteredAuthors = useMemo(() => {
     if (!authors) return [];
-    const list = authors.content || [];
+    const list = Array.isArray(authors)
+      ? authors
+      : (authors as any).content || [];
     return list.filter((a: any) =>
       a.name.toLowerCase().includes(authorSearch.toLowerCase()),
     );
@@ -1809,14 +1873,18 @@ function CreateIPExpansionDialog({
 
   const filteredWorks = useMemo(() => {
     if (!works) return [];
-    return works.filter((w: any) =>
+    const list = Array.isArray(works) ? works : (works as any).content || [];
+    return list.filter((w: any) =>
       w.title.toLowerCase().includes(workSearch.toLowerCase()),
     );
   }, [works, workSearch]);
 
   const filteredLorebooks = useMemo(() => {
-    if (!lorebooks || !Array.isArray(lorebooks)) return [];
-    let filtered = lorebooks.filter((l: any) =>
+    if (!lorebooks) return [];
+    const list = Array.isArray(lorebooks)
+      ? lorebooks
+      : (lorebooks as any).content || [];
+    let filtered = list.filter((l: any) =>
       l.keyword.toLowerCase().includes(lorebookSearch.toLowerCase()),
     );
     if (lorebookCategoryTab !== 'all') {
@@ -1851,13 +1919,13 @@ function CreateIPExpansionDialog({
       // Add all visible lorebooks that aren't already selected
       const newSelected = [...selectedLorebooks];
       filteredLorebooks.forEach((lorebook: any) => {
-        if (!newSelected.some((s) => s.id === lorebook.id)) {
+        if (!newSelected.some((s) => s.lorebookId === lorebook.lorebookId)) {
           newSelected.push({
             ...lorebook,
             authorName: selectedAuthor?.name,
             workTitle: selectedWork?.title,
             authorId: selectedAuthor?.id,
-            workId: selectedWork?.id,
+            workId: selectedWork?.workId,
           });
         }
       });
@@ -1865,7 +1933,8 @@ function CreateIPExpansionDialog({
     } else {
       // Remove all visible lorebooks
       const newSelected = selectedLorebooks.filter(
-        (s) => !filteredLorebooks.some((l: any) => l.id === s.id),
+        (s) =>
+          !filteredLorebooks.some((l: any) => l.lorebookId === s.lorebookId),
       );
       setSelectedLorebooks(newSelected);
     }
@@ -1873,9 +1942,11 @@ function CreateIPExpansionDialog({
 
   const toggleLorebook = (lorebook: any) => {
     setSelectedLorebooks((prev) => {
-      const exists = prev.find((item) => item.id === lorebook.id);
+      const exists = prev.find(
+        (item) => item.lorebookId === lorebook.lorebookId,
+      );
       if (exists) {
-        return prev.filter((item) => item.id !== lorebook.id);
+        return prev.filter((item) => item.lorebookId !== lorebook.lorebookId);
       } else {
         if (!selectedAuthor || !selectedWork) return prev;
         return [
@@ -1885,7 +1956,7 @@ function CreateIPExpansionDialog({
             authorName: selectedAuthor.name,
             workTitle: selectedWork.title,
             authorId: selectedAuthor.id,
-            workId: selectedWork.id,
+            workId: selectedWork.workId,
           },
         ];
       }
@@ -1903,7 +1974,7 @@ function CreateIPExpansionDialog({
         if (initialData.crownSettingId) {
           setSelectedCrownSetting(initialData.crownSettingId);
         } else if (initialData.lorebooks && initialData.lorebooks.length > 0) {
-          setSelectedCrownSetting(initialData.lorebooks[0].id);
+          setSelectedCrownSetting(initialData.lorebooks[0].lorebookId);
         }
         setConflictConfirmed(true);
         setStep3Confirmed(true);
@@ -1985,7 +2056,14 @@ function CreateIPExpansionDialog({
       setIsConflictChecking(true);
       try {
         const result = await managerService.checkConflicts({
-          lorebookIds: selectedLorebooks.map((l) => l.id),
+          lorebooks: selectedLorebooks.map((l) => ({
+            id: l.lorebookId || l.id,
+            lorebookId: l.lorebookId || l.id,
+            title: l.keyword || l.title,
+            category: l.category,
+            description: l.description,
+            setting: l.setting,
+          })),
           crownId: selectedCrownSetting,
         });
         setConflictResult(result);
@@ -2152,7 +2230,7 @@ function CreateIPExpansionDialog({
   const confirmCreate = () => {
     onCreated({
       authorId: selectedAuthor?.id,
-      workId: selectedWork?.id,
+      workId: selectedWork?.workId,
       title: projectTitle,
       lorebookIds: selectedLorebooks.map((l: any) => l.id),
       crownLorebookId: selectedCrownSetting,
@@ -2352,6 +2430,7 @@ function CreateIPExpansionDialog({
                             <div
                               key={author.id}
                               onClick={() => {
+                                if (selectedAuthor?.id === author.id) return;
                                 setSelectedAuthor(author);
                                 setSelectedWork(null);
                               }}
@@ -2424,11 +2503,15 @@ function CreateIPExpansionDialog({
                           <div className="p-3 space-y-1.5">
                             {filteredWorks.map((work: any) => (
                               <div
-                                key={work.id}
-                                onClick={() => setSelectedWork(work)}
+                                key={work.workId}
+                                onClick={() => {
+                                  if (selectedWork?.workId === work.workId)
+                                    return;
+                                  setSelectedWork(work);
+                                }}
                                 className={cn(
                                   'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm border border-transparent',
-                                  selectedWork?.id === work.id
+                                  selectedWork?.workId === work.workId
                                     ? 'bg-slate-900 text-white shadow-md transform scale-[1.01]'
                                     : 'hover:bg-slate-50 text-slate-700 hover:border-slate-200',
                                 )}
@@ -2454,7 +2537,7 @@ function CreateIPExpansionDialog({
                                   <div
                                     className={cn(
                                       'text-xs mt-1',
-                                      selectedWork?.id === work.id
+                                      selectedWork?.workId === work.workId
                                         ? 'text-slate-300'
                                         : 'text-slate-500',
                                     )}
@@ -2488,7 +2571,7 @@ function CreateIPExpansionDialog({
                                   filteredLorebooks.length > 0 &&
                                   filteredLorebooks.every((l: any) =>
                                     selectedLorebooks.some(
-                                      (s) => s.id === l.id,
+                                      (s) => s.lorebookId === l.lorebookId,
                                     ),
                                   )
                                 }
@@ -2561,13 +2644,43 @@ function CreateIPExpansionDialog({
                             {filteredLorebooks.map(
                               (lorebook: any, index: number) => {
                                 const isSelected = selectedLorebooks.some(
-                                  (item) => item.id === lorebook.id,
+                                  (item) =>
+                                    item.lorebookId === lorebook.lorebookId,
                                 );
+
+                                // Parse setting for display
+                                let settingContent = lorebook.setting;
+                                try {
+                                  if (
+                                    typeof settingContent === 'string' &&
+                                    (settingContent.startsWith('{') ||
+                                      settingContent.startsWith('['))
+                                  ) {
+                                    settingContent = JSON.parse(settingContent);
+                                  }
+                                } catch (e) {}
+
+                                const summary =
+                                  lorebook.description ||
+                                  (typeof settingContent === 'object'
+                                    ? settingContent.description ||
+                                      settingContent.summary ||
+                                      Object.entries(settingContent)
+                                        .filter(
+                                          ([_, v]) =>
+                                            typeof v === 'string' ||
+                                            typeof v === 'number',
+                                        )
+                                        .slice(0, 3)
+                                        .map(([k, v]) => `${k}: ${v}`)
+                                        .join(' / ')
+                                    : settingContent);
+
                                 return (
-                                  <label
-                                    key={`${lorebook.id}-${index}`}
+                                  <div
+                                    key={`${lorebook.lorebookId}-${index}`}
                                     className={cn(
-                                      'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all border text-sm group',
+                                      'flex items-start gap-3 p-3 rounded-lg transition-all border text-sm group relative',
                                       isSelected
                                         ? 'bg-slate-50 border-slate-400 ring-1 ring-slate-400 shadow-sm'
                                         : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm',
@@ -2580,7 +2693,10 @@ function CreateIPExpansionDialog({
                                       }
                                       className="mt-0.5 data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900"
                                     />
-                                    <div className="flex-1 min-w-0 select-none">
+                                    <div
+                                      className="flex-1 min-w-0 cursor-pointer select-none"
+                                      onClick={() => toggleLorebook(lorebook)}
+                                    >
                                       <div className="font-bold flex items-center gap-2 text-slate-800">
                                         <HighlightText
                                           text={lorebook.keyword}
@@ -2594,12 +2710,21 @@ function CreateIPExpansionDialog({
                                         </Badge>
                                       </div>
                                       <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                                        {typeof lorebook.setting === 'string'
-                                          ? lorebook.setting
-                                          : JSON.stringify(lorebook.setting)}
+                                        {summary}
                                       </p>
                                     </div>
-                                  </label>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2 bg-white/80 hover:bg-slate-100"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setViewingLorebook(lorebook);
+                                      }}
+                                    >
+                                      <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
+                                    </Button>
+                                  </div>
                                 );
                               },
                             )}
@@ -2631,15 +2756,17 @@ function CreateIPExpansionDialog({
                                 {analysisBadges.map((badge, idx) => (
                                   <Tooltip key={idx} delayDuration={0}>
                                     <TooltipTrigger asChild>
-                                      <Badge
-                                        variant="outline"
-                                        className={cn(
-                                          'cursor-pointer font-medium border text-xs px-2.5 h-6 hover:opacity-80 transition-opacity',
-                                          badge.color,
-                                        )}
-                                      >
-                                        {badge.label}
-                                      </Badge>
+                                      <span className="inline-block cursor-pointer">
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            'font-medium border text-xs px-2.5 h-6 hover:opacity-80 transition-opacity',
+                                            badge.color,
+                                          )}
+                                        >
+                                          {badge.label}
+                                        </Badge>
+                                      </span>
                                     </TooltipTrigger>
                                     <TooltipContent className="z-[1000] bg-slate-900 text-white border-0 shadow-xl">
                                       <p className="max-w-[240px] text-xs leading-relaxed font-medium">
@@ -2703,20 +2830,28 @@ function CreateIPExpansionDialog({
                           <div className="p-3 space-y-2">
                             {selectedLorebooks.map((item, idx) => (
                               <SelectedSettingCard
-                                key={item.id}
+                                key={item.lorebookId}
                                 item={item}
                                 onRemove={() => {
                                   setSelectedLorebooks((prev) =>
-                                    prev.filter((l) => l.id !== item.id),
+                                    prev.filter(
+                                      (l) => l.lorebookId !== item.lorebookId,
+                                    ),
                                   );
-                                  if (selectedCrownSetting === item.id) {
+                                  if (
+                                    selectedCrownSetting === item.lorebookId
+                                  ) {
                                     setSelectedCrownSetting(null);
                                   }
                                 }}
-                                isCrown={selectedCrownSetting === item.id}
+                                isCrown={
+                                  selectedCrownSetting === item.lorebookId
+                                }
                                 onSelectCrown={() =>
                                   setSelectedCrownSetting((prev) =>
-                                    prev === item.id ? null : item.id,
+                                    prev === item.lorebookId
+                                      ? null
+                                      : item.lorebookId,
                                   )
                                 }
                               />
@@ -2888,6 +3023,47 @@ function CreateIPExpansionDialog({
                     <DialogFooter>
                       <Button onClick={() => setShowConflictDetail(false)}>
                         확인
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog
+                  open={!!viewingLorebook}
+                  onOpenChange={(open) => !open && setViewingLorebook(null)}
+                >
+                  <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        {viewingLorebook?.keyword}
+                        <Badge variant="outline">
+                          {viewingLorebook?.category}
+                        </Badge>
+                      </DialogTitle>
+                      <DialogDescription>
+                        설정집 상세 정보입니다.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="flex-1 p-4 bg-slate-50 rounded-md border border-slate-100">
+                      <pre className="text-xs whitespace-pre-wrap font-mono text-slate-700">
+                        {(() => {
+                          if (!viewingLorebook) return '';
+                          let content = viewingLorebook.setting;
+                          try {
+                            if (typeof content === 'string') {
+                              const parsed = JSON.parse(content);
+                              return JSON.stringify(parsed, null, 2);
+                            }
+                            return JSON.stringify(content, null, 2);
+                          } catch (e) {
+                            return content;
+                          }
+                        })()}
+                      </pre>
+                    </ScrollArea>
+                    <DialogFooter>
+                      <Button onClick={() => setViewingLorebook(null)}>
+                        닫기
                       </Button>
                     </DialogFooter>
                   </DialogContent>
