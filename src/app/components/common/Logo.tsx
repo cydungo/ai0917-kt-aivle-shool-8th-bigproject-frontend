@@ -10,6 +10,37 @@ export function Logo({ className, onClick }: LogoProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const getThemeColors = () => {
+    if (location.pathname.includes('/manager')) {
+      return {
+        dot: 'bg-blue-600',
+        text: 'text-blue-600',
+        ping: 'bg-blue-600',
+      };
+    }
+    if (location.pathname.includes('/author')) {
+      return {
+        dot: 'bg-orange-600',
+        text: 'text-orange-600',
+        ping: 'bg-orange-600',
+      };
+    }
+    if (location.pathname.includes('/admin')) {
+      return {
+        dot: 'bg-red-600',
+        text: 'text-red-600',
+        ping: 'bg-red-600',
+      };
+    }
+    return {
+      dot: 'bg-foreground',
+      text: 'text-foreground',
+      ping: 'bg-foreground',
+    };
+  };
+
+  const theme = getThemeColors();
+
   const handleClick = () => {
     if (onClick) {
       onClick();
@@ -53,8 +84,18 @@ export function Logo({ className, onClick }: LogoProps) {
 
           {/* . : 중심점 (에너지 파동 효과) */}
           <span className="relative mx-1 flex h-2 w-2 mb-1">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground opacity-20"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-foreground"></span>
+            <span
+              className={cn(
+                'animate-ping absolute inline-flex h-full w-full rounded-full opacity-20',
+                theme.ping,
+              )}
+            ></span>
+            <span
+              className={cn(
+                'relative inline-flex rounded-full h-2 w-2',
+                theme.dot,
+              )}
+            ></span>
           </span>
 
           {/* SUM: 확장 (간격이 벌어지는 애니메이션) */}
@@ -65,7 +106,12 @@ export function Logo({ className, onClick }: LogoProps) {
 
         {/* 하단 툴팁형 ergo: 논리적 가교 */}
         <div className="absolute -bottom-1 flex flex-col items-center">
-          <span className="opacity-0 translate-y-1 transition-all duration-500 ease-out group-hover:opacity-100 group-hover:translate-y-0 text-[9px] font-black italic tracking-[0.3em] text-foreground">
+          <span
+            className={cn(
+              'opacity-0 translate-y-1 transition-all duration-500 ease-out group-hover:opacity-100 group-hover:translate-y-0 text-[9px] font-black italic tracking-[0.3em]',
+              theme.text,
+            )}
+          >
             ergo
           </span>
           {/* 툴팁을 받쳐주는 미세한 광채 (선택 사항) */}
