@@ -1,57 +1,225 @@
 import {
   FileText,
   Maximize2,
-  Film,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
   Video,
-  Gamepad,
-  Sparkles,
-  Image as ImageIcon,
+  ImageIcon,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from './ui/utils';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { useState, useEffect, useRef } from 'react';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+// Worker Setup
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export const PdfPreview = ({
   className,
   isFullScreen = false,
   onFullScreen,
+  pdfUrl,
+  onDownload,
 }: {
   className?: string;
   isFullScreen?: boolean;
   onFullScreen?: () => void;
+  pdfUrl?: string;
+  onDownload?: () => void;
 }) => {
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [scale, setScale] = useState<number>(1.0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
+    setPageNumber(1);
+  }
+
+  // Update container width for responsive page rendering
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         'bg-slate-50 rounded-2xl overflow-hidden relative border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center group',
-        isFullScreen ? 'w-full h-full p-10' : 'p-6 h-full min-h-[300px]',
+        isFullScreen ? 'w-full h-full p-0' : 'p-6 h-full min-h-[300px]',
         className,
       )}
     >
-      <div className="absolute inset-0 bg-slate-100/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {pdfUrl ? (
+        <div className="w-full h-full flex flex-col relative bg-slate-100/50">
+          <div className="flex-1 overflow-auto p-4 relative">
+            <div className="flex justify-center min-h-full">
+              <Document
+                file={pdfUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                loading={
+                  <div className="flex flex-col items-center gap-2 text-slate-400 self-center mt-20">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                    <span className="text-xs">PDF 로딩 중...</span>
+                  </div>
+                }
+                error={
+                  <div className="flex flex-col items-center gap-2 text-red-400 self-center mt-20">
+                    <FileText className="w-8 h-8" />
+                    <span className="text-xs">PDF를 불러올 수 없습니다.</span>
+                  </div>
+                }
+                className="max-w-full shadow-lg"
+              >
+                <Page
+                  pageNumber={pageNumber}
+                  width={
+                    isFullScreen
+                      ? Math.min(containerWidth * 0.8 * scale, 1000 * scale)
+                      : Math.min(containerWidth - 48, 600)
+                  }
+                  scale={isFullScreen ? scale : 1}
+                  className="bg-white shadow-sm"
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                />
+              </Document>
+            </div>
+          </div>
 
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="w-20 h-20 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-          <FileText className="w-10 h-10" />
-        </div>
-        <h3 className="text-xl font-bold text-slate-900 mb-2">
-          IP 확장 기획 제안서.pdf
-        </h3>
-        <p className="text-sm text-slate-500 mb-8 max-w-[240px]">
-          AI가 생성한 기획 제안서의 전체 내용을 PDF 형식으로 미리볼 수 있습니다.
-        </p>
-        <div className="flex gap-3">
-          <Button variant="outline" className="gap-2 bg-white hover:bg-slate-50">
-            <FileText className="w-4 h-4" />
-            PDF 다운로드
-          </Button>
-          {!isFullScreen && onFullScreen && (
-            <Button variant="ghost" className="gap-2" onClick={onFullScreen}>
-              <Maximize2 className="w-4 h-4" />
-              전체화면
+          {/* Controls Overlay */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 backdrop-blur shadow-md rounded-full px-3 py-1.5 z-10 border border-slate-100">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={pageNumber <= 1}
+              onClick={() => setPageNumber((p) => p - 1)}
+            >
+              <ChevronLeft className="w-4 h-4" />
             </Button>
+            <span className="text-xs font-medium min-w-[3rem]">
+              {pageNumber} / {numPages || '-'}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={pageNumber >= numPages}
+              onClick={() => setPageNumber((p) => p + 1)}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+
+            {isFullScreen && (
+              <>
+                <div className="w-px h-4 bg-slate-200 mx-1" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </Button>
+                <span className="text-xs font-medium min-w-[3rem]">
+                  {Math.round(scale * 100)}%
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setScale((s) => Math.min(2.0, s + 0.1))}
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Top Actions */}
+          {!isFullScreen && (
+            <div className="absolute top-2 right-2 flex gap-1 z-10">
+              {onDownload && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8 shadow-sm bg-white/90 hover:bg-white"
+                  onClick={onDownload}
+                  title="다운로드"
+                >
+                  <FileText className="w-4 h-4" />
+                </Button>
+              )}
+              {onFullScreen && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8 shadow-sm bg-white/90 hover:bg-white"
+                  onClick={onFullScreen}
+                  title="전체화면"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           )}
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-slate-100/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+              <FileText className="w-10 h-10" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              IP 확장 기획 제안서.pdf
+            </h3>
+            <p className="text-sm text-slate-500 mb-8 max-w-[240px]">
+              AI가 생성한 기획 제안서의 전체 내용을 PDF 형식으로 미리볼 수
+              있습니다.
+            </p>
+            <div className="flex gap-3">
+              {onDownload && (
+                <Button
+                  variant="outline"
+                  className="gap-2 bg-white hover:bg-slate-50"
+                  onClick={onDownload}
+                >
+                  <FileText className="w-4 h-4" />
+                  PDF 다운로드
+                </Button>
+              )}
+              {!isFullScreen && onFullScreen && (
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={onFullScreen}
+                >
+                  <Maximize2 className="w-4 h-4" />
+                  전체화면
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -59,97 +227,75 @@ export const PdfPreview = ({
 export const VisualPreview = ({
   className,
   isFullScreen = false,
-  project,
   onFullScreen,
+  imageUrl,
+  type = 'image',
 }: {
   className?: string;
   isFullScreen?: boolean;
-  project: any;
   onFullScreen?: () => void;
+  imageUrl?: string;
+  type?: 'image' | 'video';
 }) => {
-  const format = project?.format || 'webtoon';
-
   return (
     <div
       className={cn(
-        'bg-slate-50 rounded-2xl overflow-hidden relative group border border-slate-200 shadow-sm',
-        isFullScreen ? 'w-full h-full' : 'aspect-video',
+        'bg-slate-50 rounded-2xl overflow-hidden relative border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center group',
+        isFullScreen ? 'w-full h-full p-0' : 'p-6 h-full min-h-[300px]',
         className,
       )}
     >
-      {/* Abstract Gradient Background based on Format */}
-      <div
-        className={cn(
-          'absolute inset-0 transition-transform duration-700 group-hover:scale-105 bg-gradient-to-br',
-          format === 'webtoon' && 'from-green-50 to-emerald-100',
-          format === 'drama' && 'from-purple-50 to-indigo-100',
-          format === 'movie' && 'from-red-50 to-orange-100',
-          format === 'game' && 'from-blue-50 to-sky-100',
-          !['webtoon', 'drama', 'movie', 'game'].includes(format) &&
-            'from-slate-50 to-gray-100',
-        )}
-      />
-
-      {/* Subtle Pattern Overlay */}
-      <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-        <div
-          className={cn(
-            'w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-sm border transition-transform duration-300 group-hover:scale-110',
-            'bg-white border-white/50 text-slate-700',
+      {imageUrl ? (
+        <div className="w-full h-full relative">
+          {type === 'video' ? (
+            <div className="w-full h-full bg-black flex items-center justify-center">
+              <Video className="w-12 h-12 text-white opacity-50" />
+            </div>
+          ) : (
+            <img
+              src={imageUrl}
+              alt="Visual Preview"
+              className="w-full h-full object-cover"
+            />
           )}
-        >
-          {format === 'webtoon' && <ImageIcon className="w-10 h-10" />}
-          {format === 'drama' && <Video className="w-10 h-10" />}
-          {format === 'movie' && <Film className="w-10 h-10" />}
-          {format === 'game' && <Gamepad className="w-10 h-10" />}
-          {!['webtoon', 'drama', 'movie', 'game'].includes(format) && (
-            <Sparkles className="w-10 h-10" />
+          {!isFullScreen && onFullScreen && (
+            <div className="absolute top-2 right-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 shadow-sm bg-white/90 hover:bg-white"
+                onClick={onFullScreen}
+              >
+                <Maximize2 className="w-4 h-4" />
+              </Button>
+            </div>
           )}
         </div>
-
-        <p className="text-xl font-bold text-slate-900 tracking-tight mb-2">
-          {format === 'webtoon' && '웹툰 스타일 컷 미리보기'}
-          {format === 'drama' && '드라마 시네마틱 룩 미리보기'}
-          {format === 'movie' && '영화 포스터 컨셉 미리보기'}
-          {format === 'game' && '게임 인게임 화면 미리보기'}
-          {!['webtoon', 'drama', 'movie', 'game'].includes(format) &&
-            `${format} 비주얼 컨셉`}
-        </p>
-        <p className="text-sm text-slate-500 font-medium">
-          {format === 'webtoon' && 'AI가 생성한 주요 장면 스케치'}
-          {format === 'drama' && '주요 로케이션 및 무드 보드'}
-          {format === 'movie' && '키 비주얼 및 타이틀 로고'}
-          {format === 'game' && 'UI/UX 및 캐릭터 모델링 컨셉'}
-          {!['webtoon', 'drama', 'movie', 'game'].includes(format) &&
-            'AI 기반 비주얼 컨셉 제안'}
-        </p>
-      </div>
-
-      {/* Overlay Info */}
-      {!isFullScreen && onFullScreen && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white/60 backdrop-blur-md border-t border-slate-200/50 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-between">
-          <div>
-            <h4 className="font-bold text-sm mb-0.5 text-slate-900">
-              Visual Concept Generated by AI
-            </h4>
-            <p className="text-xs text-slate-500">
-              {project?.mediaDetails?.style
-                ? `${project.mediaDetails.style} Style`
-                : 'Style Analysis Pending'}
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-slate-100/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+              <ImageIcon className="w-10 h-10" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              비주얼 컨셉 이미지
+            </h3>
+            <p className="text-sm text-slate-500 mb-8 max-w-[240px]">
+              생성된 비주얼 컨셉 아트를 미리볼 수 있습니다.
             </p>
+            {!isFullScreen && onFullScreen && (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={onFullScreen}
+              >
+                <Maximize2 className="w-4 h-4" />
+                전체화면
+              </Button>
+            )}
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="hover:bg-slate-200/50 h-8 text-slate-700"
-            onClick={onFullScreen}
-          >
-            <Maximize2 className="w-4 h-4 mr-2" />
-            크게 보기
-          </Button>
-        </div>
+        </>
       )}
     </div>
   );
