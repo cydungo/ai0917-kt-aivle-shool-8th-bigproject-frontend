@@ -91,3 +91,13 @@ export interface ManagerDashboardPageResponseDto {
   summary: ManagerDashboardSummaryDto;
   notices: ManagerDashboardNoticeDto[];
 }
+
+export interface ManagerNotice {
+  id: number;
+  source: 'AUTHOR_PROPOSAL' | 'IP_EXTREND' | 'IP_EXT';
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  redirectUrl?: string;
+}
