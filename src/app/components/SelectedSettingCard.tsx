@@ -19,6 +19,7 @@ interface SelectedSettingCardProps {
   onRemove: () => void;
   isCrown: boolean;
   onSelectCrown: () => void;
+  onClick?: () => void;
 }
 
 export function SelectedSettingCard({
@@ -26,15 +27,18 @@ export function SelectedSettingCard({
   onRemove,
   isCrown,
   onSelectCrown,
+  onClick,
 }: SelectedSettingCardProps) {
   return (
     <div
       className={cn(
         'bg-white p-3 rounded-lg border shadow-sm relative group transition-all duration-200',
+        onClick && 'cursor-pointer hover:shadow-md',
         isCrown
           ? 'border-yellow-500 shadow-md ring-1 ring-yellow-500 bg-yellow-50/10'
           : 'border-slate-200 hover:border-slate-300',
       )}
+      onClick={onClick}
     >
       {/* Crown Selection (Radio Logic) */}
       <div
