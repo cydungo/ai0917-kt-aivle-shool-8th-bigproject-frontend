@@ -19,6 +19,7 @@ AIVLE SCHOOL 8th Big Project - AI 기반 웹소설 창작 및 관리 플랫폼 �
 
 - **사용자 경험 (UX)**:
   - `shadcn/ui` 및 `Tailwind CSS` 기반의 미니멀하고 직관적인 UI.
+  - **역할 기반 로고 테마 시스템**: Manager(Blue), Author(Orange), Admin(Red) 색상 자동 적용.
   - 다크 모드 지원 및 반응형 디자인.
   - 권한 회수 및 탈퇴 시 7일 유예 기간 적용으로 실수 방지.
 
