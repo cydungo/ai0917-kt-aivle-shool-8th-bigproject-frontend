@@ -20,6 +20,9 @@ import {
   Trash2,
   FileBox,
   BarChart3,
+  GitGraph,
+  Clock,
+  Network,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -56,10 +59,10 @@ import {
   TooltipTrigger,
 } from '../../../components/ui/tooltip';
 import { cn } from '../../../components/ui/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { authorService } from '../../../services/authorService';
 import { WorkResponseDto, ManuscriptDto } from '../../../types/author';
-import { WorkAnalysisModal } from './WorkAnalysisModal';
+import { toast } from 'sonner';
 
 interface AuthorWorkExplorerProps {
   works: WorkResponseDto[];
@@ -203,7 +206,6 @@ function WorkItem({
   const [manuscriptToRename, setManuscriptToRename] =
     useState<ManuscriptDto | null>(null);
   const [renameInput, setRenameInput] = useState('');
-  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
 
   // Fetch manuscripts when opened
   const { data: manuscriptsPage } = useQuery({
@@ -299,15 +301,6 @@ function WorkItem({
             >
               <Info className="w-4 h-4 mr-2" />
               작품 정보
-            </ContextMenuItem>
-            <ContextMenuItem
-              onClick={() => {
-                setIsAnalysisModalOpen(true);
-              }}
-              className="text-indigo-600 focus:text-indigo-600 focus:bg-indigo-50"
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              작품 분석
             </ContextMenuItem>
             <ContextMenuItem
               className="text-red-600 focus:text-red-600 focus:bg-red-50"
@@ -441,12 +434,6 @@ function WorkItem({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <WorkAnalysisModal
-        isOpen={isAnalysisModalOpen}
-        onClose={() => setIsAnalysisModalOpen(false)}
-        workId={work.id}
-      />
     </>
   );
 }
