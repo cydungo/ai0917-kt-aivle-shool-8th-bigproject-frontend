@@ -4,32 +4,57 @@ import { cn } from '../../components/ui/utils';
 interface LogoProps {
   className?: string;
   onClick?: () => void;
+  role?: 'manager' | 'author' | 'admin' | 'default';
 }
 
-export function Logo({ className, onClick }: LogoProps) {
+export function Logo({ className, onClick, role }: LogoProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const getThemeColors = () => {
+    // 1. Role prop 우선 적용
+    if (role === 'manager') {
+      return {
+        dot: 'bg-[#0984E3]',
+        text: 'text-[#0984E3]',
+        ping: 'bg-[#0984E3]',
+      };
+    }
+    if (role === 'author') {
+      return {
+        dot: 'bg-[#6C5CE7]',
+        text: 'text-[#6C5CE7]',
+        ping: 'bg-[#6C5CE7]',
+      };
+    }
+    if (role === 'admin') {
+      return {
+        dot: 'bg-[#2D3436]',
+        text: 'text-[#2D3436]',
+        ping: 'bg-[#2D3436]',
+      };
+    }
+
+    // 2. 기존 URL 기반 폴백 (하위 호환성 유지)
     if (location.pathname.includes('/manager')) {
       return {
-        dot: 'bg-blue-600',
-        text: 'text-blue-600',
-        ping: 'bg-blue-600',
+        dot: 'bg-[#0984E3]',
+        text: 'text-[#0984E3]',
+        ping: 'bg-[#0984E3]',
       };
     }
     if (location.pathname.includes('/author')) {
       return {
-        dot: 'bg-orange-600',
-        text: 'text-orange-600',
-        ping: 'bg-orange-600',
+        dot: 'bg-[#6C5CE7]',
+        text: 'text-[#6C5CE7]',
+        ping: 'bg-[#6C5CE7]',
       };
     }
     if (location.pathname.includes('/admin')) {
       return {
-        dot: 'bg-red-600',
-        text: 'text-red-600',
-        ping: 'bg-red-600',
+        dot: 'bg-[#2D3436]',
+        text: 'text-[#2D3436]',
+        ping: 'bg-[#2D3436]',
       };
     }
     return {
