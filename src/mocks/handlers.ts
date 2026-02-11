@@ -311,6 +311,19 @@ export const handlers: RequestHandler[] = [
     },
   ),
 
+  http.post(
+    `${BACKEND_URL}/api/v1/ai/author/works/:workId/analysis/relationships`,
+    async () => {
+      await delay(1000);
+      return HttpResponse.json(`graph TD
+    A[이준] -->|팀장| B[강독고]
+    A -->|동료| C[김대리]
+    B -->|보고| D[이사]
+    A -->|상하_관계_(채굴단장)| B
+    style A fill:#f9f,stroke:#333,stroke-width:2px`);
+    },
+  ),
+
   // ======================================================================
   // 3. Manager API
   // ======================================================================

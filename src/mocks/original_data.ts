@@ -174,6 +174,78 @@ export const ORIGINAL_LOREBOOKS = [
   },
 ];
 
+// Helper constants for generation
+const STATUSES = ['NEW', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'DELETED'];
+const FORMATS = ['WEBTOON', 'DRAMA', 'MOVIE', 'GAME', 'ANIMATION', 'MERCHANDISE'];
+const BUDGETS = ['LOW', 'MEDIUM', 'HIGH', 'BLOCKBUSTER'];
+const GENDERS = ['MALE', 'FEMALE', 'ALL'];
+const AGES = ['10', '20', '30', '40', '50'];
+
+// Generate 27 items (20 + 7 extra for pagination test)
+const GENERATED_PROPOSALS = Array.from({ length: 27 }, (_, i) => {
+  const id = 200 + i;
+  const titleIdx = i % ORIGINAL_TITLES.length;
+  const workTitle = ORIGINAL_TITLES[titleIdx];
+  const format = FORMATS[i % FORMATS.length];
+  const status = STATUSES[i % STATUSES.length];
+  const genre = ORIGINAL_GENRES[i % ORIGINAL_GENRES.length];
+
+  return {
+    id,
+    title: `${workTitle} - ${format}화 프로젝트`,
+    authorId: (i % 50) + 1,
+    authorName: ORIGINAL_NAMES[i % ORIGINAL_NAMES.length],
+    workId: (i % 20) + 1,
+    workTitle: workTitle,
+    managerId: 'manager_001',
+    status: status,
+    statusDescription: status === 'APPROVED' ? '승인됨' : (status === 'PENDING_APPROVAL' ? '승인 대기' : '검토 중'),
+    createdAt: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString(),
+    updatedAt: new Date().toISOString(),
+    
+    // DTO Fields
+    targetFormat: format,
+    targetGenre: genre,
+    worldSetting: 'FANTASY',
+    targetAges: ['10', '20', '30'],
+    targetGender: 'ALL',
+    budgetScale: BUDGETS[i % BUDGETS.length],
+    toneAndManner: '밝음, 희망참, 독창적',
+    mediaDetail: {
+        platform: 'NETFLIX',
+        episodes: 12,
+        releaseDate: '2025-12-25'
+    },
+    
+    // Analysis
+    expMarket: '높은 시장성, 글로벌 진출 가능',
+    expCreative: '독창적인 스토리텔링과 캐릭터',
+    expVisual: '화려한 비주얼 이펙트 기대',
+    expWorld: '방대한 세계관의 확장성',
+    expBusiness: 'OSMU 수익성 극대화',
+    expProduction: '제작 난이도 높음',
+
+    // Legacy / Frontend compat
+    format: format,
+    business: {
+      budget: '100,000,000',
+      royalty: '10',
+      targetAge: ['10', '20'],
+      targetGender: 'ALL',
+      rights: ['copyright', 'publication'],
+    },
+    contentStrategy: {
+       differentiation: '기존 장르의 문법 파괴',
+       keyReason: 'MZ세대의 트렌드 반영',
+       successGrounds: '원작의 높은 인지도',
+       coreNarrative: '주인공의 역경과 극복',
+       worldBuilding: '치밀한 설정과 배경',
+       visualStyle: '트렌디한 작화'
+    },
+    lorebookIds: [1001, 2001, 3001]
+  };
+});
+
 export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
   {
     id: 101,
@@ -183,8 +255,16 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
     workId: ORIGINAL_WORK_ID,
     workTitle: ORIGINAL_WORK_TITLE,
     format: 'webtoon',
-    status: 'REVIEWING',
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+    targetFormat: 'WEBTOON',
+    targetGenre: 'FANTASY',
+    worldSetting: 'STEAM_PUNK',
+    targetAges: ['10', '20'],
+    targetGender: 'MALE',
+    budgetScale: 'HIGH',
+    toneAndManner: 'Epic, Adventure',
+    managerId: 'manager_001',
+    status: 'PENDING_APPROVAL', // REVIEWING -> PENDING_APPROVAL
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString(),
     business: {
       budget: '50000000',
@@ -193,7 +273,7 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
       targetGender: 'male',
       rights: ['2nd_copyright', 'merchandise'],
     },
-    mediaDetails: {
+    mediaDetail: {
       platform: 'naver',
       serializationCycle: 'weekly',
       colorType: 'full_color',
@@ -207,6 +287,7 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
       worldBuilding: '기어헤이븐의 입체적인 구조 시각화',
       visualStyle: '극화체, 높은 채도의 에테르 효과',
     },
+    lorebookIds: [1001, 1002, 2001, 3001]
   },
   {
     id: 102,
@@ -216,8 +297,16 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
     workId: ORIGINAL_WORK_ID,
     workTitle: ORIGINAL_WORK_TITLE,
     format: 'game',
+    targetFormat: 'GAME',
+    targetGenre: 'PUZZLE',
+    worldSetting: 'STEAM_PUNK',
+    targetAges: ['10', '20', '30'],
+    targetGender: 'ALL',
+    budgetScale: 'MEDIUM',
+    toneAndManner: 'Casual, Mystery',
+    managerId: 'manager_001',
     status: 'APPROVED',
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString(),
     business: {
       budget: '200000000',
@@ -226,7 +315,7 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
       targetGender: 'all',
       rights: ['game_rights'],
     },
-    mediaDetails: {
+    mediaDetail: {
       gameGenre: 'puzzle',
       platform: 'mobile',
     },
@@ -238,6 +327,7 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
       worldBuilding: '각 층마다 다른 테마의 맵 디자인',
       visualStyle: 'SD 캐릭터, 캐주얼한 스팀펑크 아트',
     },
+    lorebookIds: [2001, 2002, 3002]
   },
   {
     id: 103,
@@ -247,8 +337,16 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
     workId: ORIGINAL_WORK_ID,
     workTitle: ORIGINAL_WORK_TITLE,
     format: 'spinoff',
-    status: 'PENDING',
-    createdAt: new Date().toISOString(), // Today
+    targetFormat: 'SPINOFF',
+    targetGenre: 'NOIR',
+    worldSetting: 'POST_APOCALYPSE',
+    targetAges: ['20', '30'],
+    targetGender: 'MALE',
+    budgetScale: 'LOW',
+    toneAndManner: 'Dark, Serious',
+    managerId: 'manager_001',
+    status: 'NEW', // PENDING -> NEW
+    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     business: {
       budget: '5000000',
@@ -257,7 +355,7 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
       targetGender: 'male',
       rights: ['publication'],
     },
-    mediaDetails: {
+    mediaDetail: {
       spinoffType: 'prequel',
       targetCharacter: '케일런 쏜',
     },
@@ -269,5 +367,7 @@ export const ORIGINAL_IP_EXPANSION_PROPOSALS = [
       worldBuilding: '대붕괴 직후의 혼란스러운 시대상',
       visualStyle: '느와르, 어두운 분위기',
     },
+    lorebookIds: [1002, 2002, 4002]
   },
+  ...GENERATED_PROPOSALS
 ];
