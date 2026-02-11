@@ -56,6 +56,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { IPProposalCommentDto } from '../../../types/author';
+import { ManagerCommentResponseDto } from '../../../types/manager';
 import { PdfPreview, VisualPreview } from '../../../components/ProjectPreviews';
 import { Button } from '../../../components/ui/button';
 import {
@@ -957,6 +958,7 @@ export function ManagerIPExpansion() {
       {selectedProject && (
         <ProjectDetailModal
           project={selectedProject}
+          managerId={me?.integrationId}
           isOpen={!!selectedProject}
           onClose={() => setSelectedProject(null)}
           onPropose={handlePropose}
@@ -970,6 +972,7 @@ export function ManagerIPExpansion() {
 
 function ProjectDetailModal({
   project,
+  managerId,
   isOpen,
   onClose,
   onPropose,
@@ -977,6 +980,7 @@ function ProjectDetailModal({
   onDelete,
 }: {
   project: any;
+  managerId?: string;
   isOpen: boolean;
   onClose: () => void;
   onPropose: (id: number) => void;
@@ -984,14 +988,59 @@ function ProjectDetailModal({
   onDelete: (id: number) => void;
 }) {
   const [showPdfFullScreen, setShowPdfFullScreen] = useState(false);
+  const [showLorebookListModal, setShowLorebookListModal] = useState(false);
+  const [lorebookFilter, setLorebookFilter] = useState('전체'); // New State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedLorebookDetail, setSelectedLorebookDetail] =
     useState<any>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewComments, setReviewComments] = useState<IPProposalCommentDto[]>(
-    [],
-  );
+  const [reviewComments, setReviewComments] = useState<
+    ManagerCommentResponseDto[]
+  >([]);
+
+  const queryClient = useQueryClient();
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      managerService.updateIPProposal(id, { status }, managerId),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['manager', 'ip-expansion', 'proposals'],
+      });
+      toast.success(
+        `프로젝트가 ${variables.status === 'APPROVED' ? '최종 승인' : '반려'}되었습니다.`,
+      );
+      setShowReviewModal(false);
+      onClose();
+    },
+    onError: (e) => {
+      console.log(e);
+      toast.error('상태 변경에 실패했습니다.');
+    },
+  });
+
+  const handleFinalDecision = (status: 'APPROVED' | 'REJECTED') => {
+    if (!project.id) return;
+    updateStatusMutation.mutate({ id: project.id, status });
+  };
+
+  const allApproved =
+    reviewComments.length > 0 &&
+    reviewComments.every((c) => c.status === 'APPROVED');
+  const anyRejected = reviewComments.some((c) => c.status === 'REJECTED');
+
+  const { data: lorebooks } = useQuery({
+    queryKey: ['manager', 'proposal-lorebooks', managerId, project.id],
+    queryFn: async () => {
+      if (!managerId || !project.id) return [];
+      return managerService.getProposalLorebooks(
+        managerId,
+        project.id.toString(),
+      );
+    },
+    enabled: !!managerId && !!project.id,
+  });
 
   // Fetch PDF Blob and create Object URL
   useEffect(() => {
@@ -1059,7 +1108,7 @@ function ProjectDetailModal({
 
   const handleOpenReviewModal = async () => {
     try {
-      const comments = await managerService.getIPProposalComments(project.id);
+      const comments = await managerService.getProposalComments(project.id);
       setReviewComments(comments);
       setShowReviewModal(true);
     } catch (e) {
@@ -1247,7 +1296,7 @@ function ProjectDetailModal({
 
               {/* 3. Input Setting Summary & Lorebooks */}
               <div className="space-y-6 pt-6 border-t border-slate-100">
-                <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800 pt-6 border-t border-slate-100">
                   <Settings className="w-5 h-5 text-slate-500" />
                   입력 설정 요약
                 </h3>
@@ -1261,6 +1310,7 @@ function ProjectDetailModal({
                       icon: BookOpen,
                       color: 'text-indigo-600',
                       bg: 'bg-indigo-50',
+                      onClick: () => setShowLorebookListModal(true),
                     },
                     {
                       label: '포맷 (Format)',
@@ -1427,7 +1477,12 @@ function ProjectDetailModal({
                   ].map((item: any, i) => (
                     <div
                       key={i}
-                      className={`flex items-start gap-3 p-3 rounded-lg border border-slate-100 ${item.bg}`}
+                      onClick={item.onClick}
+                      className={`flex items-start gap-3 p-3 rounded-lg border border-slate-100 ${item.bg} ${
+                        item.onClick
+                          ? 'cursor-pointer hover:bg-opacity-80 transition-colors'
+                          : ''
+                      }`}
                     >
                       <div className={`p-1.5 rounded-md bg-white/60 shrink-0`}>
                         <item.icon className={`w-4 h-4 ${item.color}`} />
@@ -1480,11 +1535,19 @@ function ProjectDetailModal({
               >
                 <Trash2 className="w-4 h-4" /> 삭제
               </Button>
-              <Button variant="outline" onClick={() => onEdit(project)}>
+              <Button
+                variant="outline"
+                onClick={() => onEdit(project)}
+                className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+              >
                 <Edit className="w-4 h-4 mr-2" /> 수정
               </Button>
-              <Button variant="outline" onClick={handleOpenReviewModal}>
-                <ClipboardList className="w-4 h-4 mr-2" /> 검토
+              <Button
+                variant="outline"
+                onClick={handleOpenReviewModal}
+                className="bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200"
+              >
+                <ClipboardList className="w-4 h-4 mr-2" /> 검토 내역
               </Button>
               {project.status === 'PENDING' && (
                 <Button
@@ -1527,12 +1590,12 @@ function ProjectDetailModal({
             {reviewComments.length > 0 ? (
               reviewComments.map((comment) => (
                 <div
-                  key={comment.id}
+                  key={comment.commentId}
                   className="bg-slate-50 p-4 rounded-lg space-y-2 border border-slate-100"
                 >
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-slate-900 text-sm">
-                      {comment.writerName}
+                      {comment.authorName}
                     </span>
                     <Badge
                       variant={
@@ -1545,14 +1608,20 @@ function ProjectDetailModal({
                       className={cn(
                         'text-[10px] px-2 py-0.5',
                         comment.status === 'APPROVED' &&
-                          'bg-green-600 hover:bg-green-700',
+                          'bg-emerald-600 hover:bg-emerald-700',
+                        comment.status === 'REJECTED' &&
+                          'bg-rose-600 hover:bg-rose-700',
+                        comment.status === 'ARCHIVED' &&
+                          'bg-slate-400 hover:bg-slate-500',
                       )}
                     >
                       {comment.status === 'APPROVED'
                         ? '승인'
                         : comment.status === 'REJECTED'
                           ? '반려'
-                          : '대기'}
+                          : comment.status === 'ARCHIVED'
+                            ? '미사용'
+                            : '대기'}
                     </Badge>
                   </div>
                   <p className="text-sm text-slate-600 whitespace-pre-wrap">
@@ -1570,14 +1639,31 @@ function ProjectDetailModal({
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:space-x-0">
             <Button
               variant="outline"
               onClick={() => setShowReviewModal(false)}
-              className="w-full"
+              className="flex-1 sm:flex-none"
             >
               닫기
             </Button>
+            {allApproved && (
+              <Button
+                onClick={() => handleFinalDecision('APPROVED')}
+                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                최종 승인
+              </Button>
+            )}
+            {anyRejected && (
+              <Button
+                onClick={() => handleFinalDecision('REJECTED')}
+                variant="destructive"
+                className="flex-1 sm:flex-none"
+              >
+                최종 반려
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1718,6 +1804,78 @@ function ProjectDetailModal({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={showLorebookListModal}
+        onOpenChange={setShowLorebookListModal}
+      >
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto flex flex-col bg-slate-50">
+          <DialogHeader className="px-1">
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-indigo-600" />
+              원천 데이터 상세
+            </DialogTitle>
+            {/* Filter Bar */}
+            <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+              {['전체', '인물', '장소', '물건', '집단', '세계', '사건'].map(
+                (cat) => (
+                  <Button
+                    key={cat}
+                    variant={lorebookFilter === cat ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs rounded-full px-3 shrink-0"
+                    onClick={() => setLorebookFilter(cat)}
+                  >
+                    {cat}
+                  </Button>
+                ),
+              )}
+            </div>
+          </DialogHeader>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+              {lorebooks
+                ?.filter(
+                  (lb) =>
+                    lorebookFilter === '전체' || lb.category === lorebookFilter,
+                )
+                .map((lorebook, index) => {
+                  // Determine if this is the core lorebook (first item in the original list)
+                  const isCore =
+                    lorebooks.length > 0 &&
+                    lorebook.lorebookId === lorebooks[0].lorebookId;
+
+                  return (
+                    <SelectedSettingCard
+                      key={lorebook.lorebookId}
+                      item={lorebook}
+                      onRemove={() => {}}
+                      isCrown={isCore}
+                      hideRemove={true}
+                    />
+                  );
+                })}
+              {(!lorebooks ||
+                lorebooks.filter(
+                  (lb) =>
+                    lorebookFilter === '전체' || lb.category === lorebookFilter,
+                ).length === 0) && (
+                <div className="col-span-full py-12 text-center text-slate-500">
+                  해당 카테고리의 설정집이 없습니다.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 mt-2 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setShowLorebookListModal(false)}
+            >
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -2599,7 +2757,17 @@ function CreateIPExpansionDialog({
     onCreated({
       managerId: currentManagerId,
       title: projectTitle,
-      lorebookIds: selectedLorebooks.map((l: any) => l.lorebookId || l.id),
+      lorebookIds: (() => {
+        const ids = selectedLorebooks.map((l: any) => l.lorebookId || l.id);
+        if (selectedCrownSetting) {
+          // Move crown setting to first position
+          return [
+            selectedCrownSetting,
+            ...ids.filter((id: number) => id !== selectedCrownSetting),
+          ];
+        }
+        return ids;
+      })(),
       targetFormat: selectedFormat?.toUpperCase(),
       targetGenre: targetGenre || selectedGenres[0] || 'FANTASY',
       worldSetting: universeSetting.toUpperCase(),

@@ -99,5 +99,27 @@ export interface ManagerNotice {
   message: string;
   isRead: boolean;
   createdAt: string;
-  redirectUrl?: string;
+  // File Info
+  filePath?: string;
+  // Additional/Legacy fields for UI compatibility
+  authorName?: string;
+  workTitle?: string;
+  processed_lorebooks?: any[];
+  lorebooks?: any[];
+  // Frontend specific / Legacy fields
+  contentStrategy?: any;
+  format?: string;
+  content?: string;
+  coreNarrative?: string;
+  receivedAt?: string;
+  sender?: string;
+}
+
+export interface ManagerCommentResponseDto {
+  commentId: number;
+  authorName: string;
+  authorId: string;
+  status: string;
+  comment: string;
+  createdAt: string;
 }

@@ -165,6 +165,16 @@ export const managerService = {
     return response.data;
   },
 
+  getProposalLorebooks: async (
+    managerId: number | string,
+    id: number | string,
+  ) => {
+    const response = await apiClient.get<MatchedLorebookDto[]>(
+      `/api/v1/manager/ipext/lorebooks/${managerId}/${id}`,
+    );
+    return response.data;
+  },
+
   getManagerAuthors: async (managerId: number | string) => {
     const response = await apiClient.get<ManagerAuthorDto[]>(
       `/api/v1/manager/ipext/${managerId}/author`,
@@ -268,5 +278,20 @@ export const managerService = {
 
   getSystemNoticeSubscribeUrl: (integrationId: string) => {
     return `${apiClient.defaults.baseURL}/api/v1/manager/sysnotice/subscribe?integrationId=${integrationId}`;
+  },
+
+  // IP Expansion Comments (Review History)
+  getProposalComments: async (proposalId: number) => {
+    const response = await apiClient.get<
+      {
+        commentId: number;
+        authorName: string;
+        authorId: string;
+        status: string;
+        comment: string;
+        createdAt: string;
+      }[]
+    >(`/api/v1/manager/ipext/comment/${proposalId}`);
+    return response.data;
   },
 };
