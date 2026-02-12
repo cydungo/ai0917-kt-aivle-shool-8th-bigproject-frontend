@@ -150,7 +150,10 @@ const HighlightText = ({
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === highlight.toLowerCase() ? (
-          <span key={i} className="bg-yellow-100 font-medium text-yellow-900">
+          <span
+            key={i}
+            className="bg-yellow-500/20 font-medium text-yellow-700 dark:text-yellow-300"
+          >
             {part}
           </span>
         ) : (
@@ -228,10 +231,10 @@ const SettingComparison = ({
   );
 
   return (
-    <div className="border rounded-md overflow-hidden text-xs">
-      <div className="grid grid-cols-2 bg-slate-100 border-b font-bold text-slate-700">
-        <div className="p-2 border-r flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-slate-400" />
+    <div className="border rounded-md overflow-hidden text-xs border-border">
+      <div className="grid grid-cols-2 bg-muted border-b font-bold text-foreground">
+        <div className="p-2 border-r border-border flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-muted-foreground" />
           기존 설정 (Original)
         </div>
         <div className="p-2 flex items-center gap-2">
@@ -249,17 +252,21 @@ const SettingComparison = ({
           newVal &&
           JSON.stringify(origVal) !== JSON.stringify(newVal);
 
-        let origClass = 'p-2 border-r bg-white text-slate-600';
-        let newClass = 'p-2 bg-white text-slate-600';
+        let origClass =
+          'p-2 border-r border-border bg-card text-muted-foreground';
+        let newClass = 'p-2 bg-card text-muted-foreground';
 
         if (isAdded) {
-          newClass = 'p-2 bg-green-50 text-green-700 font-medium';
+          newClass =
+            'p-2 bg-green-500/10 text-green-700 dark:text-green-400 font-medium';
         } else if (isDeleted) {
           origClass =
-            'p-2 border-r bg-red-50 text-red-700 font-medium decoration-red-300';
+            'p-2 border-r border-border bg-destructive/10 text-destructive font-medium decoration-destructive';
         } else if (isModified) {
-          origClass = 'p-2 border-r bg-yellow-50 text-yellow-700';
-          newClass = 'p-2 bg-yellow-50 text-yellow-700 font-medium';
+          origClass =
+            'p-2 border-r border-border bg-yellow-500/10 text-yellow-700 dark:text-yellow-400';
+          newClass =
+            'p-2 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 font-medium';
         }
 
         const formatValue = (val: any) => {
@@ -270,11 +277,13 @@ const SettingComparison = ({
               return val.map((item, i) => (
                 <div
                   key={i}
-                  className="mb-1 last:mb-0 pl-2 border-l-2 border-slate-200"
+                  className="mb-1 last:mb-0 pl-2 border-l-2 border-border"
                 >
                   {Object.entries(item).map(([k, v]) => (
                     <div key={k} className="flex gap-1">
-                      <span className="font-semibold text-slate-500">{k}:</span>
+                      <span className="font-semibold text-muted-foreground">
+                        {k}:
+                      </span>
                       <span>{String(v)}</span>
                     </div>
                   ))}
@@ -285,10 +294,12 @@ const SettingComparison = ({
           }
           if (typeof val === 'object') {
             return (
-              <div className="pl-2 border-l-2 border-slate-200">
+              <div className="pl-2 border-l-2 border-border">
                 {Object.entries(val).map(([k, v]) => (
                   <div key={k} className="flex gap-1">
-                    <span className="font-semibold text-slate-500">{k}:</span>
+                    <span className="font-semibold text-muted-foreground">
+                      {k}:
+                    </span>
                     <span>{String(v)}</span>
                   </div>
                 ))}
@@ -299,15 +310,18 @@ const SettingComparison = ({
         };
 
         return (
-          <div key={key} className="grid grid-cols-2 border-b last:border-0">
+          <div
+            key={key}
+            className="grid grid-cols-2 border-b last:border-0 border-border"
+          >
             <div className={origClass}>
-              <span className="font-bold mr-2 text-[10px] text-slate-400 block mb-1">
+              <span className="font-bold mr-2 text-[10px] text-muted-foreground block mb-1">
                 {key}
               </span>
               {formatValue(origVal)}
             </div>
             <div className={newClass}>
-              <span className="font-bold mr-2 text-[10px] text-slate-400 block mb-1">
+              <span className="font-bold mr-2 text-[10px] text-muted-foreground block mb-1">
                 {key}
               </span>
               {formatValue(newVal)}
@@ -355,7 +369,7 @@ const LorebookContentViewer = ({
     });
 
     if (entries.length === 0) {
-      return <div className="text-slate-500 italic">내용 없음</div>;
+      return <div className="text-muted-foreground italic">내용 없음</div>;
     }
 
     return (
@@ -363,10 +377,12 @@ const LorebookContentViewer = ({
         {entries.map(([key, value]) => (
           <div
             key={key}
-            className="bg-slate-50 rounded p-3 border border-slate-100"
+            className="bg-muted/50 rounded p-3 border border-border"
           >
-            <div className="text-xs font-bold text-slate-500 mb-1">{key}</div>
-            <div className="text-sm text-slate-800 whitespace-pre-wrap">
+            <div className="text-xs font-bold text-muted-foreground mb-1">
+              {key}
+            </div>
+            <div className="text-sm text-foreground whitespace-pre-wrap">
               {typeof value === 'object'
                 ? JSON.stringify(value, null, 2)
                 : String(value)}
@@ -481,6 +497,17 @@ function getContentStrategy(formatId: string | null) {
           ...common.feasibility,
           sub: '원작 설정 기반의 밸런싱 완료 여부 및 개발 우선순위.',
         },
+        // 게임 전용 추가 카드
+        core_fun: {
+          title: '핵심 재미요소',
+          sub: '플레이어가 경험할 핵심적인 재미 요소와 루프.',
+          icon: Sparkles,
+        },
+        genre: {
+          title: '게임 장르',
+          sub: '게임의 장르 및 스타일 (예: RPG, FPS, 시뮬레이션).',
+          icon: Gamepad2,
+        },
       };
     case 'spinoff':
       return {
@@ -569,13 +596,6 @@ export function ManagerIPExpansion() {
       toast.success('IP 확장 프로젝트 생성이 완료되었습니다!', {
         duration: 5000,
         icon: '✅',
-        style: {
-          background: '#f0fdf4',
-          color: '#15803d',
-          border: '1px solid #bbf7d0',
-          padding: '16px',
-          fontWeight: 'bold',
-        },
       });
     },
   });
@@ -745,7 +765,7 @@ export function ManagerIPExpansion() {
           Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="h-[200px] rounded-lg border border-slate-200 bg-slate-50 animate-pulse"
+              className="h-[200px] rounded-lg border border-border bg-muted animate-pulse"
             />
           ))
         ) : proposals && proposals.length > 0 ? (
@@ -759,26 +779,32 @@ export function ManagerIPExpansion() {
             return (
               <Card
                 key={proposal.id}
-                className="group cursor-pointer hover:shadow-md transition-all border-slate-200 overflow-hidden"
-                onClick={() => handleOpenDetail(proposal)}
+                className="group cursor-pointer hover:shadow-md transition-all border-border overflow-hidden"
+                onClick={() => {
+                  if (proposal.status === 'NEW') {
+                    toast.info('AI 분석이 진행 중입니다.');
+                    return;
+                  }
+                  handleOpenDetail(proposal);
+                }}
               >
                 <CardHeader className="p-0">
                   <div
                     className={cn(
                       'h-16 bg-gradient-to-br relative overflow-hidden',
                       formatItem?.color === 'green'
-                        ? 'from-green-50 to-green-100'
+                        ? 'from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/40'
                         : formatItem?.color === 'purple'
-                          ? 'from-purple-50 to-purple-100'
+                          ? 'from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/40'
                           : formatItem?.color === 'blue'
-                            ? 'from-blue-50 to-blue-100'
+                            ? 'from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/40'
                             : formatItem?.color === 'red'
-                              ? 'from-red-50 to-red-100'
+                              ? 'from-red-50 to-red-100 dark:from-red-950/40 dark:to-red-900/40'
                               : formatItem?.color === 'amber'
-                                ? 'from-amber-50 to-amber-100'
+                                ? 'from-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/40'
                                 : formatItem?.color === 'pink'
-                                  ? 'from-pink-50 to-pink-100'
-                                  : 'from-slate-50 to-slate-100',
+                                  ? 'from-pink-50 to-pink-100 dark:from-pink-950/40 dark:to-pink-900/40'
+                                  : 'from-muted/50 to-muted dark:from-muted/10 dark:to-muted/20',
                     )}
                   >
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -786,22 +812,22 @@ export function ManagerIPExpansion() {
                         className={cn(
                           'w-6 h-6 opacity-20',
                           formatItem?.color === 'green'
-                            ? 'text-green-600'
+                            ? 'text-green-600 dark:text-green-400'
                             : formatItem?.color === 'purple'
-                              ? 'text-purple-600'
+                              ? 'text-purple-600 dark:text-purple-400'
                               : formatItem?.color === 'blue'
-                                ? 'text-blue-600'
+                                ? 'text-blue-600 dark:text-blue-400'
                                 : formatItem?.color === 'red'
-                                  ? 'text-red-600'
+                                  ? 'text-red-600 dark:text-red-400'
                                   : formatItem?.color === 'amber'
-                                    ? 'text-amber-600'
+                                    ? 'text-amber-600 dark:text-amber-400'
                                     : formatItem?.color === 'pink'
-                                      ? 'text-pink-600'
-                                      : 'text-slate-600',
+                                      ? 'text-pink-600 dark:text-pink-400'
+                                      : 'text-muted-foreground',
                         )}
                       />
                     </div>
-                    <Badge className="absolute top-2 left-2 bg-white/90 shadow-sm backdrop-blur-sm text-slate-700 hover:bg-white/90 border-0 text-[10px] h-5 px-1.5">
+                    <Badge className="absolute top-2 left-2 bg-card/90 dark:bg-card/50 shadow-sm backdrop-blur-sm text-foreground hover:bg-card/90 dark:hover:bg-card/50 border-0 text-[10px] h-5 px-1.5">
                       {formatItem?.title ||
                         proposal.targetFormat ||
                         proposal.format ||
@@ -815,8 +841,8 @@ export function ManagerIPExpansion() {
                           : proposal.status === 'PENDING_APPROVAL'
                             ? 'bg-blue-500 hover:bg-blue-600'
                             : proposal.status === 'REJECTED'
-                              ? 'bg-rose-500 hover:bg-rose-600'
-                              : 'bg-slate-500 hover:bg-slate-600',
+                              ? 'bg-destructive hover:bg-destructive/90'
+                              : 'bg-muted-foreground hover:bg-muted-foreground/90',
                       )}
                     >
                       {proposal.statusDescription ||
@@ -833,11 +859,11 @@ export function ManagerIPExpansion() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-3 pb-0">
-                  <h3 className="font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors text-xs">
+                  <h3 className="font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors text-xs">
                     {proposal.title}
                   </h3>
                 </CardContent>
-                <div className="p-3 flex items-center justify-between text-[10px] text-slate-400">
+                <div className="p-3 flex items-center justify-between text-[10px] text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     {proposal.createdAt || proposal.receivedAt
@@ -850,11 +876,11 @@ export function ManagerIPExpansion() {
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        className="h-6 w-6 p-0 hover:bg-slate-100 rounded-full"
+                        className="h-6 w-6 p-0 hover:bg-accent rounded-full"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <span className="sr-only">메뉴 열기</span>
-                        <MoreHorizontal className="h-3 w-3 text-slate-400" />
+                        <MoreHorizontal className="h-3 w-3 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[140px]">
@@ -878,7 +904,7 @@ export function ManagerIPExpansion() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(proposal.id);
@@ -894,15 +920,15 @@ export function ManagerIPExpansion() {
             );
           })
         ) : (
-          <div className="col-span-full h-60 flex flex-col items-center justify-center gap-3 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg">
-            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-slate-300" />
+          <div className="col-span-full h-60 flex flex-col items-center justify-center gap-3 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-muted-foreground" />
             </div>
             <div className="text-center">
-              <p className="font-medium text-slate-900">
+              <p className="font-medium text-foreground">
                 진행 중인 프로젝트가 없습니다
               </p>
-              <p className="text-sm mt-1 text-slate-400">
+              <p className="text-sm mt-1 text-muted-foreground">
                 새로운 IP 확장 프로젝트를 시작해보세요.
               </p>
             </div>
@@ -918,13 +944,13 @@ export function ManagerIPExpansion() {
             size="sm"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="text-slate-600"
+            className="text-muted-foreground"
           >
             이전
           </Button>
-          <div className="text-sm font-medium text-slate-600 px-4">
-            <span className="text-slate-900">{page + 1}</span>
-            <span className="mx-1 text-slate-400">/</span>
+          <div className="text-sm font-medium text-muted-foreground px-4">
+            <span className="text-foreground">{page + 1}</span>
+            <span className="mx-1 text-muted-foreground">/</span>
             {proposalsData.totalPages}
           </div>
           <Button
@@ -934,7 +960,7 @@ export function ManagerIPExpansion() {
               setPage((p) => Math.min(proposalsData.totalPages - 1, p + 1))
             }
             disabled={page >= proposalsData.totalPages - 1}
-            className="text-slate-600"
+            className="text-muted-foreground"
           >
             다음
           </Button>
@@ -1003,7 +1029,7 @@ function ProjectDetailModal({
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
-      managerService.updateIPProposal(id, { status }, managerId),
+      managerService.updateIPProposalStatus(id, status),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['manager', 'ip-expansion', 'proposals'],
@@ -1026,9 +1052,12 @@ function ProjectDetailModal({
   };
 
   const allApproved =
+    Array.isArray(reviewComments) &&
     reviewComments.length > 0 &&
     reviewComments.every((c) => c.status === 'APPROVED');
-  const anyRejected = reviewComments.some((c) => c.status === 'REJECTED');
+  const anyRejected =
+    Array.isArray(reviewComments) &&
+    reviewComments.some((c) => c.status === 'REJECTED');
 
   const { data: lorebooks } = useQuery({
     queryKey: ['manager', 'proposal-lorebooks', managerId, project.id],
@@ -1109,10 +1138,11 @@ function ProjectDetailModal({
   const handleOpenReviewModal = async () => {
     try {
       const comments = await managerService.getProposalComments(project.id);
-      setReviewComments(comments);
+      setReviewComments(Array.isArray(comments) ? comments : []);
       setShowReviewModal(true);
     } catch (e) {
       toast.error('검토 내역을 불러오는데 실패했습니다.');
+      setReviewComments([]);
     }
   };
 
@@ -1141,7 +1171,7 @@ function ProjectDetailModal({
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
             >
               삭제
             </AlertDialogAction>
@@ -1150,19 +1180,19 @@ function ProjectDetailModal({
       </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-[85vw] lg:max-w-4xl max-h-[90vh] p-0 gap-0 rounded-xl overflow-y-auto flex flex-col bg-white shadow-2xl border-0">
+        <DialogContent className="max-w-[85vw] lg:max-w-4xl max-h-[90vh] p-0 gap-0 rounded-xl overflow-y-auto flex flex-col bg-card shadow-2xl border-0">
           <ScrollArea className="flex-1">
             {/* Hero Header */}
             <div
               className={cn(
                 'relative h-40 flex items-end p-6 overflow-hidden shrink-0',
-                'bg-slate-50 border-b border-slate-100',
+                'bg-muted/30 border-b border-border',
               )}
             >
               <div className="relative z-10 w-full flex justify-between items-end">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge className="bg-white border-slate-200 text-slate-500 hover:bg-slate-50 uppercase tracking-wider shadow-sm text-[10px]">
+                    <Badge className="bg-card border-border text-muted-foreground hover:bg-accent uppercase tracking-wider shadow-sm text-[10px]">
                       {project.targetFormat || project.format || 'FORMAT'}
                     </Badge>
                     <Badge
@@ -1179,7 +1209,7 @@ function ProjectDetailModal({
                           ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                           : project.status === 'PENDING_APPROVAL'
                             ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                            : 'bg-rose-500 text-white hover:bg-rose-600',
+                            : 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
                       )}
                     >
                       {project.status === 'APPROVED'
@@ -1189,17 +1219,17 @@ function ProjectDetailModal({
                           : '반려'}
                     </Badge>
                   </div>
-                  <DialogTitle className="text-2xl font-bold text-slate-900 tracking-tight">
+                  <DialogTitle className="text-2xl font-bold text-foreground tracking-tight">
                     {project.title}
                   </DialogTitle>
-                  <div className="text-slate-500 text-xs mt-2 flex items-center gap-4">
+                  <div className="text-muted-foreground text-xs mt-2 flex items-center gap-4">
                     <span className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />{' '}
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" />{' '}
                       {new Date(project.createdAt).toLocaleDateString()}
                     </span>
-                    <span className="w-0.5 h-3 bg-slate-300" />
+                    <span className="w-0.5 h-3 bg-border" />
                     <span className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-slate-400" />{' '}
+                      <Users className="w-3.5 h-3.5 text-muted-foreground" />{' '}
                       {project.authorName || '작가 미정'}
                     </span>
                   </div>
@@ -1209,7 +1239,7 @@ function ProjectDetailModal({
 
             <div className="p-6 space-y-8">
               {/* 1. PDF Preview */}
-              <div className="w-full h-[500px] bg-slate-100 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+              <div className="w-full h-[500px] bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
                 <PdfPreview
                   isFullScreen={false}
                   className="h-full w-full"
@@ -1221,76 +1251,85 @@ function ProjectDetailModal({
 
               {/* 2. Core Content Strategy (6 Grid) */}
               <section>
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-900">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-900 dark:text-slate-50">
                   <Sparkles className="w-5 h-5 text-purple-500" />
                   핵심 내용 요약
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    {
-                      title: '시장 전략 (Market Strategy)',
-                      icon: Target,
-                      content: project.expMarket,
-                      color: 'text-rose-600',
-                      bg: 'bg-rose-50',
-                    },
-                    {
-                      title: '서사 기획 (Creative Narrative)',
-                      icon: Zap,
-                      content: project.expCreative,
-                      color: 'text-indigo-600',
-                      bg: 'bg-indigo-50',
-                    },
-                    {
-                      title: '아트 컨셉 (Visual Concept)',
-                      icon: ImageIcon,
-                      content: project.expVisual,
-                      color: 'text-pink-600',
-                      bg: 'bg-pink-50',
-                    },
-                    {
-                      title: '세계관 확장 (World Expansion)',
-                      icon: Monitor,
-                      content: project.expWorld,
-                      color: 'text-purple-600',
-                      bg: 'bg-purple-50',
-                    },
-                    {
-                      title: '사업 모델 (Business Model)',
-                      icon: BarChart,
-                      content: project.expBusiness,
-                      color: 'text-emerald-600',
-                      bg: 'bg-emerald-50',
-                    },
-                    {
-                      title: '기술 환경 (Technical Environment)',
-                      icon: BookOpen,
-                      content: project.expProduction,
-                      color: 'text-blue-600',
-                      bg: 'bg-blue-50',
-                    },
-                  ].map((item: any, i) => (
-                    <Card
-                      key={i}
-                      className="border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 duration-300"
-                    >
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2 text-slate-800">
-                          <div className={`p-1.5 rounded-md ${item.bg}`}>
-                            <item.icon
-                              className={`w-3.5 h-3.5 ${item.color}`}
-                            />
-                          </div>
-                          {item.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
-                          {item.content || '내용이 없습니다.'}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {(() => {
+                    const strategy = getContentStrategy(
+                      project.targetFormat || project.format,
+                    ) as any;
+                    return [
+                      {
+                        key: 'valueProp',
+                        content: project.expMarket,
+                        color: 'text-rose-600 dark:text-rose-400',
+                        bg: 'bg-rose-50 dark:bg-rose-900/20',
+                      },
+                      {
+                        key: 'adaptation',
+                        content: project.expCreative,
+                        color: 'text-indigo-600 dark:text-indigo-400',
+                        bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+                      },
+                      {
+                        key: 'visual',
+                        content: project.expVisual,
+                        color: 'text-pink-600 dark:text-pink-400',
+                        bg: 'bg-pink-50 dark:bg-pink-900/20',
+                      },
+                      {
+                        key: 'world',
+                        content: project.expWorld,
+                        color: 'text-purple-600 dark:text-purple-400',
+                        bg: 'bg-purple-50 dark:bg-purple-900/20',
+                      },
+                      {
+                        key: 'business',
+                        content: project.expBusiness,
+                        color: 'text-emerald-600 dark:text-emerald-400',
+                        bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+                      },
+                      {
+                        key: 'feasibility',
+                        content: project.expProduction,
+                        color: 'text-blue-600 dark:text-blue-400',
+                        bg: 'bg-blue-50 dark:bg-blue-900/20',
+                      },
+                    ].map((item: any, i) => {
+                      const strategyItem = strategy[item.key];
+                      const Icon = strategyItem?.icon || item.icon;
+
+                      return (
+                        <Card
+                          key={i}
+                          className="border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 duration-300 bg-card dark:bg-card"
+                        >
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                              <div className={`p-1.5 rounded-md ${item.bg}`}>
+                                <Icon className={`w-3.5 h-3.5 ${item.color}`} />
+                              </div>
+                              <div>
+                                <div>{strategyItem?.title || item.title}</div>
+                                {strategyItem?.sub && (
+                                  <div className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                                    {strategyItem.sub}
+                                  </div>
+                                )}
+                              </div>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
+                              {item.content || '내용이 없습니다.'}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      );
+                    });
+                  })()}
                 </div>
               </section>
 
@@ -1474,15 +1513,29 @@ function ProjectDetailModal({
                           },
                         ]
                       : []),
+                    ...(project.addPrompt
+                      ? [
+                          {
+                            label: '추가 요청사항 (Prompt)',
+                            value: project.addPrompt,
+                            icon: MessageSquare,
+                            color: 'text-slate-600',
+                            bg: 'bg-slate-50',
+                            isFullWidth: true,
+                          },
+                        ]
+                      : []),
                   ].map((item: any, i) => (
                     <div
                       key={i}
                       onClick={item.onClick}
-                      className={`flex items-start gap-3 p-3 rounded-lg border border-slate-100 ${item.bg} ${
-                        item.onClick
-                          ? 'cursor-pointer hover:bg-opacity-80 transition-colors'
-                          : ''
-                      }`}
+                      className={cn(
+                        `flex items-start gap-3 p-3 rounded-lg border border-slate-100 ${item.bg}`,
+                        item.onClick &&
+                          'cursor-pointer hover:bg-opacity-80 transition-colors',
+                        item.isFullWidth &&
+                          'col-span-1 md:col-span-2 lg:col-span-3',
+                      )}
                     >
                       <div className={`p-1.5 rounded-md bg-white/60 shrink-0`}>
                         <item.icon className={`w-4 h-4 ${item.color}`} />
@@ -1491,29 +1544,19 @@ function ProjectDetailModal({
                         <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-0.5">
                           {item.label}
                         </p>
-                        <p className="text-sm font-semibold text-slate-900 truncate">
+                        <p
+                          className={cn(
+                            'text-sm font-semibold text-slate-900',
+                            item.isFullWidth
+                              ? 'whitespace-pre-wrap leading-relaxed'
+                              : 'truncate',
+                          )}
+                        >
                           {item.value || '-'}
                         </p>
                       </div>
                     </div>
                   ))}
-
-                  {/* Add Prompt */}
-                  {project.addPrompt && (
-                    <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50">
-                      <div className="p-1.5 rounded-md bg-white/60 shrink-0">
-                        <MessageSquare className="w-4 h-4 text-slate-600" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-0.5">
-                          추가 요청사항 (Prompt)
-                        </p>
-                        <p className="text-sm font-medium text-slate-900 whitespace-pre-wrap leading-relaxed">
-                          {project.addPrompt}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -2897,29 +2940,30 @@ function CreateIPExpansionDialog({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto bg-slate-50/50 relative">
+          <div className="flex-1 overflow-y-auto bg-muted/30 relative">
             {currentStep === 1 && (
               <div className="h-full p-4 max-w-[1600px] mx-auto flex flex-col">
                 {/* Step 1: Selection */}
                 <div className="flex-1 min-h-0 flex flex-col gap-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 h-full min-h-0">
                     {/* 1. Authors */}
-                    <Card className="flex flex-col min-h-[500px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
-                      <CardHeader className="py-4 px-4 border-b bg-white shrink-0">
-                        <h3 className="font-bold flex items-center gap-2 text-slate-800 text-base">
-                          <Users className="w-4 h-4 text-slate-500" /> 작가 선택
+                    <Card className="flex flex-col min-h-[500px] lg:h-full border-border shadow-sm hover:border-ring transition-colors overflow-hidden">
+                      <CardHeader className="py-4 px-4 border-b bg-card shrink-0">
+                        <h3 className="font-bold flex items-center gap-2 text-foreground text-base">
+                          <Users className="w-4 h-4 text-muted-foreground" />{' '}
+                          작가 선택
                         </h3>
                         <div className="relative mt-2">
-                          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                          <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                           <Input
                             placeholder="작가 검색..."
-                            className="pl-9 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
+                            className="pl-9 h-9 text-sm bg-muted/50 border-input focus-visible:ring-ring"
                             value={authorSearch}
                             onChange={(e) => setAuthorSearch(e.target.value)}
                           />
                         </div>
                       </CardHeader>
-                      <ScrollArea className="flex-1 bg-white overflow-y-auto">
+                      <ScrollArea className="flex-1 bg-card overflow-y-auto">
                         <div className="p-3 space-y-1.5">
                           {filteredAuthors.map((author: any) => (
                             <div
@@ -2932,11 +2976,11 @@ function CreateIPExpansionDialog({
                               className={cn(
                                 'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm border border-transparent',
                                 selectedAuthor?.id === author.id
-                                  ? 'bg-slate-900 text-white shadow-md transform scale-[1.01]'
-                                  : 'hover:bg-slate-50 text-slate-700 hover:border-slate-200',
+                                  ? 'bg-primary text-primary-foreground shadow-md transform scale-[1.01]'
+                                  : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground hover:border-border',
                               )}
                             >
-                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
                                 {author.name[0]}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -2950,8 +2994,8 @@ function CreateIPExpansionDialog({
                                   className={cn(
                                     'text-xs truncate mt-0.5',
                                     selectedAuthor?.id === author.id
-                                      ? 'text-slate-300'
-                                      : 'text-slate-500',
+                                      ? 'text-primary-foreground/80'
+                                      : 'text-muted-foreground',
                                   )}
                                 >
                                   작품 {author.workCount || 0}개
@@ -2965,33 +3009,33 @@ function CreateIPExpansionDialog({
                     </Card>
 
                     {/* 2. Works */}
-                    <Card className="flex flex-col min-h-[500px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
-                      <CardHeader className="py-4 px-4 border-b bg-white shrink-0">
-                        <h3 className="font-bold flex items-center gap-2 text-slate-800 text-base">
-                          <BookOpen className="w-4 h-4 text-slate-500" /> 작품
-                          선택
+                    <Card className="flex flex-col min-h-[500px] lg:h-full border-border shadow-sm hover:border-ring transition-colors overflow-hidden">
+                      <CardHeader className="py-4 px-4 border-b bg-card shrink-0">
+                        <h3 className="font-bold flex items-center gap-2 text-foreground text-base">
+                          <BookOpen className="w-4 h-4 text-muted-foreground" />{' '}
+                          작품 선택
                         </h3>
                         <div className="relative mt-2">
-                          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                          <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                           <Input
                             placeholder="작품 검색..."
-                            className="pl-9 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
+                            className="pl-9 h-9 text-sm bg-muted/50 border-input focus-visible:ring-ring"
                             value={workSearch}
                             onChange={(e) => setWorkSearch(e.target.value)}
                             disabled={!selectedAuthor}
                           />
                         </div>
                       </CardHeader>
-                      <ScrollArea className="flex-1 bg-white overflow-y-auto">
+                      <ScrollArea className="flex-1 bg-card overflow-y-auto">
                         {!selectedAuthor ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                          <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-6 text-center min-h-[200px]">
                             <Users className="w-8 h-8 mb-2 opacity-30" />
                             <p className="text-sm font-medium">
                               작가를 먼저 선택해주세요
                             </p>
                           </div>
                         ) : filteredWorks.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                          <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-6 text-center min-h-[200px]">
                             <p className="text-sm">등록된 작품이 없습니다</p>
                           </div>
                         ) : (
@@ -3007,18 +3051,18 @@ function CreateIPExpansionDialog({
                                 className={cn(
                                   'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm border border-transparent',
                                   selectedWork?.workId === work.workId
-                                    ? 'bg-slate-900 text-white shadow-md transform scale-[1.01]'
-                                    : 'hover:bg-slate-50 text-slate-700 hover:border-slate-200',
+                                    ? 'bg-primary text-primary-foreground shadow-md transform scale-[1.01]'
+                                    : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground hover:border-border',
                                 )}
                               >
                                 {work.coverImageUrl ? (
                                   <img
                                     src={work.coverImageUrl}
                                     alt={work.title}
-                                    className="w-10 h-14 object-cover rounded-md shadow-sm bg-slate-200"
+                                    className="w-10 h-14 object-cover rounded-md shadow-sm bg-muted"
                                   />
                                 ) : (
-                                  <div className="w-10 h-14 rounded-md bg-slate-200 flex items-center justify-center text-[10px] text-slate-400 font-medium">
+                                  <div className="w-10 h-14 rounded-md bg-muted flex items-center justify-center text-[10px] text-muted-foreground font-medium">
                                     No Img
                                   </div>
                                 )}
@@ -3033,8 +3077,8 @@ function CreateIPExpansionDialog({
                                     className={cn(
                                       'text-xs mt-1',
                                       selectedWork?.workId === work.workId
-                                        ? 'text-slate-300'
-                                        : 'text-slate-500',
+                                        ? 'text-primary-foreground/80'
+                                        : 'text-muted-foreground',
                                     )}
                                   >
                                     {work.genre || '장르 미정'}
@@ -3049,16 +3093,16 @@ function CreateIPExpansionDialog({
                     </Card>
 
                     {/* 3. Lorebooks */}
-                    <Card className="flex flex-col min-h-[500px] lg:h-full border-slate-200 shadow-sm hover:border-slate-300 transition-colors overflow-hidden">
-                      <CardHeader className="py-4 px-4 border-b bg-white shrink-0 space-y-3">
+                    <Card className="flex flex-col min-h-[500px] lg:h-full border-border shadow-sm hover:border-ring transition-colors overflow-hidden">
+                      <CardHeader className="py-4 px-4 border-b bg-card shrink-0 space-y-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-bold flex items-center gap-2 text-slate-800 text-base">
+                          <h3 className="font-bold flex items-center gap-2 text-foreground text-base">
                             설정집 선택
                           </h3>
                           {selectedWork && filteredLorebooks.length > 0 && (
                             <label
                               htmlFor="select-all-lorebooks"
-                              className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors"
+                              className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded transition-colors"
                             >
                               <Checkbox
                                 id="select-all-lorebooks"
@@ -3074,17 +3118,17 @@ function CreateIPExpansionDialog({
                                   toggleAllLorebooks(!!checked)
                                 }
                               />
-                              <span className="text-xs text-slate-500 font-medium select-none">
+                              <span className="text-xs text-muted-foreground font-medium select-none">
                                 전체 선택
                               </span>
                             </label>
                           )}
                         </div>
                         <div className="relative">
-                          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                          <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                           <Input
                             placeholder="키워드 검색..."
-                            className="pl-9 h-9 text-sm bg-slate-50 border-slate-200 focus-visible:ring-slate-400"
+                            className="pl-9 h-9 text-sm bg-muted/50 border-input focus-visible:ring-ring"
                             value={lorebookSearch}
                             onChange={(e) => setLorebookSearch(e.target.value)}
                             disabled={!selectedWork}
@@ -3096,7 +3140,7 @@ function CreateIPExpansionDialog({
                             onValueChange={setLorebookCategoryTab}
                             className="w-full"
                           >
-                            <TabsList className="w-full grid grid-cols-7 h-auto p-1 bg-slate-100/80">
+                            <TabsList className="w-full grid grid-cols-7 h-auto p-1 bg-muted/50">
                               {[
                                 { id: 'all', label: '전체' },
                                 { id: 'characters', label: '인물' },
@@ -3109,7 +3153,7 @@ function CreateIPExpansionDialog({
                                 <TabsTrigger
                                   key={tab.id}
                                   value={tab.id}
-                                  className="text-[10px] font-bold px-0.5 py-1.5 h-7 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm flex items-center justify-center transition-all text-slate-500"
+                                  className="text-[10px] font-bold px-0.5 py-1.5 h-7 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm flex items-center justify-center transition-all text-muted-foreground"
                                 >
                                   {tab.label}
                                 </TabsTrigger>
@@ -3118,16 +3162,16 @@ function CreateIPExpansionDialog({
                           </Tabs>
                         )}
                       </CardHeader>
-                      <ScrollArea className="flex-1 bg-white scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent overflow-y-auto">
+                      <ScrollArea className="flex-1 bg-card scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent overflow-y-auto">
                         {!selectedWork ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                          <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-6 text-center min-h-[200px]">
                             <BookOpen className="w-8 h-8 mb-2 opacity-30" />
                             <p className="text-sm font-medium">
                               작품을 먼저 선택해주세요
                             </p>
                           </div>
                         ) : filteredLorebooks.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center min-h-[200px]">
+                          <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-6 text-center min-h-[200px]">
                             <p className="text-sm">
                               {lorebookCategoryTab === 'all'
                                 ? '등록된 설정집이 없습니다'
@@ -3239,8 +3283,8 @@ function CreateIPExpansionDialog({
                                     className={cn(
                                       'flex items-start gap-3 p-3 rounded-lg transition-all border text-sm group relative',
                                       isSelected
-                                        ? 'bg-slate-50 border-slate-400 ring-1 ring-slate-400 shadow-sm'
-                                        : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm',
+                                        ? 'bg-muted/50 border-primary/50 ring-1 ring-primary/50 shadow-sm'
+                                        : 'bg-card border-border hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm',
                                     )}
                                   >
                                     <Checkbox
@@ -3254,19 +3298,19 @@ function CreateIPExpansionDialog({
                                       className="flex-1 min-w-0 cursor-pointer select-none"
                                       onClick={() => toggleLorebook(lorebook)}
                                     >
-                                      <div className="font-bold flex items-center gap-2 text-slate-800">
+                                      <div className="font-bold flex items-center gap-2 text-foreground">
                                         <HighlightText
                                           text={lorebook.keyword}
                                           highlight={lorebookSearch}
                                         />
                                         <Badge
                                           variant="secondary"
-                                          className="text-[10px] h-4 px-1 bg-slate-100 text-slate-600 border-slate-200"
+                                          className="text-[10px] h-4 px-1 bg-muted text-muted-foreground border-border"
                                         >
                                           {lorebook.category}
                                         </Badge>
                                       </div>
-                                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                                         {summary}
                                       </p>
                                     </div>
@@ -4901,28 +4945,28 @@ function CreateIPExpansionDialog({
             {currentStep === 6 && (
               <div className="max-w-[1000px] mx-auto py-4 h-full flex flex-col">
                 <div className="text-center mb-4 shrink-0">
-                  <h2 className="text-xl font-bold mb-1 tracking-tight text-slate-900">
+                  <h2 className="text-xl font-bold mb-1 tracking-tight text-foreground">
                     최종 검토 및 생성
                   </h2>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     설정하신 내용을 바탕으로 AI가 IP 확장 제안서를 생성합니다.
                   </p>
                 </div>
 
-                <Card className="flex-1 flex flex-col border-slate-200 shadow-sm bg-slate-50/50">
+                <Card className="flex-1 flex flex-col border-border shadow-sm bg-muted/20">
                   <ScrollArea className="flex-1">
                     <div className="p-5 space-y-5">
                       {/* 1. Project Title & Overview */}
-                      <section className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
-                        <h3 className="font-bold text-sm flex items-center gap-2 mb-4 text-slate-800">
-                          <FileText className="w-4 h-4 text-indigo-500" />
+                      <section className="bg-card rounded-xl p-4 border border-border shadow-sm">
+                        <h3 className="font-bold text-sm flex items-center gap-2 mb-4 text-foreground">
+                          <FileText className="w-4 h-4 text-primary" />
                           프로젝트 제안서 생성 개요
                         </h3>
                         <div className="space-y-4">
                           <div className="space-y-1.5">
-                            <Label className="text-xs font-bold text-slate-500">
+                            <Label className="text-xs font-bold text-muted-foreground">
                               프로젝트 제목
-                              <span className="text-red-500 ml-1">*</span>
+                              <span className="text-destructive ml-1">*</span>
                             </Label>
                             <Input
                               value={projectTitle}
@@ -4931,7 +4975,7 @@ function CreateIPExpansionDialog({
                                 formats.find((f) => f.id === selectedFormat)
                                   ?.title || '확장'
                               } 프로젝트`}
-                              className="font-bold text-base h-10 bg-white border-slate-300 focus-visible:ring-indigo-500"
+                              className="font-bold text-base h-10 bg-background border-input focus-visible:ring-primary"
                             />
                           </div>
                         </div>
@@ -4939,26 +4983,26 @@ function CreateIPExpansionDialog({
 
                       {/* 2. Configuration Summary Grid */}
                       <section>
-                        <h3 className="font-bold text-sm flex items-center gap-2 mb-3 px-1 text-slate-800">
-                          <Settings className="w-4 h-4 text-slate-500" />
+                        <h3 className="font-bold text-sm flex items-center gap-2 mb-3 px-1 text-foreground">
+                          <Settings className="w-4 h-4 text-muted-foreground" />
                           입력 설정 요약
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {/* [Card 1] Source Setting (Priority) */}
                           <div
                             onClick={() => setShowReferenceModal(true)}
-                            className="bg-white rounded-lg p-3 border border-slate-200 shadow-sm flex items-start gap-2.5 relative group hover:border-indigo-400 transition-colors cursor-pointer order-first"
+                            className="bg-card rounded-lg p-3 border border-border shadow-sm flex items-start gap-2.5 relative group hover:border-primary/50 transition-colors cursor-pointer order-first"
                           >
-                            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-slate-50 text-slate-600">
+                            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-muted text-muted-foreground">
                               <BookOpen className="w-3.5 h-3.5" />
                             </div>
                             <div className="overflow-hidden flex-1">
                               <div className="flex items-center justify-between mb-0.5">
-                                <p className="text-[10px] font-bold text-slate-500">
+                                <p className="text-[10px] font-bold text-muted-foreground">
                                   원천 설정집
                                 </p>
                               </div>
-                              <p className="text-xs font-bold text-slate-800 truncate">
+                              <p className="text-xs font-bold text-foreground truncate">
                                 {selectedLorebooks.find(
                                   (l) => l.lorebookId === selectedCrownSetting,
                                 )?.keyword ||
@@ -4973,16 +5017,16 @@ function CreateIPExpansionDialog({
                           {/* [Card 2] Planning Direction (New) */}
                           <div
                             onClick={() => setShowPlanningDirectionModal(true)}
-                            className="bg-white rounded-lg p-3 border border-slate-200 shadow-sm flex items-start gap-2.5 relative group hover:border-indigo-400 transition-colors cursor-pointer"
+                            className="bg-card rounded-lg p-3 border border-border shadow-sm flex items-start gap-2.5 relative group hover:border-primary/50 transition-colors cursor-pointer"
                           >
-                            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-indigo-50 text-indigo-600">
+                            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-primary/10 text-primary">
                               <Zap className="w-3.5 h-3.5" />
                             </div>
                             <div className="overflow-hidden">
-                              <p className="text-[10px] font-bold text-slate-500 mb-0.5">
+                              <p className="text-[10px] font-bold text-muted-foreground mb-0.5">
                                 기획 방향
                               </p>
-                              <p className="text-xs font-bold text-slate-800 truncate">
+                              <p className="text-xs font-bold text-foreground truncate">
                                 {analysisBadges.length > 0
                                   ? `${analysisBadges[0].label} 등 ${analysisBadges.length}개 전략`
                                   : 'AI 분석 완료'}
@@ -4993,16 +5037,16 @@ function CreateIPExpansionDialog({
                           {/* [Card 3] Auto-Generation Rules */}
                           <div
                             onClick={() => setShowAutoGenerationModal(true)}
-                            className="bg-white rounded-lg p-3 border border-slate-200 shadow-sm flex items-start gap-2.5 relative group cursor-pointer hover:border-amber-400 transition-colors"
+                            className="bg-card rounded-lg p-3 border border-border shadow-sm flex items-start gap-2.5 relative group cursor-pointer hover:border-amber-400 transition-colors"
                           >
-                            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-amber-50 text-amber-600">
+                            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
                               <Sparkles className="w-3.5 h-3.5" />
                             </div>
                             <div className="overflow-hidden">
-                              <p className="text-[10px] font-bold text-slate-500 mb-0.5">
+                              <p className="text-[10px] font-bold text-muted-foreground mb-0.5">
                                 AI 생성 규칙
                               </p>
-                              <p className="text-xs font-bold text-slate-800 truncate">
+                              <p className="text-xs font-bold text-foreground truncate">
                                 {unselectedCategoryTips.length > 0
                                   ? `${unselectedCategoryTips.length}개 요소 제외됨`
                                   : '모든 설정 요소 포함'}
@@ -5016,13 +5060,13 @@ function CreateIPExpansionDialog({
                               0 && (
                               <div
                                 onClick={() => setCurrentStep(2)}
-                                className="bg-white rounded-lg p-3 border border-slate-200 shadow-sm flex items-start gap-2.5 relative group cursor-pointer hover:border-red-400 transition-colors col-span-full"
+                                className="bg-card rounded-lg p-3 border border-border shadow-sm flex items-start gap-2.5 relative group cursor-pointer hover:border-destructive/50 transition-colors col-span-full"
                               >
-                                <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-red-50 text-red-600">
+                                <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-destructive/10 text-destructive">
                                   <AlertTriangle className="w-3.5 h-3.5" />
                                 </div>
                                 <div className="overflow-hidden w-full">
-                                  <p className="text-[10px] font-bold text-slate-500 mb-0.5">
+                                  <p className="text-[10px] font-bold text-muted-foreground mb-0.5">
                                     설정 충돌 해결
                                   </p>
                                   <div className="space-y-1">
@@ -5050,10 +5094,10 @@ function CreateIPExpansionDialog({
                                                   key={`${category}-${idx}`}
                                                   className="flex items-start gap-2 text-xs"
                                                 >
-                                                  <span className="font-bold text-slate-700 min-w-[60px]">
+                                                  <span className="font-bold text-foreground min-w-[60px]">
                                                     {category}/{itemName}
                                                   </span>
-                                                  <span className="text-slate-600 truncate">
+                                                  <span className="text-muted-foreground truncate">
                                                     {reason}
                                                   </span>
                                                 </div>
