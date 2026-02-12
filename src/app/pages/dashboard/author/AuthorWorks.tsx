@@ -104,7 +104,80 @@ import {
   Globe,
   Box,
   LayoutGrid,
+  Info,
 } from 'lucide-react';
+
+const extractConflictItems = (data: any): any[] => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+
+  const items: any[] = [];
+  // data is an object where keys are categories (e.g., "인물", "세계")
+  Object.entries(data).forEach(([category, entities]) => {
+    if (Array.isArray(entities)) {
+      entities.forEach((entityObj: any) => {
+        // entityObj structure can vary.
+        // It might be { "EntityName": "AnalysisString", "신규설정": {...}, "기존설정": {...} }
+        // or { "이름": "EntityName", "분석": "AnalysisString", ... }
+
+        const keys = Object.keys(entityObj);
+        // Find the key that is NOT '신규설정', '기존설정', '분석', '이름' if possible to guess the entity name
+        // or if there is an explicit '이름' key, use that.
+
+        let nameKey = keys.find(
+          (k) => k !== '신규설정' && k !== '기존설정' && k !== '분석',
+        );
+        let entityName = nameKey;
+        let analysisStr = '';
+
+        if (entityObj['이름']) {
+          entityName = entityObj['이름'];
+          nameKey = '이름'; // Treat as found
+        }
+
+        // Try to find analysis string
+        if (entityObj['분석']) {
+          analysisStr = entityObj['분석'];
+        } else if (nameKey && typeof entityObj[nameKey] === 'string') {
+          analysisStr = entityObj[nameKey];
+        }
+
+        if (entityName) {
+          const newSettings =
+            entityObj['신규설정'] ||
+            (nameKey && entityObj[nameKey] !== analysisStr
+              ? entityObj[nameKey]
+              : null);
+          const oldSettings = entityObj['기존설정'];
+
+          // Parse analysis string: [결과: 충돌] [판단사유: ...]
+          const resultMatch = analysisStr.match(/\[결과:\s*(.*?)\]/);
+          const reasonMatch = analysisStr.match(/\[판단사유:\s*([\s\S]*?)\]/);
+
+          const result = resultMatch ? resultMatch[1].trim() : '충돌';
+          // If reason is captured, use it. Otherwise use the whole string.
+          let reason = reasonMatch ? reasonMatch[1].trim() : analysisStr;
+
+          items.push({
+            id: `${category}-${entityName}-${Date.now()}-${Math.random()
+              .toString(36)
+              .substr(2, 9)}`,
+            name: entityName,
+            category: category,
+            reason: reason,
+            original:
+              oldSettings || '기존 설정은 분석 내용에 포함되어 있습니다.',
+            new: newSettings || '신규 설정 정보를 찾을 수 없습니다.',
+            result: result,
+            rawAnalysis: analysisStr,
+          });
+        }
+      });
+    }
+  });
+  return items;
+};
+
 import { DynamicSettingEditor } from '../../../components/dashboard/author/DynamicSettingEditor';
 import { GlobalLoadingOverlay } from './GlobalLoadingOverlay';
 import { DiffView } from './DiffView';
@@ -1534,7 +1607,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
               </span>
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 AI 분석 중...
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1599,7 +1672,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                 {selectedManuscript ? (
                   <span className="text-sm font-medium flex items-center gap-2">
                     {isDirty && (
-                      <span className="text-xs text-orange-500 font-normal">
+                      <span className="text-xs text-orange-500 dark:text-orange-400 font-normal">
                         (수정됨)
                       </span>
                     )}
@@ -1682,7 +1755,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                     className={cn(
                       'w-full h-full resize-none border-none focus-visible:ring-0 p-8 text-lg leading-relaxed font-serif overflow-y-auto',
                       selectedManuscript?.readOnly &&
-                        'bg-gray-50 text-gray-500 cursor-not-allowed',
+                        'bg-muted text-muted-foreground cursor-not-allowed',
                     )}
                     placeholder="여기에 내용을 작성하세요..."
                   />
@@ -2107,9 +2180,10 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger
                   value="충돌"
-                  className="data-[state=active]:text-red-600 data-[state=active]:bg-red-50"
+                  className="data-[state=active]:text-red-600 data-[state=active]:bg-red-50 dark:data-[state=active]:bg-red-900/20 dark:data-[state=active]:text-red-400"
                 >
-                  충돌 ({settingBookDiff?.['충돌']?.length || 0})
+                  충돌 ({extractConflictItems(settingBookDiff?.['충돌']).length}
+                  )
                 </TabsTrigger>
                 <TabsTrigger value="설정 결합">
                   설정 결합 ({settingBookDiff?.['설정 결합']?.length || 0})
@@ -2122,11 +2196,17 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
 
             <div className="flex-1 overflow-y-auto bg-muted/5 p-6">
               {['충돌', '설정 결합', '신규 업로드'].map((tabKey) => {
-                const items = (
-                  (settingBookDiff?.[
-                    tabKey as keyof PublishAnalysisResponseDto
-                  ] as any[]) || []
-                ).filter(
+                let rawItems: any[] = [];
+                if (tabKey === '충돌') {
+                  rawItems = extractConflictItems(settingBookDiff?.['충돌']);
+                } else {
+                  rawItems =
+                    (settingBookDiff?.[
+                      tabKey as keyof PublishAnalysisResponseDto
+                    ] as any[]) || [];
+                }
+
+                const items = rawItems.filter(
                   (item) =>
                     reviewCategory === 'all' ||
                     item.category === reviewCategory,
@@ -2185,8 +2265,16 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                               >
                                 <div className="flex flex-col gap-3">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="font-bold text-lg text-primary">
+                                    <h4 className="font-bold text-lg text-primary flex items-center gap-2">
                                       {item.name}
+                                      {item.result && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-red-600 border-red-200 bg-red-50"
+                                        >
+                                          {item.result}
+                                        </Badge>
+                                      )}
                                     </h4>
                                     {isResolved ? (
                                       <div className="flex items-center gap-2">
@@ -2220,14 +2308,14 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                                         >
                                           확인 완료 (Resolved)
                                         </label>
-                                        <div className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">
+                                        <div className="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 text-xs font-bold rounded">
                                           CONFLICT
                                         </div>
                                       </div>
                                     )}
                                   </div>
                                   <div className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-lg">
-                                    <p className="font-semibold text-red-600 mb-2 flex items-center gap-2">
+                                    <p className="font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-2">
                                       <AlertTriangle className="w-4 h-4" />
                                       {item.reason}
                                     </p>
@@ -2282,7 +2370,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                                     <Badge variant="outline">
                                       {item.category}
                                     </Badge>
-                                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200">
+                                    <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                                       UPDATED
                                     </Badge>
                                   </div>
@@ -2319,7 +2407,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                           onClick={() =>
                                             deleteItem(item.id, tabKey)
                                           }
@@ -2341,8 +2429,8 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                                         <SettingViewer data={item.original} />
                                       </div>
                                     </div>
-                                    <div className="flex flex-col border rounded-md overflow-hidden ring-2 ring-blue-500/20 bg-card">
-                                      <div className="bg-blue-50/50 p-2 text-xs font-semibold border-b text-blue-700 flex justify-between">
+                                    <div className="flex flex-col border rounded-md overflow-hidden ring-2 ring-primary/20 bg-card">
+                                      <div className="bg-primary/10 p-2 text-xs font-semibold border-b text-primary flex justify-between">
                                         <span>Editing...</span>
                                       </div>
                                       <div className="p-4 overflow-y-auto flex-1">
@@ -2373,8 +2461,8 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
                                         <SettingViewer data={item.original} />
                                       </div>
                                     </div>
-                                    <div className="flex flex-col border rounded-md overflow-hidden ring-1 ring-blue-500/20 bg-blue-50/10">
-                                      <div className="bg-blue-50/50 p-2 text-xs font-semibold border-b text-blue-700">
+                                    <div className="flex flex-col border rounded-md overflow-hidden ring-1 ring-primary/20 bg-primary/5">
+                                      <div className="bg-primary/10 p-2 text-xs font-semibold border-b text-primary">
                                         Updated
                                       </div>
                                       <div className="p-3 overflow-y-auto flex-1 text-sm">
@@ -2744,7 +2832,7 @@ export function AuthorWorks({ integrationId }: AuthorWorksProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
               onClick={() => deleteWorkMutation.mutate()}
               disabled={deleteWorkMutation.isPending}
             >
