@@ -102,19 +102,13 @@ export function Logo({ className, onClick, role }: LogoProps) {
       <div className="group relative flex flex-col items-center cursor-pointer select-none px-4 py-2">
         {/* 메인 로고 영역 */}
         <div className="flex items-baseline tracking-tighter transition-all duration-500 ease-in-out">
-          {/* IP: 본질 (살짝 기울어짐 효과) */}
-          <span className="text-2xl font-black text-foreground transition-transform duration-500 group-hover:-rotate-3 group-hover:scale-105">
+          {/* IP: 본질 (정적이고 단단하게) */}
+          <span className="text-2xl font-black text-foreground transition-transform duration-300 group-hover:scale-105">
             IP
           </span>
 
-          {/* . : 중심점 (에너지 파동 효과) */}
+          {/* . : 중심점 (정적인 강조) */}
           <span className="relative mx-1 flex h-2 w-2 mb-1">
-            <span
-              className={cn(
-                'animate-ping absolute inline-flex h-full w-full rounded-full opacity-20',
-                theme.ping,
-              )}
-            ></span>
             <span
               className={cn(
                 'relative inline-flex rounded-full h-2 w-2',
@@ -123,8 +117,8 @@ export function Logo({ className, onClick, role }: LogoProps) {
             ></span>
           </span>
 
-          {/* SUM: 확장 (간격이 벌어지는 애니메이션) */}
-          <span className="text-2xl font-extralight text-foreground/80 transition-all duration-500 group-hover:translate-x-1 group-hover:text-foreground">
+          {/* SUM: 확장 (부드러운 이동) */}
+          <span className="text-2xl font-extralight text-foreground/80 transition-all duration-300 group-hover:text-foreground">
             SUM
           </span>
         </div>
