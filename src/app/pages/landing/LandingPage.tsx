@@ -117,35 +117,28 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
         <div className="grid md:grid-cols-2 gap-16 items-center">
           {/* Left: Text Content */}
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-6">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              v2.0 업데이트 완료
-            </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tight text-foreground mb-6">
-              서사를{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600">
-                데이터
+              하나뿐인 IP의
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6C5CE7] to-[#0984E3] animate-in fade-in duration-1000">
+                무한한 가능성
               </span>
-              로,
-              <br />
-              IP의 가치를
-              <br />
-              증명하세요
+              을 열다
             </h1>
-            <p className="text-muted-foreground leading-relaxed mb-8 text-lg md:text-xl max-w-lg">
-              AI 기반 설정집 자동 추출과 IP 확장 시뮬레이션으로
-              <br className="hidden md:block" /> 창작물의 가치를 체계적으로
-              관리하고 증명합니다.
+            <p className="text-xl md:text-2xl font-bold text-foreground/80 mb-4">
+              집필로 시작해 확장까지
+            </p>
+            <p className="text-muted-foreground leading-relaxed mb-8 text-lg max-w-lg">
+              AI가 복잡한 설정 관리와 오류 검사를 대신합니다.
+              <br />
+              작가는 오직 <strong>집필</strong>에만 집중하세요.
             </p>
             <div className="flex items-center gap-4">
               <Button
                 onClick={onSignInClick}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8 rounded-xl font-bold text-lg shadow-lg shadow-primary/20 transition-transform active:scale-95"
               >
-                시작하기
+                무료로 시작하기
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button
@@ -184,7 +177,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
             </div>
 
             {/* Floating Card */}
-            <div className="absolute -right-4 -bottom-4 bg-card border border-border rounded-xl p-4 shadow-xl w-48 animate-bounce-slow">
+            <div className="absolute -right-4 -bottom-4 bg-card border border-border rounded-xl p-4 shadow-xl w-48">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                   <Brain className="w-4 h-4 text-primary" />
@@ -205,10 +198,12 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
       <section id="features" className="max-w-[1200px] mx-auto px-6 py-24">
         <div className="text-center mb-16">
           <h2 className="text-2xl md:text-3xl font-bold leading-tight tracking-tight text-foreground mb-4">
-            핵심 기능
+            시스템이 기억하고, 매니저가 연결합니다
           </h2>
-          <p className="text-base text-muted-foreground">
-            AI가 창작물을 분석하고 체계화합니다
+          <p className="text-base text-muted-foreground max-w-2xl mx-auto">
+            IP.SUM은 단순한 도구가 아닙니다.
+            <br />
+            작가와 플랫폼을 잇는 가장 확실한 파트너입니다.
           </p>
         </div>
 
@@ -216,70 +211,54 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
           {/* Feature 1 */}
           <div className="bg-card hover:bg-accent/50 transition-colors border border-border/50 rounded-2xl p-8 group">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-              <Users className="w-6 h-6 text-primary" />
+              <BookMarked className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl font-bold text-foreground mb-3">
-              인물 설정 자동화
+              설정 충돌 방지
             </h3>
             <p className="text-muted-foreground leading-[1.6]">
-              캐릭터 프로필, 관계도, 핵심 욕망을 AI가 자동으로 추출하고
-              체계화합니다.
+              "이 캐릭터, 3화에서 죽지 않았나요?"
+              <br />
+              AI가 실시간으로 설정 오류와 모순을 <br />
+              찾아냅니다.
             </p>
           </div>
 
           {/* Feature 2 */}
           <div className="bg-card hover:bg-accent/50 transition-colors border border-border/50 rounded-2xl p-8 group">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-              <Globe className="w-6 h-6 text-primary" />
+              <Users className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl font-bold text-foreground mb-3">
-              세계관 동기화
+              1:1 매니저 매칭
             </h3>
             <p className="text-muted-foreground leading-[1.6]">
-              시간, 공간, 시스템 규칙을 명확하게 정의하고 설정 간 충돌을
-              실시간으로 감지합니다.
+              IP 확장은 혼자가 아닙니다.
+              <br />
+              전담 매니저 배정을 통해 IP 확장 기회를 <br />
+              제안받으세요.
             </p>
           </div>
 
           {/* Feature 3 */}
           <div className="bg-card hover:bg-accent/50 transition-colors border border-border/50 rounded-2xl p-8 group">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-              <BookMarked className="w-6 h-6 text-primary" />
+              <Globe className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl font-bold text-foreground mb-3">
-              2차 창작 시뮬레이션
+              심층 작품 분석
             </h3>
             <p className="text-muted-foreground leading-[1.6]">
-              영화, 드라마, 웹툰 등 다양한 매체로의 확장 가능성을 AI가 분석하고
-              제안합니다.
+              인물 관계도부터 사건 타임라인까지.
+              <br />
+              작품의 구조를 시각화하여 빈틈없는 세계관을 <br />
+              완성합니다.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Social Proof */}
-      <section className="bg-card border-y border-border py-16">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <p className="text-center text-sm text-muted-foreground mb-8 uppercase tracking-wider">
-            Trusted by
-          </p>
-          <div className="flex items-center justify-center gap-16 flex-wrap">
-            {/* Logo placeholders */}
-            <div className="text-muted-foreground text-2xl font-semibold opacity-40">
-              Company A
-            </div>
-            <div className="text-muted-foreground text-2xl font-semibold opacity-40">
-              Company B
-            </div>
-            <div className="text-muted-foreground text-2xl font-semibold opacity-40">
-              Company C
-            </div>
-            <div className="text-muted-foreground text-2xl font-semibold opacity-40">
-              Company D
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Social Proof - Removed */}
 
       {/* Pricing Section */}
       <section id="pricing" className="max-w-[1200px] mx-auto px-6 py-24">
@@ -288,7 +267,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
             합리적인 가격
           </h2>
           <p className="text-lg text-muted-foreground">
-            창작 규모에 맞는 요금제를 선택하세요
+            검증된 IP를 위한 최고의 투자
           </p>
         </div>
 
@@ -296,7 +275,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
           {/* Free Plan */}
           <div className="bg-card border border-border rounded-lg p-8 flex flex-col h-full">
             <div className="mb-8">
-              <h3 className="text-2xl text-foreground mb-2">Just IPSUM</h3>
+              <h3 className="text-2xl text-foreground mb-2">Just IP.SUM</h3>
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="text-4xl md:text-5xl text-foreground">₩0</span>
                 <span className="text-muted-foreground">/월</span>
@@ -309,7 +288,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
                 <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 bg-foreground rounded-full"></div>
                 </div>
-                <span className="text-foreground">월 10,000 토큰</span>
+                <span className="text-foreground">기본 설정 관리</span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -321,7 +300,7 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
                 <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 bg-foreground rounded-full"></div>
                 </div>
-                <span className="text-foreground">기본 템플릿</span>
+                <span className="text-foreground">기본 인물 관계도</span>
               </li>
             </ul>
 
@@ -342,16 +321,16 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
 
             <div className="mb-8">
               <h3 className="text-2xl text-primary-foreground mb-2">
-                IPSUM More
+                IP.SUM More
               </h3>
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="text-4xl md:text-5xl text-primary-foreground">
-                  ₩19,900
+                  ₩7,700
                 </span>
                 <span className="text-primary-foreground/70">/월</span>
               </div>
               <p className="text-primary-foreground/70">
-                본격적인 창작 활동을 위한
+                본격적인 탐험가를 위한
               </p>
             </div>
 
@@ -360,19 +339,25 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
                 <div className="w-5 h-5 rounded-full bg-primary-foreground/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
                 </div>
-                <span className="text-primary-foreground">무제한 토큰</span>
+                <span className="text-primary-foreground">
+                  1:1 매니저 매칭 (IP 확장 제안)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-primary-foreground/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
                 </div>
-                <span className="text-primary-foreground">무제한 작품</span>
+                <span className="text-primary-foreground">
+                  심층 작품 분석 (전체 관계도/타임라인)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-primary-foreground/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
                 </div>
-                <span className="text-primary-foreground">프리미엄 템플릿</span>
+                <span className="text-primary-foreground">
+                  무제한 작품 및 설정 관리
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-primary-foreground/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -380,19 +365,13 @@ export function LandingPage({ onSignInClick }: LandingPageProps) {
                 </div>
                 <span className="text-primary-foreground">설정 충돌 감지</span>
               </li>
-              <li className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-primary-foreground/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
-                </div>
-                <span className="text-primary-foreground">AI 분석 리포트</span>
-              </li>
             </ul>
 
             <Button
               onClick={onSignInClick}
               className="w-full bg-card text-foreground hover:bg-accent h-12 rounded-lg mt-auto"
             >
-              진짜로 시작하기
+              지금 시작하기
             </Button>
           </div>
         </div>
